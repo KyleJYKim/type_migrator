@@ -23,3 +23,9 @@ type_migrator-*.tar
 /tmp/
 
 /.elixir_ls
+
+/translation.aux
+/translation.fdb_latexmk
+/translation.fls
+/translation.log
+/translation.synctex.gz
