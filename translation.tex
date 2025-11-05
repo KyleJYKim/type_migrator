@@ -75,11 +75,7 @@
 
 \newcommand {\TST} {\texttt{T}}
 \newcommand {\TSB} {\texttt{B}}  % Basic types
-\newcommand {\TSL} {\texttt{L}}  % Literals
-\newcommand {\TSF} {\texttt{F}}  % *Fields
-
-\newcommand {\TSI} {\texttt{I}}  % *Built-in
-\newcommand {\TSU} {\texttt{U}}  % *User-defined
+\newcommand {\TSF} {\texttt{F}}  % Fields
 
 \newcommand {\TSAn}[1][\TSE] {\ov{\texttt{@spec}\,\,{#1}}}
 \newcommand {\TSFn}[2][\ov{\TST}] {\texttt{$x$(}{#1}\texttt{)}\,\,\texttt{::}\,\,{#2}}
@@ -111,13 +107,9 @@
 \newcommand {\ETO} {\texttt{O}}  % Operators
 
 \newcommand {\ETT} {\texttt{T}}
-\newcommand {\ETB} {\texttt{B}}  % Basic types
-\newcommand {\ETL} {\texttt{L}}  % Literals
+\newcommand {\ETB} {\texttt{B}}  % Base types
+\newcommand {\ETK} {\texttt{K}}  % Keys
 \newcommand {\ETF} {\texttt{F}}  % Fields
-
-\newcommand {\ETI} {\texttt{I}}  % *Built-in
-\newcommand {\ETR} {\texttt{R}}  % *Remotes
-\newcommand {\ETU} {\texttt{U}}  % *User-defined
 
 \newcommand {\ETAn}[1][\ETE] {\texttt{\$}\,\,{#1}}
 \newcommand {\ETFn}[2][\ov{\ETT}] {#1\,\texttt{->}\,#2}
@@ -179,7 +171,7 @@
       \\ &&\bnfor& \textcolor{red}{\texttt{$n$} \bnfor \text{$n$..$n'$}}
       \\
       \textbf{Fields} & \TSF &\bnfeq&
-      \texttt{required(\TST) => \TST} \bnfor \texttt{optional(\TST) => \TST} 
+      \texttt{required(\textcolor{red}{\TST}) => \TST} \bnfor \texttt{optional(\textcolor{red}{\TST}) => \TST} 
       \end{grammarfig}
    \small(where $x$ ranges over expression variables, $\alpha$ ranges over type variables, 
    $n$ ranges over integers with $n<n'$, and $k$ ranges over atoms)
@@ -200,20 +192,22 @@
       \\[2mm]
       \textbf{Types} & \ETT &\bnfeq&
       \texttt{$\alpha$} \bnfor \texttt{\ETT\,or\,\ETT}\bnfor \texttt{\ETT\,and\,\ETT}\bnfor \texttt{not\,\ETT}
-      \\ &&\bnfor& \texttt{term()} \bnfor \texttt{none()} \bnfor \texttt{dynamic()}
-      \\ &&\bnfor& \texttt{pid()} \bnfor \texttt{port()} \bnfor \texttt{reference()}
-      \\ &&\bnfor& \texttt{atom()} \bnfor \texttt{$k$} %\bnfor \texttt{true} \bnfor \texttt{false} \bnfor \texttt{nil}
-      \\ &&\bnfor& \texttt{float()} \bnfor \texttt{integer()} \bnfor \texttt{binary()}
-      \\ &&\bnfor& \map{\ov{\ETF}} \bnfor \map{...\,\ov{\ETF}}
-      \\ &&\bnfor& \tuple{\ov{\ETT}} \bnfor \tuple{\ov{\ETT}\,...}
+      \\ &&\bnfor& \ETK \bnfor \texttt{term()} \bnfor \texttt{none()} \bnfor \texttt{dynamic()}
+      \\ &&\bnfor& \map{\ov{\ETF}} \bnfor \map{...,\ov{\ETF}}
+      \\ &&\bnfor& \tuple{\ov{\ETT}} \bnfor \tuple{\ov{\ETT},...}
       \\ &&\bnfor& \texttt{empty\_list()} \bnfor \texttt{nonempty\_list(\ETT, \ETT)}
       \\ &&\bnfor& \texttt{(} \ov{\ETT} \texttt{-> \ETT)}
       \\
-      \textbf{Keys} & \ETF &\bnfeq&
-      \texttt{required(\ETT) => \ETT} \bnfor \texttt{optional(\ETT) => \ETT}
+      \textbf{Key types} & \ETK &\bnfeq&
+      \texttt{pid()} \bnfor \texttt{port()} \bnfor \texttt{reference()}
+      \\ &&\bnfor& \texttt{binary()} \bnfor \texttt{atom()} \bnfor \texttt{$k$} %\bnfor \texttt{true} \bnfor \texttt{false} \bnfor \texttt{nil}
+      \\ &&\bnfor& \texttt{float()} \bnfor \texttt{integer()} \bnfor \text{$n$..$n$}
+      \\
+      \textbf{Fields} & \ETF &\bnfeq&
+      \texttt{$k$ => \ETT} \bnfor \texttt{\ETK\,=>\,is\_set(\ETT)}
    \end{grammarfig}
    \small(where $x$ ranges over expression variables, $\alpha$ ranges over type variables, 
-   $n$ ranges over integers with $n<n'$, and $k$ ranges over atoms)
+   $n..n$ ranges over integers invisible to the users, and $k$ ranges over atoms)
    \caption{Elixir Type}
    \label{app:elixir-concrete-syntax}
 \end{figure}

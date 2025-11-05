@@ -1,6 +1,6 @@
 # Fdb version 4
-["pdflatex"] 1762373039.3792 "/Users/kjykim1011/UNIVE_4th/Thesis/projects/type_migrator/translation.tex" "translation.pdf" "translation" 1762373039.89474 0
-  "/Users/kjykim1011/UNIVE_4th/Thesis/projects/type_migrator/translation.tex" 1762373037.64865 16541 8359530cebb77dc869e53df9ae54c28a ""
+["pdflatex"] 1762379032.14151 "/Users/kjykim1011/UNIVE_4th/Thesis/projects/type_migrator/translation.tex" "translation.pdf" "translation" 1762379032.68163 0
+  "/Users/kjykim1011/UNIVE_4th/Thesis/projects/type_migrator/translation.tex" 1762379031.89816 16367 a71959e93a9237dceedcc15c5f3e99c9 ""
   "/usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/base/8r.enc" 1165713224 4850 80dc9bab7f31fb78a000ccfed0e27cab ""
   "/usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/cm-super/cm-super-t1.enc" 1136849721 2971 def0b6c1f0b107b3b936def894055589 ""
   "/usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/cm-super/cm-super-ts1.enc" 1136849721 2900 1537cc8184ad1792082cd229ecc269f4 ""
@@ -89,8 +89,8 @@
   "/usr/local/texlive/2025/texmf-var/fonts/map/pdftex/updmap/pdftex.map" 1761840648 5467155 19efa205003f9ecad95fbbaa6ff24da1 ""
   "/usr/local/texlive/2025/texmf-var/web2c/pdftex/pdflatex.fmt" 1761840568 3345739 e56837300675a6551d22ea9a288706ed ""
   "/usr/local/texlive/2025/texmf.cnf" 1741450484 577 418a7058ec8e006d8704f60ecd22c938 ""
-  "translation.aux" 1762373039.83087 723 4ef2a05baa9382e9575bfda5e592ac68 "pdflatex"
-  "translation.tex" 1762373037.64865 16541 8359530cebb77dc869e53df9ae54c28a ""
+  "translation.aux" 1762379032.61534 723 4ef2a05baa9382e9575bfda5e592ac68 "pdflatex"
+  "translation.tex" 1762379031.89816 16367 a71959e93a9237dceedcc15c5f3e99c9 ""
   (generated)
   "translation.aux"
   "translation.log"
