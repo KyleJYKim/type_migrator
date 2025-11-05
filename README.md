@@ -1,21 +1,5 @@
 # TypeMigrator
 
-**TODO: Add description**
-
-## Installation
-
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `type_migrator` to your list of dependencies in `mix.exs`:
-
-```elixir
-def deps do
-  [
-    {:type_migrator, "~> 0.1.0"}
-  ]
-end
-```
-
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at <https://hexdocs.pm/type_migrator>.
-
+1. Formalization of TypeSpec and Elixir type
+2. Syntactic sugars with basic types
+3. Translation into Elixir type from TypeSpec
