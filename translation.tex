@@ -1,0 +1,388 @@
+\documentclass{article}
+\usepackage{graphicx} % Required for inserting images
+
+% --- Math packages ---
+\usepackage{amsmath, amssymb, mathtools}
+
+% --- Fonts and symbols ---
+\usepackage[T1]{fontenc}
+\usepackage[scaled]{beramono} % nice monospaced font for \texttt
+\usepackage{mathpartir} % for inference/grammar-like notation (optional)
+
+% --- For figures and captions ---
+\usepackage{graphicx}
+\usepackage{caption}
+
+% --- For better alignment in arrays ---
+\usepackage{array}
+
+\usepackage[dvipsnames]{xcolor}
+\usepackage{float}
+
+% --- Define the missing macros used in grammar ---
+\newcommand{\bnfeq}{::=}   % "bnf equals" symbol
+\newcommand{\bnfor}{\mid}  % "bnf or" symbol
+\newcommand{\ov}[1]{\overline{#1}} % overline shorthand
+\newcommand{\gnot}[1]{\texttt{not}\;#1}
+\newcommand{\gand}[2]{#1\;\texttt{and}\;#2}
+\newcommand{\gor}[2]{#1\;\texttt{or}\;#2}
+% Function type pretty-printer: (T1,..,Tn) -> T
+\newcommand{\fun}[2]{\texttt{(}#1\texttt{)}\,\texttt{->}\,#2}
+\newcommand{\map}[1] {\mathtt{\%\{}\hspace{.07em}\mbox{\ensuremath{#1}}\hspace{.07em}\mathtt{\}}}
+\newcommand{\tuple}[1] {\mathtt{\{}\hspace{.07em}\mbox{\ensuremath{#1}}\hspace{.07em}\mathtt{\}}}
+\newcommand{\OpenTuple}[1] {\texttt{\{}\hspace{.07em}\mbox{\ensuremath{#1}}\texttt{,}\,\mathtt{..}\hspace{.07em}\texttt{\}}}
+
+
+%%% Definitions %%%
+\newcommand {\FWE} {\texttt{E}}
+\newcommand {\FWL} {\texttt{L}}
+\newcommand {\FWP} {\texttt{P}}
+\newcommand {\FWG} {\texttt{G}}
+\newcommand {\FWD} {\texttt{D}}
+\newcommand {\FWC} {\texttt{C}}
+\newcommand {\FWB} {\texttt{B}}
+\newcommand {\FWA} {\texttt{A}}
+\newcommand {\FWT} {\texttt{T}}
+
+
+
+\newcommand {\EFn}[2][\ov{\FWP}\,\,\texttt{when}\,\,\FWG] {\texttt{fn}\,\,\ov{{#1} \,\texttt{->}\, {#2}}\,\,\texttt{end}}
+\newcommand {\EApp}[2] {#1\,\texttt{(}{#2}\texttt{)}}
+\newcommand {\ECase}[1] {\texttt{case}\,\,#1\,\,\,\ov{\FWP\,\,\texttt{when}\,\,\FWG\,\,\texttt{->}\,\,\FWE}}
+\newcommand {\ETuple}[1] {\texttt{\{}\,#1\,\texttt{\}}}
+\newcommand {\EElem}[2] {\texttt{elem}\texttt{(}#1, #2\texttt{)}}
+\newcommand {\EMap}[1][\ov{E\,\,\texttt{=>}\,\,E}] {\texttt{\%}\tuple{#1}}
+\newcommand {\EMapUpdate} {\texttt{\%}\tuple{E\,\,\texttt{|}\,\,E\,\,\texttt{=>}\,\,E}}
+\newcommand {\EMapKey} {E.k}
+\newcommand {\EMapGet} {E\, \texttt{[} E \texttt{]}}
+\newcommand {\EMapDelete} {\texttt{Map.delete}(E, L)}
+\newcommand {\EMapPut} {\texttt{Map.put}(E, L, E)}
+\newcommand {\EisInt}[1] {\mathtt{is\_integer}\texttt{(}{#1}\texttt{)}}
+\newcommand {\EisMap}[1] {\mathtt{is\_map}\texttt{(}{#1}\texttt{)}}
+\newcommand {\EisAtom}[1] {\mathtt{is\_atom}\texttt{(}{#1}\texttt{)}}
+\newcommand {\EisTuple}[1] {\mathtt{is\_tuple}\texttt{(}{#1}\texttt{)}}
+\newcommand {\EisMapKey}[2] {\mathtt{is\_map\_key}\,({#1},{#2})}
+\newcommand {\EisFunction}[2] {\mathtt{is\_function}\texttt{(}{#1,#2}\texttt{)}}
+\newcommand {\EisFun}[1] {\mathtt{is\_function}\texttt{(}{#1}\texttt{)}}
+\newcommand {\EtupleSize}[1] {\mathtt{tuple\_size}\texttt{(}{#1}\texttt{)}}
+
+%%% Definitions for TypeSpec %%%
+\newcommand {\TSA} {\texttt{A}}  % Annotations
+\newcommand {\TSE} {\texttt{E}}  % Expressions
+\newcommand {\TSP} {\texttt{P}}  % Patterns
+\newcommand {\TSG} {\texttt{G}}  % Guards
+\newcommand {\TSO} {\texttt{O}}  % Operators
+
+\newcommand {\TST} {\texttt{T}}
+\newcommand {\TSB} {\texttt{B}}  % Basic types
+\newcommand {\TSL} {\texttt{L}}  % Literals
+\newcommand {\TSF} {\texttt{F}}  % *Fields
+
+\newcommand {\TSI} {\texttt{I}}  % *Built-in
+\newcommand {\TSU} {\texttt{U}}  % *User-defined
+
+\newcommand {\TSAn}[1][\TSE] {\ov{\texttt{@spec}\,\,{#1}}}
+\newcommand {\TSFn}[2][\ov{\TST}] {\texttt{$x$(}{#1}\texttt{)}\,\,\texttt{::}\,\,{#2}}
+
+\newcommand {\TSApp}[2] {#1\,\texttt{(}{#2}\texttt{)}}
+\newcommand {\TSCase}[1] {\texttt{case}\,\,#1\,\,\,\ov{\FWP\,\,\texttt{when}\,\,\FWG\,\,\texttt{->}\,\,\FWE}}
+\newcommand {\TSTuple}[1] {\texttt{\{}\,#1\,\texttt{\}}}
+\newcommand {\TSElem}[2] {\texttt{elem}\texttt{(}#1, #2\texttt{)}}
+\newcommand {\TSMap}[1][\ov{E\,\,\texttt{=>}\,\,E}] {\texttt{\%}\tuple{#1}}
+\newcommand {\TSMapUpdate} {\texttt{\%}\tuple{E\,\,\texttt{|}\,\,E\,\,\texttt{=>}\,\,E}}
+\newcommand {\TSMapKey} {E.k}
+\newcommand {\TSMapGet} {E\, \texttt{[} E \texttt{]}}
+\newcommand {\TSMapDelete} {\texttt{Map.delete}(E, L)}
+\newcommand {\TSMapPut} {\texttt{Map.put}(E, L, E)}
+\newcommand {\TSisInt}[1] {\mathtt{is\_integer}\texttt{(}{#1}\texttt{)}}
+\newcommand {\TSisMap}[1] {\mathtt{is\_map}\texttt{(}{#1}\texttt{)}}
+\newcommand {\TSisAtom}[1] {\mathtt{is\_atom}\texttt{(}{#1}\texttt{)}}
+\newcommand {\TSisTuple}[1] {\mathtt{is\_tuple}\texttt{(}{#1}\texttt{)}}
+\newcommand {\TSisMapKey}[2] {\mathtt{is\_map\_key}\,({#1},{#2})}
+\newcommand {\TSisFunction}[2] {\mathtt{is\_function}\texttt{(}{#1,#2}\texttt{)}}
+\newcommand {\TSisFun}[1] {\mathtt{is\_function}\texttt{(}{#1}\texttt{)}}
+\newcommand {\TStupleSize}[1] {\mathtt{tuple\_size}\texttt{(}{#1}\texttt{)}}
+
+%%% Definitions for Elixir Type %%%
+\newcommand {\ETA} {\texttt{A}}  % Annotations
+\newcommand {\ETE} {\texttt{E}}  % Expressions
+\newcommand {\ETP} {\texttt{P}}  % Patterns
+\newcommand {\ETG} {\texttt{G}}  % Guards
+\newcommand {\ETO} {\texttt{O}}  % Operators
+
+\newcommand {\ETT} {\texttt{T}}
+\newcommand {\ETB} {\texttt{B}}  % Basic types
+\newcommand {\ETL} {\texttt{L}}  % Literals
+\newcommand {\ETF} {\texttt{F}}  % Fields
+
+\newcommand {\ETI} {\texttt{I}}  % *Built-in
+\newcommand {\ETR} {\texttt{R}}  % *Remotes
+\newcommand {\ETU} {\texttt{U}}  % *User-defined
+
+\newcommand {\ETAn}[1][\ETE] {\texttt{\$}\,\,{#1}}
+\newcommand {\ETFn}[2][\ov{\ETT}] {#1\,\texttt{->}\,#2}
+
+\newcommand {\ETApp}[2] {#1\,\texttt{(}{#2}\texttt{)}}
+\newcommand {\ETCase}[1] {\texttt{case}\,\,#1\,\,\,\ov{\FWP\,\,\texttt{when}\,\,\FWG\,\,\texttt{->}\,\,\FWE}}
+\newcommand {\ETTuple}[1] {\texttt{\{}\,#1\,\texttt{\}}}
+\newcommand {\ETElem}[2] {\texttt{elem}\texttt{(}#1, #2\texttt{)}}
+\newcommand {\ETMap}[1][\ov{E\,\,\texttt{=>}\,\,E}] {\texttt{\%}\tuple{#1}}
+\newcommand {\ETMapUpdate} {\texttt{\%}\tuple{E\,\,\texttt{|}\,\,E\,\,\texttt{=>}\,\,E}}
+\newcommand {\ETMapKey} {E.k}
+\newcommand {\ETMapGet} {E\, \texttt{[} E \texttt{]}}
+\newcommand {\ETMapDelete} {\texttt{Map.delete}(E, L)}
+\newcommand {\ETMapPut} {\texttt{Map.put}(E, L, E)}
+\newcommand {\ETisInt}[1] {\mathtt{is\_integer}\texttt{(}{#1}\texttt{)}}
+\newcommand {\ETisMap}[1] {\mathtt{is\_map}\texttt{(}{#1}\texttt{)}}
+\newcommand {\ETisAtom}[1] {\mathtt{is\_atom}\texttt{(}{#1}\texttt{)}}
+\newcommand {\ETisTuple}[1] {\mathtt{is\_tuple}\texttt{(}{#1}\texttt{)}}
+\newcommand {\ETisMapKey}[2] {\mathtt{is\_map\_key}\,({#1},{#2})}
+\newcommand {\ETisFunction}[2] {\mathtt{is\_function}\texttt{(}{#1,#2}\texttt{)}}
+\newcommand {\ETisFun}[1] {\mathtt{is\_function}\texttt{(}{#1}\texttt{)}}
+\newcommand {\ETtupleSize}[1] {\mathtt{tuple\_size}\texttt{(}{#1}\texttt{)}}
+
+
+\newenvironment {grammarfig} {\begin{equation*}\begin{array}{lrcll}}
+           {\end{array}\end{equation*}}
+
+
+\begin{document}
+
+% --- TypeSpec ---
+\begin{figure} [H]
+   \begin{grammarfig}
+      \textbf{Annotations} & \FWA &\bnfeq& 
+      \TSAn \bnfor \varepsilon
+      \\
+      \textbf{Expressions} & \TSE &\bnfeq& 
+      \TSFn{\TST} \bnfor 
+      \TSFn{\TST}\,\,\texttt{when}\,\,\ov{\texttt{$\alpha$:}\,\TSG}
+      \\
+      \textbf{Guards} & \TSG &\bnfeq& 
+      \TST \bnfor \texttt{var} 
+      \\[2mm]
+      \textbf{Types} & \TST &\bnfeq&
+      \texttt{$\alpha$} \bnfor \texttt{\TST|\TST} 
+      \\ &&\bnfor& \texttt{any()} \bnfor \texttt{none()}
+      \\ &&\bnfor& \texttt{pid()} \bnfor \texttt{port()} \bnfor \texttt{reference()}
+      \\ &&\bnfor& \texttt{atom()} \bnfor \texttt{$k$} % \bnfor \texttt{true} \bnfor \texttt{false} \bnfor \texttt{nil}
+      \\ &&\bnfor& \texttt{float()} \bnfor \texttt{integer()} 
+      \\ &&\bnfor& \textcolor{red}{\texttt{neg\_integer()} \bnfor \texttt{non\_neg\_integer()} \bnfor \texttt{pos\_integer()}}
+      \\ &&\bnfor& \map{\ov{\TSF}} 
+      \\ &&\bnfor& \texttt{tuple()} \bnfor \tuple{\ov{\TST}}
+      \\ &&\bnfor& \texttt{list(\TST)} \bnfor \texttt{nonempty\_list(\TST)}
+      \\ &&\bnfor& \texttt{maybe\_improper\_list(\TST, \TST)}
+      \\ &&\bnfor& \texttt{nonempty\_improper\_list(\TST, \TST)} 
+      \\ &&\bnfor& \texttt{nonempty\_maybe\_improper\_list(\TST, \TST)}
+      \\ &&\bnfor& \textcolor{red}{\texttt{<<>>} \bnfor \texttt{<<\_::$n$>>} \bnfor \texttt{<<\_::\_*$n$>>} \bnfor \texttt{<<\_::$n$, \_::\_*$n$>>}}
+      \\ &&\bnfor& \texttt{(} \ov{\TST} \texttt{-> \TST)} \bnfor \textcolor{red}{\texttt{(...-> \TST)}}
+      \\ &&\bnfor& \textcolor{red}{\texttt{$n$} \bnfor \text{$n$..$n'$}}
+      \\
+      \textbf{Fields} & \TSF &\bnfeq&
+      \texttt{required(\TST) => \TST} \bnfor \texttt{optional(\TST) => \TST} 
+      \end{grammarfig}
+   \small(where $x$ ranges over expression variables, $\alpha$ ranges over type variables, 
+   $n$ ranges over integers with $n<n'$, and $k$ ranges over atoms)
+   \caption{TypeSpec}
+   \label{app:elixir-concrete-syntax}
+\end{figure}
+
+
+% --- Elixir Type for Functions ---
+\begin{figure} [H]
+   \begin{grammarfig}
+      \textbf{Annotations} & \ETA &\bnfeq& 
+      \ETAn \bnfor \varepsilon
+      \\
+      \textbf{Expressions} & \ETE &\bnfeq& 
+      \ETFn{\ETT} \bnfor 
+      \ETFn{\ETT}\,\,\texttt{when}\,\,\ov{\texttt{$\alpha$:}\,\ETT}
+      \\[2mm]
+      \textbf{Types} & \ETT &\bnfeq&
+      \texttt{$\alpha$} \bnfor \texttt{\ETT\,or\,\ETT}\bnfor \texttt{\ETT\,and\,\ETT}\bnfor \texttt{not\,\ETT}
+      \\ &&\bnfor& \texttt{term()} \bnfor \texttt{none()} \bnfor \texttt{dynamic()}
+      \\ &&\bnfor& \texttt{pid()} \bnfor \texttt{port()} \bnfor \texttt{reference()}
+      \\ &&\bnfor& \texttt{atom()} \bnfor \texttt{$k$} %\bnfor \texttt{true} \bnfor \texttt{false} \bnfor \texttt{nil}
+      \\ &&\bnfor& \texttt{float()} \bnfor \texttt{integer()} \bnfor \texttt{binary()}
+      \\ &&\bnfor& \map{\ov{\ETF}} \bnfor \map{...\,\ov{\ETF}}
+      \\ &&\bnfor& \tuple{\ov{\ETT}} \bnfor \tuple{\ov{\ETT}\,...}
+      \\ &&\bnfor& \texttt{empty\_list()} \bnfor \texttt{nonempty\_list(\ETT, \ETT)}
+      \\ &&\bnfor& \texttt{(} \ov{\ETT} \texttt{-> \ETT)}
+      \\
+      \textbf{Keys} & \ETF &\bnfeq&
+      \texttt{required(\ETT) => \ETT} \bnfor \texttt{optional(\ETT) => \ETT}
+   \end{grammarfig}
+   \small(where $x$ ranges over expression variables, $\alpha$ ranges over type variables, 
+   $n$ ranges over integers with $n<n'$, and $k$ ranges over atoms)
+   \caption{Elixir Type}
+   \label{app:elixir-concrete-syntax}
+\end{figure}
+
+
+\section{Basic Types}
+
+\begin{enumerate}
+
+   \item Top types
+   \begin{itemize}
+      \item any() == var == term() \\
+      => Compatible in the type migration as Elixir Type has term()
+   \end{itemize}
+
+   \item Bottom type
+   \begin{itemize}
+      \item none() \\
+      => Compatible in the type migration
+   \end{itemize}
+
+   \item Identifier types
+   \begin{itemize}
+      \item pid()\\
+      A pid (process identifier) refers into a process table and a node table, which also consumes memory. \\
+      1 word for a pid from the current local node.
+      
+      \item port()\\
+      A port identifier refers into a port table and a node table, which also consumes memory.
+      
+      \item reference()\\
+      A reference also refers into more or less emulator internal data structures which also consumes memory.
+      At a minimum it refers into the node tables.      
+      \\
+      => All compatible in the type migration
+   
+   \end{itemize}
+
+   \item Atom types
+   \begin{itemize}
+      \item atom()
+      An atom, ‘$k$’, can be used as a type while ‘true’, ‘false’, ‘nil’ are reserved atoms that are used without prepositional ':'.
+      \\
+      => Compatible in the type migration
+   \end{itemize}
+
+   \item Number types
+   \begin{itemize}
+      \item float()\\
+      => Compatible in the type migration
+   
+      \item integer()\\
+      TypeSpec's integer() has subtypes that are neg\_integer(), non\_neg\_integer(), and pos\_integer().
+      Furthermore, an individual integer, ‘$n$’, can be used as a type while it supports range of integer with ‘..’ operator.
+      Whereas, in Elixir type, integer() is indivisible.
+      \\
+      However, the future work could either split integer() into:
+         individual elements;
+         ranges;
+         or neg\_integer() | zero() | pos\_integer().
+      \\
+      => Subtypes of integer() are incompatible in the type migration
+   \end{itemize}
+
+   \item Map types
+   \begin{itemize}
+      \item map()\\
+      \begin{itemize}
+         \item TypeSpec Syntactic Sugars\\
+         \begin{enumerate}
+            \item Empty map: \\
+            \%\{\}
+            \\
+            \item Map with required key ‘$:key$’ of value\_type: \\
+            \%\{key: value\_type\} == \%\{required(atom()) => \TST\}
+            \\
+            \item Map with required pairs of key\_type and value\_type: \\
+            \%\{key\_type => value\_type\}
+            \\ == \%\{required(key\_type) => value\_type\}
+            \\ == \%\{required(\TST) => \TST\}
+            \\
+            \item Map with optional pairs of key\_type and value\_type \\
+            \%\{optional(key\_type) => value\_type\}
+            \\ == \%\{optional(\TST) => \TST\}
+            \\
+            \item Struct with all fields of any type \\
+            \%SomeStruct\{\} == \%\{required(:\_\_struct\_\_) => $x$\}
+            \\
+            \item Struct with required key :key of value\_type \\
+            \%SomeStruct\{key: value\_type\}
+            \\ == \%\{required(:\_\_struct\_\_) => $x$\, required($k$) => \TST\}
+            \\
+         \end{enumerate}
+         => Compatible in the type migration \\
+         %\item New in Elixir type
+         %\%\{\map{...\,\ov{\ETF}}\}
+      \end{itemize}
+   \end{itemize}
+   
+   \item List types
+   \begin{itemize}
+      \item Lists of types \\
+      list(type) ==> empty\_list() or non\_empty\_list(\ETT)
+      \\
+      \item Non-empty lists of types \\
+      non\_empty\_list(type)
+      \\ ==> non\_empty\_list(\ETT)
+      \\ == non\_empty\_list(\ETT, empty\_list())
+      \\
+      \item Proper or improper lists \\
+      maybe\_improper\_list(content\_type, termination\_type)
+      \\ ==> list(\ETT) or non\_empty\_list(\ETT, \ETT\,and not list())
+      \\
+      \item Improper lists \\
+      nonempty\_improper\_list(content\_type, termination\_type)
+      \\ ==> non\_empty\_list(\ETT, \ETT\,and not list())
+      \\
+      \item Non-empty proper or improper lists \\
+      nonempty\_maybe\_improper\_list(content\_type, termination\_type)
+      \\ ==> non\_empty\_list(\ETT) or non\_empty\_list(\ETT, \ETT\,and not list())
+   \end{itemize}
+
+\end{enumerate}
+
+
+
+
+
+% --- Featherweight Elixir ---
+\begin{figure} [H]
+   \begin{grammarfig}
+       \textbf{Expressions} & \FWE &\bnfeq&
+       \FWL \bnfor x \bnfor \FWA\ \EFn{\FWE} \bnfor \EApp{\FWE}{\FWE_1,..,\FWE_n} \bnfor
+       \FWE + \FWE
+       \\
+       &&\bnfor& \ECase{\FWE} \bnfor
+       \ETuple{\FWE_1,..,\FWE_n} \bnfor \EElem{\FWE}{\FWE}
+       \\
+       \textbf{Singletons} & \FWL &\bnfeq& n \bnfor k \bnfor \tuple{\ov{\FWL}}
+       \\
+       \textbf{Patterns} & \FWP &\bnfeq& \FWL \bnfor x
+       \bnfor \tuple{\FWP_1,..,\FWP_n}
+       \\
+       \textbf{Guards}
+       &\FWG &\bnfeq& \FWD \bnfor \FWC \bnfor \gnot{\FWG} \bnfor \gand{\FWG}{\FWG}
+       \bnfor \gor{\FWG}{\FWG} \bnfor \FWG \,\,\texttt{==}\,\, \FWG \bnfor \FWG \,\texttt{!=}\,\, \FWG
+       \\
+       &&\bnfor& \FWG \,\,\texttt{<}\,\,\FWG \bnfor \FWG \,\,\texttt{<=}\,\, \FWG \bnfor \FWG \,\,\texttt{>}\,\,\FWG \bnfor \FWG \,\,\texttt{>=}\,\,\FWG
+       \\
+       \textbf{Selectors}
+       &\FWD &\bnfeq& \FWL \bnfor x \bnfor \EElem{\FWD}{\FWD} \bnfor \EtupleSize{\FWD}
+       \bnfor \tuple{\ov{\FWD}} \\
+       \textbf{Checks}
+       &\FWC &\bnfeq& \EisInt{\FWD} \bnfor \EisAtom{\FWD} \bnfor \EisTuple{\FWD}
+       \\
+       &&\bnfor& \EisFun{\FWD} \bnfor \EisFunction{\FWD}{n}\\[2mm]
+       \textbf{Base types} & \FWB
+       &\bnfeq& \texttt{integer()} \bnfor \texttt{atom()} \bnfor \texttt{function()} \bnfor \texttt{tuple()}  \\
+       \textbf{Types}      & \FWT
+       &\bnfeq& \FWB\bnfor \FWL \bnfor \fun{\ov{\FWT}}{\FWT} \bnfor \tuple{\ov{\FWT}}
+       \bnfor \OpenTuple{\ov{\FWT}} \bnfor \FWT\;\texttt{or}\;\FWT \bnfor \FWT\;\texttt{and}\;\FWT \bnfor \texttt{not}\,\FWT \\
+       &&\bnfor& \texttt{none()} \bnfor \texttt{term()} \bnfor \texttt{dynamic()}\\
+       \textbf{Annotations} & \FWA
+ &\bnfeq& \texttt{\$}\ \FWT \bnfor \varepsilon 
+   \end{grammarfig}
+   \small(where $x$ ranges over variables, $n$ ranges over integers, and $k$ ranges over atoms)
+   \caption{Featherweight Elixir}
+   \label{app:elixir-concrete-syntax}
+\end{figure}
+
+
+\end{document}
