@@ -81,8 +81,10 @@
 \newcommand{\TST} {\texttt{T}}
 \newcommand{\TSB} {\texttt{B}}  % Basic types
 \newcommand{\TSF} {\texttt{F}}  % Fields
+
 \newcommand{\TSAn}[1][\TSE] {\ov{\texttt{@spec}\,\,{#1}}}
 \newcommand{\TSFn}[2][\ov{\TST}] {\texttt{$x$(}{#1}\texttt{)}\,\,\texttt{::}\,\,{#2}}
+
 \newcommand{\TSApp}[2] {#1\,\texttt{(}{#2}\texttt{)}}
 \newcommand{\TSCase}[1] {\texttt{case}\,\,#1\,\,\,\ov{\FWP\,\,\texttt{when}\,\,\FWG\,\,\texttt{->}\,\,\FWE}}
 \newcommand{\TSTuple}[1] {\texttt{\{}\,#1\,\texttt{\}}}
@@ -155,22 +157,18 @@
       \textbf{Types} & \TST &\bnfeq&
       \texttt{$\alpha$} \bnfor \texttt{\TST|\TST} 
       \\ &&\bnfor& \texttt{any()} \bnfor \texttt{none()}
+      \\ &&\bnfor& \texttt{atom()} \bnfor \texttt{:$k$}
       \\ &&\bnfor& \texttt{pid()} \bnfor \texttt{port()} \bnfor \texttt{reference()}
-      \\ &&\bnfor& \texttt{atom()} \bnfor \texttt{$k$} % \bnfor \texttt{true} \bnfor \texttt{false} \bnfor \texttt{nil}
       \\ &&\bnfor& \texttt{float()} \bnfor \texttt{integer()} 
       \\ &&\bnfor& \textcolor{red}{\texttt{neg\_integer()} \bnfor \texttt{non\_neg\_integer()} \bnfor \texttt{pos\_integer()}}
-      \\ &&\bnfor& \map{\ov{\TSF}} 
-      \\ &&\bnfor& \texttt{tuple()} \bnfor \tuple{\ov{\TST}}
+      \\ &&\bnfor& \texttt{tuple()} \bnfor \tuple{\ov{\TST}} \bnfor \map{\ov{\TSF}} 
       \\ &&\bnfor& \texttt{[]} \bnfor \texttt{nonempty\_maybe\_improper\_list(\TST, \TST)} 
-      %\texttt{nonempty\_list(\TST)}
-      %\\ &&\bnfor& \texttt{maybe\_improper\_list(\TST, \TST)}
-      %\\ &&\bnfor& \texttt{nonempty\_maybe\_improper\_list(\TST, \TST)}
       \\ &&\bnfor& \textcolor{red}{\texttt{<<>>} \bnfor \texttt{<<\_::$n$>>} \bnfor \texttt{<<\_::\_*$n$>>} \bnfor \texttt{<<\_::$n$, \_::\_*$n$>>}}
-      \\ &&\bnfor& \texttt{(} \ov{\TST} \texttt{-> \TST)} \bnfor \textcolor{red}{\texttt{(...-> \TST)}}
+      \\ &&\bnfor& \texttt{($\ov{\TST}$\,->\,\TST)} \bnfor \textcolor{red}{\texttt{(...\,->\,\TST)}}
       \\ &&\bnfor& \textcolor{red}{\texttt{$n$} \bnfor \text{$n$..$n'$}}
       \\
       \textbf{Fields} & \TSF &\bnfeq&
-      \texttt{required(\textcolor{red}{\TST}) => \TST} \bnfor \texttt{optional(\textcolor{red}{\TST}) => \TST} 
+      \texttt{required(\textcolor{red}{\TST})\,=>\,\TST} \bnfor \texttt{optional(\textcolor{red}{\TST})\,=>\,\TST} 
       \end{grammarfig}
    \small(where $x$ ranges over expression variables, $\alpha$ ranges over type variables, 
    $n$ ranges over integers with $n<n'$, and $k$ ranges over atoms)
@@ -188,24 +186,24 @@
       \textbf{Signatures} & \ETS &\bnfeq& 
       \ETFn{\ETT} \bnfor 
       \ETFn{\ETT}\,\,\texttt{when}\,\,\ov{\texttt{$\alpha$:}\,\ETT} \bnfor
-      \ETS\,and\,\ETS
+      \texttt{\ETS\,and\,\ETS}
       \\[2mm]
       \textbf{Types} & \ETT &\bnfeq&
       \texttt{$\alpha$} \bnfor \text{$n$..$n$} \bnfor \texttt{\ETT\,or\,\ETT}\bnfor \texttt{\ETT\,and\,\ETT}\bnfor \texttt{not\,\ETT}
       \\ &&\bnfor& \ETK \bnfor \texttt{term()} \bnfor \texttt{none()} \bnfor \texttt{dynamic()}
-      \\ &&\bnfor& \map{\ov{\ETF}} \bnfor \map{...,\ov{\ETF}}
-      \\ &&\bnfor& \tuple{\ov{\ETT}} \bnfor \tuple{\ov{\ETT},...}
-      \\ &&\bnfor& \texttt{empty\_list()} \bnfor \texttt{nonempty\_list(\ETT, \ETT)}
-      \\ &&\bnfor& \texttt{(} \ov{\ETT} \texttt{-> \ETT)}
+      \\ &&\bnfor& \tuple{\ov{\ETT}} \bnfor \tuple{\ov{\ETT},...} \bnfor \map{\ov{\ETF}} \bnfor \map{...,\ov{\ETF}}
+      \\ &&\bnfor& \texttt{empty\_list()} \bnfor \texttt{non\_empty\_list(\ETT, \ETT)}
+      \\ &&\bnfor& \texttt{($\ov{\ETT}$\,->\,\ETT)}
       \\
       \textbf{Key types} & \ETK &\bnfeq&
-      \texttt{pid()} \bnfor \texttt{port()} \bnfor \texttt{reference()}
-      \\ &&\bnfor& \texttt{binary()} \bnfor \texttt{atom()} \bnfor \texttt{$k$} %\bnfor \texttt{true} \bnfor \texttt{false} \bnfor \texttt{nil}
-      \\ &&\bnfor& \texttt{float()} \bnfor \texttt{integer()} 
+      \texttt{atom()} \bnfor \texttt{:$k$}
+      \\ &&\bnfor& \texttt{pid()} \bnfor \texttt{port()} \bnfor \texttt{reference()}
+      \\ &&\bnfor& \texttt{float()} \bnfor \texttt{integer()} \bnfor \texttt{binary()}
       \\ &&\bnfor& \texttt{tuple()} \bnfor \texttt{open\_map()} \bnfor \texttt{fun()}
+      % \bnfor lists ????
       \\
       \textbf{Fields} & \ETF &\bnfeq&
-      \texttt{$k$ => \ETT} \bnfor \texttt{\ETK\,=>\,if\_set(\ETT)}
+      \texttt{:$k$\,=>\,\ETT} \bnfor \texttt{\ETK\,=>\,$if\_set$(\ETT)}
    \end{grammarfig}
    \small(where $x$ ranges over expression variables, $\alpha$ ranges over type variables, 
    $n..n$ ranges over integers while invisible to the users, and $k$ ranges over atoms)
@@ -220,7 +218,8 @@
    \setlength{\tabcolsep}{24pt}
    \renewcommand{\arraystretch}{1.2}
    \centering
-   \begin{tabular}{||c|c||}
+   %\begin{tabular}{||c|c||}
+   \begin{tabular}{ || m{15em}| m{30em} || } 
       \hline
       Built-in types          &  Defined as \\
       
@@ -302,9 +301,10 @@
 
    \end{tabular}
    %\small()
-   \caption{TypeSpec Defined Types}
-   \label{app:typespec-defined-types}
+   \caption{TypeSpec Built-in Types}
+   \label{app:typespec-builtin-types}
 \end{table}
+
 
 % --- Syntactic Sugars in TypeSpec ---
 \begin{table} [H]
@@ -312,7 +312,7 @@
    \setlength{\tabcolsep}{24pt}
    \renewcommand{\arraystretch}{1.2}
    \centering
-   \begin{tabular}{||c|c||}
+   \begin{tabular}{ || m{15em}| m{30em} || } 
       \hline
       Syntactic sugar          &  Expanded as \\
       
@@ -333,9 +333,9 @@
       
       \TST$_1$ => \TST$_2$    &  required(\TST$_1$) => \TST$_2$ \\
       \hline
-      $x$: \TST               &  :$x$ => \TST \\
+      $k$: \TST               &  :$k$ => \TST \\
       \hline
-      \%$x$\{$\ov{\TSF}$\}    &	\%\{:\_\_struct\_\_ => :$x$, $\ov{\TSF}$\} \\
+      \%$k$\{$\ov{\TSF}$\}    &	\%\{:\_\_struct\_\_ => :$k$, $\ov{\TSF}$\} \\
       \hline
    \end{tabular}
    %\small()
@@ -343,118 +343,30 @@
    \label{app:typespec-syntactic-sugars}
 \end{table}
 
-
-
-
-
-% --- Defined Types in Elixir Type ---
+% --- Built-in Types in Elixir Type ---
 \begin{table} [H]
    \setlength{\arrayrulewidth}{0.2mm}
    \setlength{\tabcolsep}{24pt}
    \renewcommand{\arraystretch}{1.2}
    \centering
-   \begin{tabular}{||c|c||}
+   \begin{tabular}{ || m{15em}| m{30em} || } 
       \hline
       Built-in types          &  Defined as \\
-      
-      \hline
-      \hline
-      
-      $x$: \ETT               &  \%\{:$x$ => \ETT\} \\
       \hline
 
-      \%\{\{...\}: \ETT\}     &  \%\{$k$ => \ETT\} \\
       \hline
       
-
-
-      arity()                 &  \textcolor{gray}{0..255} \\
+      non\_empty\_list(term())   &  non\_empty\_list(term(), empty\_list()) \\
       \hline
-      as\_boolean(\ETT)       &	\ETT \\
-      \hline
-      binary()                &  \textcolor{gray}{binary()} \\
-      \hline
-      nonempty\_binary()      &	\textcolor{gray}{binary()} \\
-      \hline
-      bitstring()             &	\textcolor{red}{bitstring()..?} \\
-      \hline
-      nonempty\_bitstring()   &	\textcolor{red}{bitstring()..?} \\
-      \hline
-      
-      \hline
-      boolean()               &	:true | :false \\
-      \hline
-      byte()                  &	\textcolor{red}{0..255} \\
-      \hline
-      char()                  &	\textcolor{red}{0..0x10FFFF} \\
-      \hline
-      charlist()              &	[char()] \\
-      \hline
-      nonempty\_charlist()    &	[char(), ...] \\
-      \hline
-      fun()                   &	\textcolor{red}{(none -> term())} \\
-      \hline
-      function()              &	fun() \\
-      \hline
-      identifier()            &	pid() | port() | reference() \\
-      \hline
-      iodata()                &	iolist() | binary() \\
-      \hline
-      iolist()                &	maybe\_improper\_list(byte() | binary() | iolist(), binary() | []) \\
-      \hline
-      keyword()               &	[\{atom(), any()\}] \\
-      \hline
-      keyword(\ETT)           &	[\{atom(), \ETT\}] \\
-      \hline
-
-      [any()]                 &  list(term()) \\
-      \hline
-      list()                  &	[term()] \\
-      \hline
-      nonempty\_list()        &	nonempty\_list(term()) \\
-      \hline
-
       list()                  &  empty\_list() or non\_empty\_list(term()) \\
       \hline
       improper\_list()        &  non\_empty\_list(term(), term() and not list()) \\
       \hline
-
-      nonempty\_improper\_list(\ETT, \ETT)         &  nonempty\_list(\ETT, \ETT and not list()) \\
-      \hline
-      maybe\_improper\_list(\ETT, \ETT)            &  list(\ETT) | nonempty\_improper\_list(\ETT, \ETT) \\
-      \hline
-      maybe\_improper\_list()                      &	maybe\_improper\_list(term(), term()) \\
-      \hline
-      nonempty\_maybe\_improper\_list(\ETT, \ETT)  &  nonempty\_list(\ETT) | nonempty\_improper\_list(\ETT, \ETT) \\
-      \hline
-      nonempty\_maybe\_improper\_list()            &	nonempty\_maybe\_improper\_list(term(), term()) \\
-      \hline
-
-      mfa()                   &	\{module(), atom(), \textcolor{red}{arity()}\} \\
-      \hline
-      module()                &	atom() \\
-      \hline
-      no\_return()            &	none() \\
-      \hline
-      node()                  &	atom() \\
-      \hline
-      number()                &	integer() | float() \\
-      \hline
-      \%\{\ETT => \ETT\}      &  \%\{required(\ETT) => \ETT\} \\
-      \hline
-      \%\{$x$: \ETT\}         &  \%\{$k$ => \ETT\} \\
-      \hline
-      struct()                &	\%\{:\_\_struct\_\_ => atom(), $k$ => term(), ...\} \\
-      \hline
-      timeout()               &	:infinity | \textcolor{red}{non\_neg\_integer()} \\
-      \hline
-
    \end{tabular}
    %\small()
-   \caption{Elixir Type Defined Types}
-   \label{app:elixir-type-defined-types}
+   \caption{Elixir Type Built-in Types}
+   \label{app:elixir-type-builtin-types}
 \end{table}
-
 
 % --- Syntactic Sugars in Elixir Type ---
 \begin{table} [H]
@@ -462,35 +374,25 @@
    \setlength{\tabcolsep}{24pt}
    \renewcommand{\arraystretch}{1.2}
    \centering
-   \begin{tabular}{||c|c||}
+   \begin{tabular}{ || m{15em}| m{30em} || } 
       \hline
       Syntactic sugar          &  Expanded as \\
-      
       \hline
-      \hline
-      
-      true                    &  :true \\
-      \hline
-      false                   &  :false \\
-      \hline
-      nil                     &  :nil \\
+
       \hline
       
-      [\TST, ...]             &  nonempty\_list(\TST) \\
+      \{...\}                 &  tuple() \\
       \hline
-      [T]                     &  list(\TST) \\
+      \%\{...\}               &  open\_map() \\
       \hline
-      
-      \TST$_1$ => \TST$_2$    &  required(\TST$_1$) => \TST$_2$ \\
+      $k$: \TST               &  :$k$ => \TST \\
       \hline
-      $x$: \TST               &  :$x$ => \TST \\
-      \hline
-      \%$x$\{$\ov{\TSF}$\}    &	\%\{:\_\_struct\_\_ => :$x$, $\ov{\TSF}$\} \\
+      \ETK\,=>\,$not\_set$()  &  \ETK\,=>\,$if\_set$(none()) \\
       \hline
    \end{tabular}
    %\small()
-   \caption{TypeSpec Defined Types}
-   \label{app:typespec-defined-types}
+   \caption{Elixir Type Syntactic Sugars}
+   \label{app:elixir-type-syntactic-sugars}
 \end{table}
 
 
