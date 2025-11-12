@@ -1,26 +1,84 @@
 defmodule Ex1 do
-  @spec weak_identity(integer()) :: integer()
-  def weak_identity(x), do: x
+  # TypeSpec multi-clause exhaustiveness: compile warning, dialyzer error
+  # @spec id_exhaustive(integer) :: integer()
+  # @spec id_exhaustive(float) :: float()
+  # @spec id_exhaustive(binary) :: binary()
+  # def id_exhaustive(x) when is_integer(x), do: x + 1
+  # def id_exhaustive(x) when is_float(x), do: x + 1
+  # def id_exhaustive(x) when is_binary(x), do: x
 
-  @spec strong_identity(integer()) :: integer()
-  def strong_identity(x) when is_integer(x), do: x
+
+  # TypeSpec multi-clause redundancy check: compile warning, dialyzer pass
+  @spec id_redundancy(integer | float) :: float()
+  @spec id_redundancy(float) :: float()
+  @spec id_redundancy(float) :: float()
+  def id_redundancy(x) when is_integer(x) or is_float(x), do: x + 1.0
+  def id_redundancy(x) when is_float(x), do: x + 1
+  def id_redundancy(x) when is_float(x), do: x + 1.0
+
+  improper_list(term)
+  non_empty_list(term, list)
+
+
+
+  defmodule In do
+    # @spec id_exhaustive() :: any()
+    # def id_exhaustive(), do: Ex1.id_exhaustive(:a)
+    """
+      # Compiler warning:
+      code block contains unused literal
+      "
+      The function call will not succeed.
+      Ex1.id_exhaustive(:a) will never return since the success typing is:
+        (binary() | number()) :: binary() | number()
+      and the contract is
+      Contract head:
+        (integer()) :: integer()
+      Contract head:
+        (float()) :: float()
+      Contract head:
+        (binary()) :: binary()
+      "
+      (remove the literal or assign it to _ to avoid warnings)
+
+      # Dialyzer error:
+      The function call will not succeed.
+
+      Ex1.id_exhaustive(:a)
+
+      will never return since the success typing is:
+      (binary() | number()) :: binary() | number()
+
+      and the contract is
+      Contract head:
+      (integer()) :: integer()
+
+      Contract head:
+      (float()) :: float()
+
+      Contract head:
+      (binary()) :: binary()
+    """
+
+    @spec id_redundancy() :: any()
+    def id_redundancy(), do: Ex1.id_redundancy(1)
+    """
+    """
+
+  end
+
+  # @spec weak_identity(integer()) :: integer()
+  # def weak_identity(x), do: x
+
+  # @spec strong_identity(integer()) :: integer()
+  # def strong_identity(x) when is_integer(x), do: x
 
   # @spec inc({<<_::_*8>>, %{required(:one) => integer(), binary() => integer()}}) :: integer()
   # def inc({:a, tail}), do: (tail |> Map.get(:one)) + 1
 
-  @spec id(:a) :: any()
-  def id(ts), do: ts
-
-  defmodule In do
+  defmodule Some do
     # @spec inc() :: integer()
     # def inc(), do: Ex1.inc({:"#{<<97::1*8>>}", %{:one => 1, "two" => 2, 3 => 3, 4 => 4}})
 
-    @spec id(list(list())) :: any()
-    def id(ts), do: Ex1.id(ts)
-
-  end
-
-  defmodule Some do
-    defstruct [:name, :age]
   end
 end

@@ -18,8 +18,8 @@
 \usepackage{tabularx}
 
 \usepackage[
-  left=0.5cm,
-  right=0.5cm,
+  left=1.8cm,
+  right=1.8cm,
   top=2cm,
   bottom=2cm
 ]{geometry}
@@ -144,7 +144,8 @@
 
 \begin{document}
 
-% --- TypeSpec ---
+\section{Formalized TypeSpec and Elixir Type}
+
 \begin{figure} [H]
    \begin{grammarfig}
       \textbf{Annotations} & \FWA &\bnfeq& 
@@ -171,28 +172,24 @@
       \texttt{required(\textcolor{red}{\TST})\,=>\,\TST} \bnfor \texttt{optional(\textcolor{red}{\TST})\,=>\,\TST} 
       \end{grammarfig}
    \small(where $x$ ranges over expression variables, $\alpha$ ranges over type variables, 
-   $n$ ranges over integers with $n<n'$, and $k$ ranges over atoms)
+   $n$ ranges over integers with $n<n'$, and $k$ ranges over atom names)
    \caption{TypeSpec}
    \label{app:typespec-syntax}
 \end{figure}
 
 
-% --- Elixir Type for Functions ---
 \begin{figure} [H]
    \begin{grammarfig}
       \textbf{Annotations} & \ETA &\bnfeq& 
-      \texttt{\$}\,\ETS \bnfor \varepsilon
+      \texttt{\$}\,\ETS \bnfor \texttt{\$}\,\ETS\,\,\texttt{when}\,\,\ov{\texttt{$\alpha$:}\,\ETT}
       \\
       \textbf{Signatures} & \ETS &\bnfeq& 
-      \ETFn{\ETT} \bnfor 
-      \ETFn{\ETT}\,\,\texttt{when}\,\,\ov{\texttt{$\alpha$:}\,\ETT} \bnfor
-      \texttt{\ETS\,and\,\ETS}
+      \ETFn{\ETT} \bnfor \texttt{\ETS\,and\,\ETS}
       \\[2mm]
       \textbf{Types} & \ETT &\bnfeq&
       \texttt{$\alpha$} \bnfor \text{$n$..$n$} \bnfor \texttt{\ETT\,or\,\ETT}\bnfor \texttt{\ETT\,and\,\ETT}\bnfor \texttt{not\,\ETT}
       \\ &&\bnfor& \ETK \bnfor \texttt{term()} \bnfor \texttt{none()} \bnfor \texttt{dynamic()}
       \\ &&\bnfor& \tuple{\ov{\ETT}} \bnfor \tuple{\ov{\ETT},...} \bnfor \map{\ov{\ETF}} \bnfor \map{...,\ov{\ETF}}
-      \\ &&\bnfor& \texttt{empty\_list()} \bnfor \texttt{non\_empty\_list(\ETT, \ETT)}
       \\ &&\bnfor& \texttt{($\ov{\ETT}$\,->\,\ETT)}
       \\
       \textbf{Key types} & \ETK &\bnfeq&
@@ -200,49 +197,50 @@
       \\ &&\bnfor& \texttt{pid()} \bnfor \texttt{port()} \bnfor \texttt{reference()}
       \\ &&\bnfor& \texttt{float()} \bnfor \texttt{integer()} \bnfor \texttt{binary()}
       \\ &&\bnfor& \texttt{tuple()} \bnfor \texttt{open\_map()} \bnfor \texttt{fun()}
-      % \bnfor lists ????
+      \\ &&\bnfor& \texttt{empty\_list()} \bnfor \texttt{non\_empty\_list(\ETT, \ETT)} % for now...
       \\
       \textbf{Fields} & \ETF &\bnfeq&
-      \texttt{:$k$\,=>\,\ETT} \bnfor \texttt{\ETK\,=>\,$if\_set$(\ETT)}
+      \texttt{:$k$\,=>\,\ETT} \bnfor \texttt{\ETK\,=>\,if\_set(\ETT)}
    \end{grammarfig}
    \small(where $x$ ranges over expression variables, $\alpha$ ranges over type variables, 
-   $n..n$ ranges over integers while invisible to the users, and $k$ ranges over atoms)
+   $n..n$ ranges over integers while invisible to the users, and $k$ ranges over atom names)
    \caption{Elixir Type}
    \label{app:elixir-type-syntax}
 \end{figure}
 
+\section{TypeSpec Built-in Types and Syntactic Sugars}
 
 % --- Built-in Types in TypeSpec ---
 \begin{table} [H]
    \setlength{\arrayrulewidth}{0.2mm}
-   \setlength{\tabcolsep}{24pt}
-   \renewcommand{\arraystretch}{1.2}
+   \setlength{\tabcolsep}{15pt}
+   \renewcommand{\arraystretch}{1.5}
    \centering
    %\begin{tabular}{||c|c||}
-   \begin{tabular}{ || m{15em}| m{30em} || } 
+   \begin{tabular}{ || m{15em}| m{27em} || } 
       \hline
       Built-in types          &  Defined as \\
-      
       \hline
+
       \hline
       
       term()                  &  any() \\
       \hline
-      arity()                 &  \textcolor{gray}{0..255} \\
+      arity()                 &  0..255 \\
       \hline
-      as\_boolean(\TST)       &	\TST \\
+      *as\_boolean(\TST)       &	\TST \\
       \hline
-      binary()                &  \textcolor{gray}{<<\_::\_*8>>} \\
+      binary()                &  <<\_::\_*8>> \\
       \hline
-      nonempty\_binary()      &	\textcolor{gray}{<<\_::8, \_::\_*8>>} \\
+      nonempty\_binary()      &	<<\_::8, \_::\_*8>> \\
       \hline
-      bitstring()             &	\textcolor{red}{<<\_::\_*1>>} \\
+      \textcolor{red}{bitstring()}             &	<<\_::\_*1>> \\
       \hline
-      nonempty\_bitstring()   &	\textcolor{red}{<<\_::1, \_::\_*1>>} \\
+      \textcolor{red}{nonempty\_bitstring()}   &	<<\_::1, \_::\_*1>> \\
       \hline
       boolean()               &	:true | :false \\
       \hline
-      byte()                  &	\textcolor{gray}{0..255} \\
+      byte()                  &	0..255 \\
       \hline
 
       nonempty\_list(\TST)    &  nonempty\_maybe\_improper\_list(\TST, []) \\
@@ -253,7 +251,7 @@
       nonempty\_list()        &	nonempty\_list(any()) \\
       \hline
       
-      nonempty\_improper\_list(\TST$_1$, \TST$_2$)  &  nonempty\_maybe\_improper\_list(\TST$_1$, \TST$_2$) \\
+      *nonempty\_improper\_list(\TST$_1$, \TST$_2$)  &  nonempty\_maybe\_improper\_list(\TST$_1$, \TST$_2$) \\
       \hline
       maybe\_improper\_list(\TST$_1$, \TST$_2$)     &  [] | nonempty\_improper\_list(\TST$_1$, \TST$_2$) \\
       \hline
@@ -263,7 +261,7 @@
       \hline
       
 
-      char()                  &	\textcolor{gray}{0..0x10FFFF} \\
+      char()                  &	0..0x10FFFF \\
       \hline
       charlist()              &	list(char()) \\
       \hline
@@ -284,7 +282,7 @@
       keyword(\TST)           &	[\{atom(), \TST\}] \\
       \hline
 
-      mfa()                   &	\{module(), atom(), \textcolor{red}{arity()}\} \\
+      mfa()                   &	\{module(), atom(), arity()\} \\
       \hline
       module()                &	atom() \\
       \hline
@@ -296,11 +294,12 @@
       \hline
       struct()                &	\%\{:\_\_struct\_\_ => atom(), optional(atom()) => any()\} \\
       \hline
-      timeout()               &	:infinity | \textcolor{red}{non\_neg\_integer()} \\
+      timeout()               &	:infinity | non\_neg\_integer() \\
       \hline
 
    \end{tabular}
-   %\small()
+
+   \small(built-in types with prepending asterisk (*) are only defined for documentation)
    \caption{TypeSpec Built-in Types}
    \label{app:typespec-builtin-types}
 \end{table}
@@ -309,14 +308,14 @@
 % --- Syntactic Sugars in TypeSpec ---
 \begin{table} [H]
    \setlength{\arrayrulewidth}{0.2mm}
-   \setlength{\tabcolsep}{24pt}
-   \renewcommand{\arraystretch}{1.2}
+   \setlength{\tabcolsep}{15pt}
+   \renewcommand{\arraystretch}{1.5}
    \centering
-   \begin{tabular}{ || m{15em}| m{30em} || } 
+   \begin{tabular}{ || m{15em}| m{27em} || } 
       \hline
       Syntactic sugar          &  Expanded as \\
-      
       \hline
+      
       \hline
       
       true                    &  :true \\
@@ -328,7 +327,7 @@
       
       [\TST, ...]             &  nonempty\_list(\TST) \\
       \hline
-      [T]                     &  list(\TST) \\
+      [\TST]                  &  list(\TST) \\
       \hline
       
       \TST$_1$ => \TST$_2$    &  required(\TST$_1$) => \TST$_2$ \\
@@ -343,24 +342,28 @@
    \label{app:typespec-syntactic-sugars}
 \end{table}
 
+\section{Elixir Type Built-in Types and Syntactic Sugars}
+
 % --- Built-in Types in Elixir Type ---
 \begin{table} [H]
    \setlength{\arrayrulewidth}{0.2mm}
-   \setlength{\tabcolsep}{24pt}
-   \renewcommand{\arraystretch}{1.2}
+   \setlength{\tabcolsep}{15pt}
+   \renewcommand{\arraystretch}{1.5}
    \centering
-   \begin{tabular}{ || m{15em}| m{30em} || } 
+   \begin{tabular}{ || m{15em}| m{27em} || } 
       \hline
       Built-in types          &  Defined as \\
       \hline
 
       \hline
       
-      non\_empty\_list(term())   &  non\_empty\_list(term(), empty\_list()) \\
+      non\_empty\_list(\ETT)  &  non\_empty\_list(\ETT, empty\_list()) \\
       \hline
-      list()                  &  empty\_list() or non\_empty\_list(term()) \\
+      list(\ETT)              &  empty\_list() or non\_empty\_list(\ETT) \\
       \hline
-      improper\_list()        &  non\_empty\_list(term(), term() and not list()) \\
+      list()                  &  list(term()) \\
+      \hline
+      improper\_list()        &  non\_empty\_list(term(), not list()) \\
       \hline
    \end{tabular}
    %\small()
@@ -371,10 +374,10 @@
 % --- Syntactic Sugars in Elixir Type ---
 \begin{table} [H]
    \setlength{\arrayrulewidth}{0.2mm}
-   \setlength{\tabcolsep}{24pt}
-   \renewcommand{\arraystretch}{1.2}
+   \setlength{\tabcolsep}{15pt}
+   \renewcommand{\arraystretch}{1.5}
    \centering
-   \begin{tabular}{ || m{15em}| m{30em} || } 
+   \begin{tabular}{ || m{15em}| m{27em} || } 
       \hline
       Syntactic sugar          &  Expanded as \\
       \hline
@@ -387,7 +390,11 @@
       \hline
       $k$: \TST               &  :$k$ => \TST \\
       \hline
-      \ETK\,=>\,$not\_set$()  &  \ETK\,=>\,$if\_set$(none()) \\
+      \ETK\,=>\,not\_set()  &  \ETK\,=>\,if\_set(none()) \\
+      \hline
+      :$k_1$ | $\cdots$ | :$k_n$ => \ETT &  :$k_1$ => \ETT, $\cdots$, :$k_n$ => \ETT \\
+      \hline
+      \ETK$_1$ | $\cdots$ | \ETK$_n$ => \ETT &  \ETK$_1$ => if\_set(\ETT), $\cdots$, \ETK$_n$ => if\_set(\ETT) \\
       \hline
    \end{tabular}
    %\small()
@@ -395,178 +402,6 @@
    \label{app:elixir-type-syntactic-sugars}
 \end{table}
 
-
-
-
-\section{Basic Types}
-
-\begin{enumerate}
-
-   %\item @spec multi-clauses
-   %\begin{itemize}
-   %   \item $\TSAn$ $\def$  $\ETAn$ and $\ETAn$ and ...
-   %\end{itemize}
-
-   \item Top types
-   \begin{itemize}
-      \item any() == term() \\
-      => Compatible in the type migration as Elixir Type has term()
-   \end{itemize}
-
-   \item Bottom type
-   \begin{itemize}
-      \item none() \\
-      => Compatible in the type migration
-   \end{itemize}
-
-   \item Identifier types
-   \begin{itemize}
-      \item pid()\\
-      A pid (process identifier) refers into a process table and a node table, which also consumes memory. \\
-      1 word for a pid from the current local node.
-      
-      \item port()\\
-      A port identifier refers into a port table and a node table, which also consumes memory.
-      
-      \item reference()\\
-      A reference also refers into more or less emulator internal data structures which also consumes memory.
-      At a minimum it refers into the node tables.      
-      \\
-      => All compatible in the type migration
-   
-   \end{itemize}
-
-   \item Atom types
-   \begin{itemize}
-      \item atom()
-      An atom, ‘$k$’, can be used as a type while ‘true’, ‘false’, ‘nil’ are reserved atoms that are used without prepositional ':'.
-      \\
-      => Compatible in the type migration
-   \end{itemize}
-
-   \item Number types
-   \begin{itemize}
-      \item float()\\
-      => Compatible in the type migration
-   
-      \item integer()\\
-      TypeSpec's integer() has subtypes that are neg\_integer(), non\_neg\_integer(), and pos\_integer().
-      Furthermore, an individual integer, ‘$n$’, can be used as a type while it supports range of integer with ‘..’ operator.
-      Whereas, in Elixir type, integer() is indivisible.
-      \\
-      However, the future work could either split integer() into:
-         individual elements;
-         ranges;
-         or neg\_integer() | zero() | pos\_integer().
-      \\
-      => Subtypes of integer() are incompatible in the type migration
-   \end{itemize}
-
-   \item Map types
-   \begin{itemize}
-      \item map()\\
-      \begin{itemize}
-         \item TypeSpec Syntactic Sugars\\
-         \begin{enumerate}
-            \item Empty map: \\
-            \%\{\}
-            \\
-            \item Map with required key ‘$:key$’ of value\_type: \\
-            \%\{key: value\_type\} == \%\{required(atom()) => \TST\}
-            \\
-            \item Map with required pairs of key\_type and value\_type: \\
-            \%\{key\_type => value\_type\}
-            \\ == \%\{required(key\_type) => value\_type\}
-            \\ == \%\{required(\TST) => \TST\}
-            \\
-            \item Map with optional pairs of key\_type and value\_type \\
-            \%\{optional(key\_type) => value\_type\}
-            \\ == \%\{optional(\TST) => \TST\}
-            \\
-            \item Struct with all fields of any type \\
-            \%SomeStruct\{\} == \%\{required(:\_\_struct\_\_) => $x$\}
-            \\
-            \item Struct with required key :key of value\_type \\
-            \%SomeStruct\{key: value\_type\}
-            \\ == \%\{required(:\_\_struct\_\_) => $x$\, required($k$) => \TST\}
-            \\
-         \end{enumerate}
-         => Compatible in the type migration \\
-         %\item New in Elixir type
-         %\%\{\map{...\,\ov{\ETF}}\}
-      \end{itemize}
-   \end{itemize}
-   
-   \item List types
-   \begin{itemize}
-      \item Lists of types \\
-      list(type) ==> empty\_list() or non\_empty\_list(\ETT)
-      \\
-      \item Non-empty lists of types \\
-      non\_empty\_list(type)
-      \\ ==> non\_empty\_list(\ETT)
-      \\ == non\_empty\_list(\ETT, empty\_list())
-      \\
-      \item Proper or improper lists \\
-      maybe\_improper\_list(content\_type, termination\_type)
-      \\ ==> list(\ETT) or non\_empty\_list(\ETT, \ETT\,and not list())
-      \\
-      \item Improper lists \\
-      nonempty\_improper\_list(content\_type, termination\_type)
-      \\ ==> non\_empty\_list(\ETT, \ETT\,and not list())
-      \\
-      \item Non-empty proper or improper lists \\
-      nonempty\_maybe\_improper\_list(content\_type, termination\_type)
-      \\ ==> non\_empty\_list(\ETT) or non\_empty\_list(\ETT, \ETT\,and not list())
-   \end{itemize}
-
-\end{enumerate}
-
-
-
-
-
-% --- Featherweight Elixir ---
-\begin{figure} [H]
-   \begin{grammarfig}
-       \textbf{Expressions} & \FWE &\bnfeq&
-       \FWL \bnfor x \bnfor \FWA\ \EFn{\FWE} \bnfor \EApp{\FWE}{\FWE_1,..,\FWE_n} \bnfor
-       \FWE + \FWE
-       \\
-       &&\bnfor& \ECase{\FWE} \bnfor
-       \ETuple{\FWE_1,..,\FWE_n} \bnfor \EElem{\FWE}{\FWE}
-       \\
-       \textbf{Singletons} & \FWL &\bnfeq& n \bnfor k \bnfor \tuple{\ov{\FWL}}
-       \\
-       \textbf{Patterns} & \FWP &\bnfeq& \FWL \bnfor x
-       \bnfor \tuple{\FWP_1,..,\FWP_n}
-       \\
-       \textbf{Guards}
-       &\FWG &\bnfeq& \FWD \bnfor \FWC \bnfor \gnot{\FWG} \bnfor \gand{\FWG}{\FWG}
-       \bnfor \gor{\FWG}{\FWG} \bnfor \FWG \,\,\texttt{==}\,\, \FWG \bnfor \FWG \,\texttt{!=}\,\, \FWG
-       \\
-       &&\bnfor& \FWG \,\,\texttt{<}\,\,\FWG \bnfor \FWG \,\,\texttt{<=}\,\, \FWG \bnfor \FWG \,\,\texttt{>}\,\,\FWG \bnfor \FWG \,\,\texttt{>=}\,\,\FWG
-       \\
-       \textbf{Selectors}
-       &\FWD &\bnfeq& \FWL \bnfor x \bnfor \EElem{\FWD}{\FWD} \bnfor \EtupleSize{\FWD}
-       \bnfor \tuple{\ov{\FWD}} \\
-       \textbf{Checks}
-       &\FWC &\bnfeq& \EisInt{\FWD} \bnfor \EisAtom{\FWD} \bnfor \EisTuple{\FWD}
-       \\
-       &&\bnfor& \EisFun{\FWD} \bnfor \EisFunction{\FWD}{n}\\[2mm]
-       \textbf{Base types} & \FWB
-       &\bnfeq& \texttt{integer()} \bnfor \texttt{atom()} \bnfor \texttt{function()} \bnfor \texttt{tuple()}  \\
-       \textbf{Types}      & \FWT
-       &\bnfeq& \FWB\bnfor \FWL \bnfor \fun{\ov{\FWT}}{\FWT} \bnfor \tuple{\ov{\FWT}}
-       \bnfor \OpenTuple{\ov{\FWT}} \bnfor \FWT\;\texttt{or}\;\FWT \bnfor \FWT\;\texttt{and}\;\FWT \bnfor \texttt{not}\,\FWT \\
-       &&\bnfor& \texttt{none()} \bnfor \texttt{term()} \bnfor \texttt{dynamic()}\\
-       \textbf{Annotations} & \FWA
- &\bnfeq& \texttt{\$}\ \FWT \bnfor \varepsilon 
-   \end{grammarfig}
-   \small(where $x$ ranges over variables, $n$ ranges over integers, and $k$ ranges over atoms)
-   \caption{Featherweight Elixir}
-   \label{app:elixir-concrete-syntax}
-\end{figure}
 
 
 \end{document}
