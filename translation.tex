@@ -37,7 +37,8 @@
 \newcommand{\map}[1] {\texttt{\%\{}\hspace{.07em}\mbox{\ensuremath{#1}}\hspace{.07em}\texttt{\}}}
 \newcommand{\tuple}[1] {\texttt{\{}\hspace{.07em}\mbox{\ensuremath{#1}}\hspace{.07em}\texttt{\}}}
 \newcommand{\OpenTuple}[1] {\texttt{\{}\hspace{.07em}\mbox{\ensuremath{#1}}\texttt{,}\,\texttt{..}\hspace{.07em}\texttt{\}}}
-\newcommand{\dsb}[1]{\mathopen{\llbracket}#1\mathclose{\rrbracket}}
+% \newcommand{\dsb}[1]{\mathopen{\llbracket}#1\mathclose{\rrbracket}}
+\newcommand{\dsb}[1]{[\![ #1 ]\!]}
 
 %%% Definitions %%%
 \newcommand{\FWE} {\texttt{E}}
@@ -100,8 +101,10 @@
 
 \newenvironment{grammarfig} {\begin{equation*}\begin{array}{lrcll}}
            {\end{array}\end{equation*}}
-
-
+% \newenvironment{grammarfig}
+%   {\noindent\begin{minipage}{\linewidth}
+%    \begin{array}[t]{@{}lrcll@{}}}
+%   {\end{array}\end{minipage}}
 \begin{document}
 
 \section{Formalized TypeSpec and Elixir Type}
@@ -365,11 +368,16 @@
 
 \section{Translation from TypeSpec to Elixir Type}
 
-\[
- \dsb{\,\,} \texttt{: TypeSpec $\rightarrow$ Elixir type}
-\]
+\begin{figure} [H]
+   \begin{grammarfig}
+      \dsb{\,\,} \texttt{: TypeSpec $\rightarrow$ Elixir type}
+   \end{grammarfig}
+   \caption{Translation}
+   \label{app:translation}
+\end{figure}
 
-\subsection{Expressions}
+
+\subsection{Translation in Annotations}
 
 % TypeSpec and Elixir type are structurally different while they share semantic similarities
 
@@ -395,125 +403,80 @@
 % However, it is not regarded since the former provides higher precision necessitating the presence of functions matching the annotations
 
 
-\subsection{Types}
+\subsection{Translation in Types}
 
-\[
-\dsb{\alpha} = \alpha
-\]
+\begin{figure} [H]
+   \begin{grammarfig}
+      \textbf{Types} & \dsb{\TST_{typespec}} = \ETT_{elixir type} & \bnfeq &
+      \dsb{\alpha} = \alpha
+      \\ &&\bnfor&
+      \dsb{\TST_1 | \TST_2} = \gor{\dsb{\TST_1}}{\dsb{\TST_2}}
+      \\ &&\bnfor&
+      \dsb{\texttt{any()}} = \texttt{term()}
+      \\ &&\bnfor&
+      \dsb{\texttt{none()}} = \texttt{none()}
+      \\ &&\bnfor&
+      \dsb{\texttt{atom()}} = \texttt{atom()}
+      \\ &&\bnfor&
+      \dsb{\texttt{:}k} = \texttt{:}k
+      \\ &&\bnfor&
+      \dsb{\texttt{pid()}} = \texttt{pid()}
+      \\ &&\bnfor&
+      \dsb{\texttt{port()}} = \texttt{port()}
+      \\ &&\bnfor&
+      \dsb{\texttt{reference()}} = \texttt{reference()}
+      \\ &&\bnfor&
+      \dsb{\texttt{float()}} = \texttt{float()}
+      \\ &&\bnfor&
+      \dsb{\texttt{integer()}} = \texttt{integer()}
+      \\ &&\bnfor&
+      \dsb{\texttt{neg\_integer}} = -inf\texttt{-}\texttt{-}-1
+      \\ &&\bnfor&
+      \dsb{\texttt{non\_neg\_integer}} = 0\texttt{-}\texttt{-}inf
+      \\ &&\bnfor&
+      \dsb{\texttt{pos\_integer}} = 1\texttt{-}\texttt{-}inf
+      \\ &&\bnfor&
+      \dsb{\texttt{tuple()}} = \texttt{tuple()}
+      \\ &&\bnfor&
+      \dsb{\tuple{\ov{\TST}}} = \tuple{\ov{\TST}}
+      \\ &&\bnfor&
+      \dsb{\map{\ov{\TSF}}} = \map{\ov{\TSF}}   % required translation of fields
+      \\ &&\bnfor&
+      \dsb{\texttt{[]}} = \texttt{empty\_list()}
+      \\ &&\bnfor&
+      \dsb{\texttt{nonempty\_maybe\_improper\_list(\TST$_1$, \TST$_2$)}} = \texttt{non\_empty\_list($\dsb{\TST_1}$, $\dsb{\TST_2}$)}
+      \\ &&\bnfor&
+      \dsb{\texttt{<<>>}} = \texttt{binary()}
+      \\ &&\bnfor&
+      \dsb{\texttt{<<\_::$n$>>}} = \texttt{binary()}
+      \\ &&\bnfor&
+      \dsb{\texttt{<<\_::\_*$n$>>}} = \texttt{binary()}
+      \\ &&\bnfor&
+      \dsb{\texttt{<<\_::$n$, \_::\_*$n$>>}} = \texttt{binary()}
+      \\ &&\bnfor&
+      \dsb{\texttt{(\fun{$\ov{\TST}}{\TST}$)}} = \texttt{(\fun{$\ov{\TST}}{\TST}$)}
+      \\ &&\bnfor&
+      \dsb{\texttt{(\fun{...}{\TST})}} = \texttt{fun()}
+      \\ &&\bnfor&
+      \dsb{n} = n\texttt{-}\texttt{-}n
+      \\ &&\bnfor&
+      \dsb{n\texttt{..}n'} = n_1\texttt{-}\texttt{-}n_2,\,\,\,\,\forall n_1 < n_2
+      
+   \end{grammarfig}
+   \caption{Translation in Types}
+   \label{app:translation-in-types}
+\end{figure}
 
-\[
-\dsb{\TST_1 | \TST_2} = \gor{\dsb{\TST_1}}{\dsb{\TST_2}}
-\]
+\subsection{Translation in Fields}
 
-\[
-\dsb{\texttt{any()}} = \texttt{term()}
-\]
-
-\[
-\dsb{\texttt{none()}} = \texttt{none()}
-\]
-
-\[
-\dsb{\texttt{atom()}} = \texttt{atom()}
-\]
-
-\[
-\dsb{\texttt{:}k} = \texttt{:}k
-\]
-
-\[
-\dsb{\texttt{pid()}} = \texttt{pid()}
-\]
-
-\[
-\dsb{\texttt{port()}} = \texttt{port()}
-\]
-
-\[
-\dsb{\texttt{reference()}} = \texttt{reference()}
-\]
-
-\[
-\dsb{\texttt{float()}} = \texttt{float()}
-\]
-
-\[
-\dsb{\texttt{integer()}} = \texttt{integer()}
-\]
-
-\[
-\dsb{\texttt{neg\_integer}} = -inf\texttt{-}\texttt{-}-1
-\]
-
-\[
-\dsb{\texttt{non\_neg\_integer}} = 0\texttt{-}\texttt{-}inf
-\]
-
-\[
-\dsb{\texttt{pos\_integer}} = 1\texttt{-}\texttt{-}inf
-\]
-
-\[
-\dsb{\texttt{tuple()}} = \texttt{tuple()}
-\]
-
-\[
-\dsb{\tuple{\ov{\TST}}} = \tuple{\ov{\TST}}
-\]
-
-\[
-\dsb{\map{\ov{\TSF}}} = \map{\ov{\TSF}}   % required translation of fields
-\]
-
-\[
-\dsb{\texttt{[]}} = \texttt{empty\_list()}
-\]
-
-\[
-\dsb{\texttt{nonempty\_maybe\_improper\_list(\TST$_1$, \TST$_2$)}} = \texttt{non\_empty\_list($\dsb{\TST_1}$, $\dsb{\TST_2}$)}
-\]
-
-
-\[
-\dsb{\texttt{<<>>}} = \texttt{binary()}
-\]
-
-\[
-\dsb{\texttt{<<\_::$n$>>}} = \texttt{binary()}
-\]
-
-\[
-\dsb{\texttt{<<\_::\_*$n$>>}} = \texttt{binary()}
-\]
-
-\[
-\dsb{\texttt{<<\_::$n$, \_::\_*$n$>>}} = \texttt{binary()}
-\]
-
-\[
-\dsb{\texttt{(\fun{$\ov{\TST}}{\TST}$)}} = \texttt{(\fun{$\ov{\TST}}{\TST}$)}
-\]
-
-\[
-\dsb{\texttt{(\fun{...}{\TST})}} = \texttt{fun()}
-\]
-
-\[
-\dsb{n} = n\texttt{-}\texttt{-}n
-\]
-
-\[
-\dsb{n\texttt{..}n'} = n_1\texttt{-}\texttt{-}n_2,\,\,\,\,\forall n_1 < n_2
-\]
-
-\subsection{Fields}
-
-\[
-\dsb{\texttt{required(\TST)}} = \gor{\map{\texttt{:$k$\,=>\,$\dsb{\TST}$}}}{\map{\texttt{K\,=>\,if\_set($\dsb{\TST}$)}}}
-\]
-
-\[
-\dsb{\texttt{optional(\TST)}} = \map{\texttt{K\,=>\,if\_set($\dsb{\TST}$)}}
-\]
-
+\begin{figure} [H]
+   \begin{grammarfig}
+      \textbf{Fields} & \dsb{\TSF_{typespec}} = \ETF_{elixir type} & \bnfeq &
+      \dsb{\texttt{required(\TST)}} = \gor{\map{\texttt{:$k$\,=>\,$\dsb{\TST}$}}}{\map{\texttt{K\,=>\,if\_set($\dsb{\TST}$)}}}
+      \\ &&\bnfor&
+      \dsb{\texttt{optional(\TST)}} = \map{\texttt{K\,=>\,if\_set($\dsb{\TST}$)}}
+   \end{grammarfig}
+   \caption{Translation in Fields}
+   \label{app:translation-in-fields}
+\end{figure}
 \end{document}
