@@ -15,7 +15,7 @@
 \usepackage[dvipsnames]{xcolor}
 \usepackage{float}
 
-\usepackage{tabularx}
+\usepackage{stmaryrd}
 
 \usepackage[
   left=1.8cm,
@@ -25,7 +25,7 @@
 ]{geometry}
 
 
-% --- Define the missing macros used in grammar ---
+% --- Define the macros used in grammar ---
 \newcommand{\bnfeq}{::=}   % "bnf equals" symbol
 \newcommand{\bnfor}{\mid}  % "bnf or" symbol
 \newcommand{\ov}[1]{\overline{#1}} % overline shorthand
@@ -33,11 +33,11 @@
 \newcommand{\gand}[2]{#1\;\texttt{and}\;#2}
 \newcommand{\gor}[2]{#1\;\texttt{or}\;#2}
 % Function type pretty-printer: (T1,..,Tn) -> T
-\newcommand{\fun}[2]{\texttt{(}#1\texttt{)}\,\texttt{->}\,#2}
-\newcommand{\map}[1] {\mathtt{\%\{}\hspace{.07em}\mbox{\ensuremath{#1}}\hspace{.07em}\mathtt{\}}}
-\newcommand{\tuple}[1] {\mathtt{\{}\hspace{.07em}\mbox{\ensuremath{#1}}\hspace{.07em}\mathtt{\}}}
-\newcommand{\OpenTuple}[1] {\texttt{\{}\hspace{.07em}\mbox{\ensuremath{#1}}\texttt{,}\,\mathtt{..}\hspace{.07em}\texttt{\}}}
-
+\newcommand{\fun}[2]{#1\,\texttt{->}\,#2}
+\newcommand{\map}[1] {\texttt{\%\{}\hspace{.07em}\mbox{\ensuremath{#1}}\hspace{.07em}\texttt{\}}}
+\newcommand{\tuple}[1] {\texttt{\{}\hspace{.07em}\mbox{\ensuremath{#1}}\hspace{.07em}\texttt{\}}}
+\newcommand{\OpenTuple}[1] {\texttt{\{}\hspace{.07em}\mbox{\ensuremath{#1}}\texttt{,}\,\texttt{..}\hspace{.07em}\texttt{\}}}
+\newcommand{\dsb}[1]{\mathopen{\llbracket}#1\mathclose{\rrbracket}}
 
 %%% Definitions %%%
 \newcommand{\FWE} {\texttt{E}}
@@ -49,8 +49,6 @@
 \newcommand{\FWB} {\texttt{B}}
 \newcommand{\FWA} {\texttt{A}}
 \newcommand{\FWT} {\texttt{T}}
-
-
 
 \newcommand{\EFn}[2][\ov{\FWP}\,\,\texttt{when}\,\,\FWG] {\texttt{fn}\,\,\ov{{#1} \,\texttt{->}\, {#2}}\,\,\texttt{end}}
 \newcommand{\EApp}[2] {#1\,\texttt{(}{#2}\texttt{)}}
@@ -85,25 +83,6 @@
 \newcommand{\TSAn}[1][\TSE] {\ov{\texttt{@spec}\,\,{#1}}}
 \newcommand{\TSFn}[2][\ov{\TST}] {\texttt{$x$(}{#1}\texttt{)}\,\,\texttt{::}\,\,{#2}}
 
-\newcommand{\TSApp}[2] {#1\,\texttt{(}{#2}\texttt{)}}
-\newcommand{\TSCase}[1] {\texttt{case}\,\,#1\,\,\,\ov{\FWP\,\,\texttt{when}\,\,\FWG\,\,\texttt{->}\,\,\FWE}}
-\newcommand{\TSTuple}[1] {\texttt{\{}\,#1\,\texttt{\}}}
-\newcommand{\TSElem}[2] {\texttt{elem}\texttt{(}#1, #2\texttt{)}}
-\newcommand{\TSMap}[1][\ov{E\,\,\texttt{=>}\,\,E}] {\texttt{\%}\tuple{#1}}
-\newcommand{\TSMapUpdate} {\texttt{\%}\tuple{E\,\,\texttt{|}\,\,E\,\,\texttt{=>}\,\,E}}
-\newcommand{\TSMapKey} {E.k}
-\newcommand{\TSMapGet} {E\, \texttt{[} E \texttt{]}}
-\newcommand{\TSMapDelete} {\texttt{Map.delete}(E, L)}
-\newcommand{\TSMapPut} {\texttt{Map.put}(E, L, E)}
-\newcommand{\TSisInt}[1] {\mathtt{is\_integer}\texttt{(}{#1}\texttt{)}}
-\newcommand{\TSisMap}[1] {\mathtt{is\_map}\texttt{(}{#1}\texttt{)}}
-\newcommand{\TSisAtom}[1] {\mathtt{is\_atom}\texttt{(}{#1}\texttt{)}}
-\newcommand{\TSisTuple}[1] {\mathtt{is\_tuple}\texttt{(}{#1}\texttt{)}}
-\newcommand{\TSisMapKey}[2] {\mathtt{is\_map\_key}\,({#1},{#2})}
-\newcommand{\TSisFunction}[2] {\mathtt{is\_function}\texttt{(}{#1,#2}\texttt{)}}
-\newcommand{\TSisFun}[1] {\mathtt{is\_function}\texttt{(}{#1}\texttt{)}}
-\newcommand{\TStupleSize}[1] {\mathtt{tuple\_size}\texttt{(}{#1}\texttt{)}}
-
 %%% Definitions for Elixir Type %%%
 \newcommand{\ETA} {\texttt{A}}  % Annotations
 \newcommand{\ETS} {\texttt{S}}  % Signatures
@@ -117,25 +96,6 @@
 
 \newcommand{\ETSg}[1][\ETE] {\texttt{\$}\,\,{#1}}
 \newcommand{\ETFn}[2][\ov{\ETT}] {#1\,\texttt{->}\,#2}
-
-\newcommand{\ETApp}[2] {#1\,\texttt{(}{#2}\texttt{)}}
-\newcommand{\ETCase}[1] {\texttt{case}\,\,#1\,\,\,\ov{\FWP\,\,\texttt{when}\,\,\FWG\,\,\texttt{->}\,\,\FWE}}
-\newcommand{\ETTuple}[1] {\texttt{\{}\,#1\,\texttt{\}}}
-\newcommand{\ETElem}[2] {\texttt{elem}\texttt{(}#1, #2\texttt{)}}
-\newcommand{\ETMap}[1][\ov{E\,\,\texttt{=>}\,\,E}] {\texttt{\%}\tuple{#1}}
-\newcommand{\ETMapUpdate} {\texttt{\%}\tuple{E\,\,\texttt{|}\,\,E\,\,\texttt{=>}\,\,E}}
-\newcommand{\ETMapKey} {E.k}
-\newcommand{\ETMapGet} {E\, \texttt{[} E \texttt{]}}
-\newcommand{\ETMapDelete} {\texttt{Map.delete}(E, L)}
-\newcommand{\ETMapPut} {\texttt{Map.put}(E, L, E)}
-\newcommand{\ETisInt}[1] {\mathtt{is\_integer}\texttt{(}{#1}\texttt{)}}
-\newcommand{\ETisMap}[1] {\mathtt{is\_map}\texttt{(}{#1}\texttt{)}}
-\newcommand{\ETisAtom}[1] {\mathtt{is\_atom}\texttt{(}{#1}\texttt{)}}
-\newcommand{\ETisTuple}[1] {\mathtt{is\_tuple}\texttt{(}{#1}\texttt{)}}
-\newcommand{\ETisMapKey}[2] {\mathtt{is\_map\_key}\,({#1},{#2})}
-\newcommand{\ETisFunction}[2] {\mathtt{is\_function}\texttt{(}{#1,#2}\texttt{)}}
-\newcommand{\ETisFun}[1] {\mathtt{is\_function}\texttt{(}{#1}\texttt{)}}
-\newcommand{\ETtupleSize}[1] {\mathtt{tuple\_size}\texttt{(}{#1}\texttt{)}}
 
 
 \newenvironment{grammarfig} {\begin{equation*}\begin{array}{lrcll}}
@@ -161,15 +121,15 @@
       \\ &&\bnfor& \texttt{atom()} \bnfor \texttt{:$k$}
       \\ &&\bnfor& \texttt{pid()} \bnfor \texttt{port()} \bnfor \texttt{reference()}
       \\ &&\bnfor& \texttt{float()} \bnfor \texttt{integer()} 
-      \\ &&\bnfor& \textcolor{red}{\texttt{neg\_integer()} \bnfor \texttt{non\_neg\_integer()} \bnfor \texttt{pos\_integer()}}
+      \\ &&\bnfor& \texttt{neg\_integer()} \bnfor \texttt{non\_neg\_integer()} \bnfor \texttt{pos\_integer()}
       \\ &&\bnfor& \texttt{tuple()} \bnfor \tuple{\ov{\TST}} \bnfor \map{\ov{\TSF}} 
       \\ &&\bnfor& \texttt{[]} \bnfor \texttt{nonempty\_maybe\_improper\_list(\TST, \TST)} 
-      \\ &&\bnfor& \textcolor{red}{\texttt{<<>>} \bnfor \texttt{<<\_::$n$>>} \bnfor \texttt{<<\_::\_*$n$>>} \bnfor \texttt{<<\_::$n$, \_::\_*$n$>>}}
-      \\ &&\bnfor& \texttt{($\ov{\TST}$\,->\,\TST)} \bnfor \textcolor{red}{\texttt{(...\,->\,\TST)}}
-      \\ &&\bnfor& \textcolor{red}{\texttt{$n$} \bnfor \text{$n$..$n'$}}
+      \\ &&\bnfor& \texttt{<<>>} \bnfor \texttt{<<\_::$n$>>} \bnfor \texttt{<<\_::\_*$n$>>} \bnfor \texttt{<<\_::$n$, \_::\_*$n$>>}
+      \\ &&\bnfor& \texttt{(\fun{$\ov{\TST}$}{\TST})} \bnfor \texttt{(\fun{...}{\TST})}
+      \\ &&\bnfor& \texttt{$n$} \bnfor \text{$n$..$n'$}
       \\
       \textbf{Fields} & \TSF &\bnfeq&
-      \texttt{required(\textcolor{red}{\TST})\,=>\,\TST} \bnfor \texttt{optional(\textcolor{red}{\TST})\,=>\,\TST} 
+      \texttt{required(\TST)\,=>\,\TST} \bnfor \texttt{optional(\TST)\,=>\,\TST} 
       \end{grammarfig}
    \small(where $x$ ranges over expression variables, $\alpha$ ranges over type variables, 
    $n$ ranges over integers with $n<n'$, and $k$ ranges over atom names)
@@ -187,17 +147,17 @@
       \ETFn{\ETT} \bnfor \texttt{\ETS\,and\,\ETS}
       \\[2mm]
       \textbf{Types} & \ETT &\bnfeq&
-      \texttt{$\alpha$} \bnfor \text{$n$..$n$} \bnfor \texttt{\ETT\,or\,\ETT}\bnfor \texttt{\ETT\,and\,\ETT}\bnfor \texttt{not\,\ETT}
+      \texttt{$\alpha$} \bnfor \text{$n$..$n$} \bnfor \gor{\ETT}{\ETT} \bnfor \gand{\ETT}{\ETT} \bnfor \gnot{\ETT}
       \\ &&\bnfor& \ETK \bnfor \texttt{term()} \bnfor \texttt{none()} \bnfor \texttt{dynamic()}
-      \\ &&\bnfor& \tuple{\ov{\ETT}} \bnfor \tuple{\ov{\ETT},...} \bnfor \map{\ov{\ETF}} \bnfor \map{...,\ov{\ETF}}
-      \\ &&\bnfor& \texttt{($\ov{\ETT}$\,->\,\ETT)}
+      \\ &&\bnfor& \tuple{\ov{\ETT}} \bnfor \tuple{\ov{\ETT},\texttt{...}} \bnfor \map{\ov{\ETF}} \bnfor \map{\texttt{...},\ov{\ETF}}
+      \\ &&\bnfor& \texttt{(\fun{$\ov{\ETT}$}{\ETT})} \bnfor \texttt{non\_empty\_list(\ETT, \ETT)}
       \\
       \textbf{Key types} & \ETK &\bnfeq&
       \texttt{atom()} \bnfor \texttt{:$k$}
       \\ &&\bnfor& \texttt{pid()} \bnfor \texttt{port()} \bnfor \texttt{reference()}
       \\ &&\bnfor& \texttt{float()} \bnfor \texttt{integer()} \bnfor \texttt{binary()}
       \\ &&\bnfor& \texttt{tuple()} \bnfor \texttt{open\_map()} \bnfor \texttt{fun()}
-      \\ &&\bnfor& \texttt{empty\_list()} \bnfor \texttt{non\_empty\_list(\ETT, \ETT)} % for now...
+      \\ &&\bnfor& \texttt{empty\_list()} \bnfor \texttt{non\_empty\_list(term(), empty\_list())}
       \\
       \textbf{Fields} & \ETF &\bnfeq&
       \texttt{:$k$\,=>\,\ETT} \bnfor \texttt{\ETK\,=>\,if\_set(\ETT)}
@@ -299,7 +259,7 @@
 
    \end{tabular}
 
-   \small(built-in types with prepending asterisk (*) are only defined for documentation)
+   \small(built-in types with prepending asterisk (*) are only listed for documentation)
    \caption{TypeSpec Built-in Types}
    \label{app:typespec-builtin-types}
 \end{table}
@@ -392,10 +352,10 @@
       \hline
       \ETK\,=>\,not\_set()  &  \ETK\,=>\,if\_set(none()) \\
       \hline
-      :$k_1$ | $\cdots$ | :$k_n$ => \ETT &  :$k_1$ => \ETT, $\cdots$, :$k_n$ => \ETT \\
-      \hline
-      \ETK$_1$ | $\cdots$ | \ETK$_n$ => \ETT &  \ETK$_1$ => if\_set(\ETT), $\cdots$, \ETK$_n$ => if\_set(\ETT) \\
-      \hline
+      % :$k_1$ | $\cdots$ | :$k_n$ => \ETT &  :$k_1$ => \ETT, $\cdots$, :$k_n$ => \ETT \\
+      % \hline
+      % \ETK$_1$ | $\cdots$ | \ETK$_n$ => \ETT &  \ETK$_1$ => if\_set(\ETT), $\cdots$, \ETK$_n$ => if\_set(\ETT) \\
+      % \hline
    \end{tabular}
    %\small()
    \caption{Elixir Type Syntactic Sugars}
@@ -403,5 +363,157 @@
 \end{table}
 
 
+\section{Translation from TypeSpec to Elixir Type}
+
+\[
+ \dsb{\,\,} \texttt{: TypeSpec $\rightarrow$ Elixir type}
+\]
+
+\subsection{Expressions}
+
+% TypeSpec and Elixir type are structurally different while they share semantic similarities
+
+% A function annotation in TypeSpec mainly consists of "@spec", input type, and output type. 
+% Starting with "@spec" that announces the existence of an annotation, 
+% the following expression is divided into input and output types by "::".
+% Where input type has a function's name prepending that it specifies and places in between a pair of parentheses.
+% In addition, TypeSpec allows to use type parameters by entailing a "when" clause which taken as a type in the whole clause.
+
+% Elixir type features the semantical similarities described above 
+% that are "@spec" is replaced by "\$" sign, and input and output types are only distinquished by "->".
+
+% Notwithstanding the similarities, the main difference comes from TypeSpec's support in multi-clause annotations.
+% It 
+
+% It can consist of one or more clauses to express the polymorphic nature of Elixir functions.
+% (Does order matter in Dialyzer??? Let's check!!!)
+
+% while that in Elixir Type takes a single clause.
+% In the case of TypeSpec's multi-clause, it can be represented with `and` between clauses in Elixir Type within a single clause.
+% That is because multi-clauses indicates the existence of the matching function.
+% Some may argue that the `or` can be an alternative. 
+% However, it is not regarded since the former provides higher precision necessitating the presence of functions matching the annotations
+
+
+\subsection{Types}
+
+\[
+\dsb{\alpha} = \alpha
+\]
+
+\[
+\dsb{\TST_1 | \TST_2} = \gor{\dsb{\TST_1}}{\dsb{\TST_2}}
+\]
+
+\[
+\dsb{\texttt{any()}} = \texttt{term()}
+\]
+
+\[
+\dsb{\texttt{none()}} = \texttt{none()}
+\]
+
+\[
+\dsb{\texttt{atom()}} = \texttt{atom()}
+\]
+
+\[
+\dsb{\texttt{:}k} = \texttt{:}k
+\]
+
+\[
+\dsb{\texttt{pid()}} = \texttt{pid()}
+\]
+
+\[
+\dsb{\texttt{port()}} = \texttt{port()}
+\]
+
+\[
+\dsb{\texttt{reference()}} = \texttt{reference()}
+\]
+
+\[
+\dsb{\texttt{float()}} = \texttt{float()}
+\]
+
+\[
+\dsb{\texttt{integer()}} = \texttt{integer()}
+\]
+
+\[
+\dsb{\texttt{neg\_integer}} = -inf\texttt{-}\texttt{-}-1
+\]
+
+\[
+\dsb{\texttt{non\_neg\_integer}} = 0\texttt{-}\texttt{-}inf
+\]
+
+\[
+\dsb{\texttt{pos\_integer}} = 1\texttt{-}\texttt{-}inf
+\]
+
+\[
+\dsb{\texttt{tuple()}} = \texttt{tuple()}
+\]
+
+\[
+\dsb{\tuple{\ov{\TST}}} = \tuple{\ov{\TST}}
+\]
+
+\[
+\dsb{\map{\ov{\TSF}}} = \map{\ov{\TSF}}   % required translation of fields
+\]
+
+\[
+\dsb{\texttt{[]}} = \texttt{empty\_list()}
+\]
+
+\[
+\dsb{\texttt{nonempty\_maybe\_improper\_list(\TST$_1$, \TST$_2$)}} = \texttt{non\_empty\_list($\dsb{\TST_1}$, $\dsb{\TST_2}$)}
+\]
+
+
+\[
+\dsb{\texttt{<<>>}} = \texttt{binary()}
+\]
+
+\[
+\dsb{\texttt{<<\_::$n$>>}} = \texttt{binary()}
+\]
+
+\[
+\dsb{\texttt{<<\_::\_*$n$>>}} = \texttt{binary()}
+\]
+
+\[
+\dsb{\texttt{<<\_::$n$, \_::\_*$n$>>}} = \texttt{binary()}
+\]
+
+\[
+\dsb{\texttt{(\fun{$\ov{\TST}}{\TST}$)}} = \texttt{(\fun{$\ov{\TST}}{\TST}$)}
+\]
+
+\[
+\dsb{\texttt{(\fun{...}{\TST})}} = \texttt{fun()}
+\]
+
+\[
+\dsb{n} = n\texttt{-}\texttt{-}n
+\]
+
+\[
+\dsb{n\texttt{..}n'} = n_1\texttt{-}\texttt{-}n_2,\,\,\,\,\forall n_1 < n_2
+\]
+
+\subsection{Fields}
+
+\[
+\dsb{\texttt{required(\TST)}} = \gor{\map{\texttt{:$k$\,=>\,$\dsb{\TST}$}}}{\map{\texttt{K\,=>\,if\_set($\dsb{\TST}$)}}}
+\]
+
+\[
+\dsb{\texttt{optional(\TST)}} = \map{\texttt{K\,=>\,if\_set($\dsb{\TST}$)}}
+\]
 
 \end{document}
