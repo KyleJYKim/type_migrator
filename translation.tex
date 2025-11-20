@@ -39,6 +39,7 @@
 \newcommand{\OpenTuple}[1] {\texttt{\{}\hspace{.07em}\mbox{\ensuremath{#1}}\texttt{,}\,\texttt{..}\hspace{.07em}\texttt{\}}}
 % \newcommand{\dsb}[1]{\mathopen{\llbracket}#1\mathclose{\rrbracket}}
 \newcommand{\dsb}[1]{[\![ #1 ]\!]}
+\newcommand{\apstrph}[1]{#1^{\texttt{'}}}
 
 %%% Definitions %%%
 \newcommand{\FWE} {\texttt{E}}
@@ -82,7 +83,7 @@
 \newcommand{\TSF} {\texttt{F}}  % Fields
 
 \newcommand{\TSAn}[1][\TSE] {\ov{\texttt{@spec}\,\,{#1}}}
-\newcommand{\TSFn}[2][\ov{\TST}] {\texttt{$x$(}{#1}\texttt{)}\,\,\texttt{::}\,\,{#2}}
+\newcommand{\TSFn}[2] {\texttt{$x$(}{#1}\texttt{)}\,\,\texttt{::}\,\,{#2}}
 
 %%% Definitions for Elixir Type %%%
 \newcommand{\ETA} {\texttt{A}}  % Annotations
@@ -119,8 +120,8 @@
       \TSAn \bnfor \varepsilon
       \\
       \textbf{Expressions} & \TSE &\bnfeq& 
-      \TSFn{\TST} \bnfor 
-      \TSFn{\TST}\,\,\texttt{when}\,\,\ov{\texttt{$\alpha$:}\,\TST}
+      \TSFn{\ov{\TST}}{\TST} \bnfor 
+      \TSFn{\ov{\TST}}{\TST}\,\,\texttt{when}\,\,\ov{\texttt{$\alpha$:}\,\TST}
       \\[2mm]
       \textbf{Types} & \TST &\bnfeq&
       \texttt{$\alpha$} \bnfor \texttt{\TST|\TST} 
@@ -180,88 +181,88 @@
 % --- Built-in Types in TypeSpec ---
 \begin{table} [H]
    \setlength{\arrayrulewidth}{0.2mm}
-   \setlength{\tabcolsep}{15pt}
+   \setlength{\tabcolsep}{5pt}
    \renewcommand{\arraystretch}{1.5}
    \centering
    %\begin{tabular}{||c|c||}
-   \begin{tabular}{ || m{15em}| m{27em} || } 
+   \begin{tabular}{ || m{17em}| m{32em} || } 
       \hline
-      Built-in types          &  Defined as \\
+      \textbf{Built-in types}          &  \textbf{Defined as} \\
       \hline
 
       \hline
       
-      term()                  &  any() \\
+      \texttt{term()}                  &  \texttt{any()} \\
       \hline
-      arity()                 &  0..255 \\
+      \texttt{arity()}                 &  \texttt{0..255} \\
       \hline
-      *as\_boolean(\TST)       &	\TST \\
+      \texttt{*as\_boolean(\TST)}      &	\TST \\
       \hline
-      binary()                &  <<\_::\_*8>> \\
+      \texttt{binary()}                &  \texttt{<<\_::\_*8>>}\\
       \hline
-      nonempty\_binary()      &	<<\_::8, \_::\_*8>> \\
+      \texttt{nonempty\_binary()}      &	\texttt{<<\_::8, \_::\_*8>>} \\
       \hline
-      \textcolor{red}{bitstring()}             &	<<\_::\_*1>> \\
+      \texttt{bitstring()}             &	\texttt{<<\_::\_*1>>} \\
       \hline
-      \textcolor{red}{nonempty\_bitstring()}   &	<<\_::1, \_::\_*1>> \\
+      \texttt{nonempty\_bitstring()}   &	\texttt{<<\_::1, \_::\_*1>>} \\
       \hline
-      boolean()               &	:true | :false \\
+      \texttt{boolean()}               &	\texttt{:true | :false} \\
       \hline
-      byte()                  &	0..255 \\
-      \hline
-
-      nonempty\_list(\TST)    &  nonempty\_maybe\_improper\_list(\TST, []) \\
-      \hline
-      list(\TST)              &  [] | nonempty\_list(\TST) \\
-      \hline
-      
-      nonempty\_list()        &	nonempty\_list(any()) \\
-      \hline
-      
-      *nonempty\_improper\_list(\TST$_1$, \TST$_2$)  &  nonempty\_maybe\_improper\_list(\TST$_1$, \TST$_2$) \\
-      \hline
-      maybe\_improper\_list(\TST$_1$, \TST$_2$)     &  [] | nonempty\_improper\_list(\TST$_1$, \TST$_2$) \\
-      \hline
-      maybe\_improper\_list()                       &	maybe\_improper\_list(any(), any()) \\
-      \hline
-      nonempty\_maybe\_improper\_list()             &	nonempty\_maybe\_improper\_list(any(), any()) \\
-      \hline
-      
-
-      char()                  &	0..0x10FFFF \\
-      \hline
-      charlist()              &	list(char()) \\
-      \hline
-      nonempty\_charlist()    &	nonempty\_list(char()) \\
-      \hline
-      fun()                   &	(... -> any()) \\
-      \hline
-      function()              &	fun() \\
-      \hline
-      identifier()            &	pid() | port() | reference() \\
-      \hline
-      iodata()                &	iolist() | binary() \\
-      \hline
-      iolist()                &	maybe\_improper\_list(byte() | binary() | iolist(), binary() | []) \\
-      \hline
-      keyword()               &	[\{atom(), any()\}] \\
-      \hline
-      keyword(\TST)           &	[\{atom(), \TST\}] \\
+      \texttt{byte()}                  &	\texttt{0..255} \\
       \hline
 
-      mfa()                   &	\{module(), atom(), arity()\} \\
+      \texttt{nonempty\_list(\TST)}    &  \texttt{nonempty\_maybe\_improper\_list(\TST, [])} \\
       \hline
-      module()                &	atom() \\
+      \texttt{list(\TST)}              &  \texttt{[] | nonempty\_list(\TST)} \\
       \hline
-      no\_return()            &	none() \\
+      
+      \texttt{nonempty\_list()}        &	\texttt{nonempty\_list(any())} \\
       \hline
-      node()                  &	atom() \\
+      
+      \texttt{*nonempty\_improper\_list(\TST$_1$, \TST$_2$)}  &  \texttt{nonempty\_maybe\_improper\_list(\TST$_1$, \TST$_2$)} \\
       \hline
-      number()                &	integer() | float() \\
+      \texttt{maybe\_improper\_list(\TST$_1$, \TST$_2$)}     &  \texttt{[] | nonempty\_improper\_list(\TST$_1$, \TST$_2$)} \\
       \hline
-      struct()                &	\%\{:\_\_struct\_\_ => atom(), optional(atom()) => any()\} \\
+      \texttt{maybe\_improper\_list()}                       &	\texttt{maybe\_improper\_list(any(), any())} \\
       \hline
-      timeout()               &	:infinity | non\_neg\_integer() \\
+      \texttt{nonempty\_maybe\_improper\_list()}             &	\texttt{nonempty\_maybe\_improper\_list(any(), any())} \\
+      \hline
+      
+
+      \texttt{char()}                  &	\texttt{0..0x10FFFF} \\
+      \hline
+      \texttt{charlist()}              &	\texttt{list(char())} \\
+      \hline
+      \texttt{nonempty\_charlist()}    &	\texttt{nonempty\_list(char())} \\
+      \hline
+      \texttt{fun()}                   &	\texttt{(... -> any())} \\
+      \hline
+      \texttt{function()}              &	\texttt{fun()} \\
+      \hline
+      \texttt{identifier()}            &	\texttt{pid()\,|\,port()\,|\,reference()} \\
+      \hline
+      \texttt{iodata()}                &	\texttt{iolist()\,|\,binary()} \\
+      \hline
+      \texttt{iolist()}                &	\texttt{maybe\_improper\_list(byte()\,|\,binary()\,|\,iolist(),\,binary()\,|\,[])} \\
+      \hline
+      \texttt{keyword()}               &	\texttt{[\{atom(), any()\}]} \\
+      \hline
+      \texttt{keyword(\TST)}           &	\texttt{[\{atom(), \TST\}]} \\
+      \hline
+
+      \texttt{mfa()}                   &	\texttt{\{module(), atom(), arity()\}} \\
+      \hline
+      \texttt{module()}                &	\texttt{atom()} \\
+      \hline
+      \texttt{no\_return()}            &	\texttt{none()} \\
+      \hline
+      \texttt{node()}                  &	\texttt{atom()} \\
+      \hline
+      \texttt{number()}                &	\texttt{integer() | float()} \\
+      \hline
+      \texttt{struct()}                &	\texttt{\%\{:\_\_struct\_\_ => atom(), optional(atom()) => any()\}} \\
+      \hline
+      \texttt{timeout()}               &	\texttt{:infinity | non\_neg\_integer()} \\
       \hline
 
    \end{tabular}
@@ -275,33 +276,33 @@
 % --- Syntactic Sugars in TypeSpec ---
 \begin{table} [H]
    \setlength{\arrayrulewidth}{0.2mm}
-   \setlength{\tabcolsep}{15pt}
+   \setlength{\tabcolsep}{5pt}
    \renewcommand{\arraystretch}{1.5}
    \centering
-   \begin{tabular}{ || m{15em}| m{27em} || } 
+   \begin{tabular}{ || m{17em}| m{32em} || } 
       \hline
-      Syntactic sugar          &  Expanded as \\
-      \hline
-      
+      \textbf{Syntactic sugar}         &  \textbf{Expanded as} \\
       \hline
       
-      true                    &  :true \\
-      \hline
-      false                   &  :false \\
-      \hline
-      nil                     &  :nil \\
       \hline
       
-      [\TST, ...]             &  nonempty\_list(\TST) \\
+      \texttt{true}                    &  \texttt{:true} \\
       \hline
-      [\TST]                  &  list(\TST) \\
+      \texttt{false}                   &  \texttt{:false} \\
+      \hline
+      \texttt{nil}                     &  \texttt{:nil} \\
       \hline
       
-      \TST$_1$ => \TST$_2$    &  required(\TST$_1$) => \TST$_2$ \\
+      \texttt{[\TST, ...]}             &  \texttt{nonempty\_list(\TST)} \\
       \hline
-      $k$: \TST               &  :$k$ => \TST \\
+      \texttt{[\TST]}                  &  \texttt{list(\TST)} \\
       \hline
-      \%$k$\{$\ov{\TSF}$\}    &	\%\{:\_\_struct\_\_ => :$k$, $\ov{\TSF}$\} \\
+      
+      \texttt{\TST$_1$ => \TST$_2$}    &  \texttt{required(\TST$_1$) => \TST$_2$} \\
+      \hline
+      \texttt{$k$:\,\TST}              &  \texttt{:$k$ => \TST} \\
+      \hline
+      \texttt{\%$k$\{$\ov{\TSF}$\}}    &	\texttt{\%\{:\_\_struct\_\_ => :$k$, $\ov{\TSF}$\}} \\
       \hline
    \end{tabular}
    %\small()
@@ -314,23 +315,23 @@
 % --- Built-in Types in Elixir Type ---
 \begin{table} [H]
    \setlength{\arrayrulewidth}{0.2mm}
-   \setlength{\tabcolsep}{15pt}
+   \setlength{\tabcolsep}{5pt}
    \renewcommand{\arraystretch}{1.5}
    \centering
-   \begin{tabular}{ || m{15em}| m{27em} || } 
+   \begin{tabular}{ || m{17em}| m{32em} || } 
       \hline
-      Built-in types          &  Defined as \\
+      \textbf{Built-in types}          &  \textbf{Defined as} \\
       \hline
 
       \hline
       
-      non\_empty\_list(\ETT)  &  non\_empty\_list(\ETT, empty\_list()) \\
+      \texttt{non\_empty\_list(\ETT)}  &  \texttt{non\_empty\_list(\ETT, empty\_list())} \\
       \hline
-      list(\ETT)              &  empty\_list() or non\_empty\_list(\ETT) \\
+      \texttt{list(\ETT)}              &  \texttt{empty\_list() or non\_empty\_list(\ETT)} \\
       \hline
-      list()                  &  list(term()) \\
+      \texttt{list()}                  &  \texttt{list(term())} \\
       \hline
-      improper\_list()        &  non\_empty\_list(term(), not list()) \\
+      \texttt{improper\_list()}        &  \texttt{non\_empty\_list(term(), not list())} \\
       \hline
    \end{tabular}
    %\small()
@@ -341,23 +342,23 @@
 % --- Syntactic Sugars in Elixir Type ---
 \begin{table} [H]
    \setlength{\arrayrulewidth}{0.2mm}
-   \setlength{\tabcolsep}{15pt}
+   \setlength{\tabcolsep}{5pt}
    \renewcommand{\arraystretch}{1.5}
    \centering
-   \begin{tabular}{ || m{15em}| m{27em} || } 
+   \begin{tabular}{ || m{17em}| m{32em} || } 
       \hline
-      Syntactic sugar          &  Expanded as \\
+      \textbf{Syntactic sugar}         &  \textbf{Expanded as} \\
       \hline
 
       \hline
       
-      \{...\}                 &  tuple() \\
+      \texttt{\{...\}}                 &  \texttt{tuple()} \\
       \hline
-      \%\{...\}               &  open\_map() \\
+      \texttt{\%\{...\}}               &  \texttt{open\_map()} \\
       \hline
-      $k$: \TST               &  :$k$ => \TST \\
+      \texttt{$k$: \TST}               &  \texttt{:$k$ => \TST} \\
       \hline
-      \ETK\,=>\,not\_set()  &  \ETK\,=>\,if\_set(none()) \\
+      \texttt{\ETK\,=>\,not\_set()}    &  \texttt{\ETK\,=>\,if\_set(none())} \\
       \hline
       % :$k_1$ | $\cdots$ | :$k_n$ => \ETT &  :$k_1$ => \ETT, $\cdots$, :$k_n$ => \ETT \\
       % \hline
@@ -389,11 +390,50 @@
       \dsb{\ov{\texttt{@spec \TSE}}} = 
       \left\{
          \begin{array}{ll}
-            % there exists an E_n that \alpha_n \in \{\alpha_i \mid 0 \le i < n\}.
-            \texttt{\$}\,\ETS\,\,\texttt{when}\,\,\ov{\texttt{$\alpha'_n$:}\,\ETT'_n} & if\,\,\exists{n = length(\ov{\texttt{@spec \TSE}})},\,\dsb{\TSE_n} \approx \dsb{x(\ov{\TST_n}) :: \TST_n\,\,\texttt{when}\,\ov{\alpha_n: \TST_n}}
-            \\ & where\,\,[\alpha_n/\alpha_n'], [\TST_n/\TST_n']\,\,iff\,\,\exists{0\le i<n},\,\alpha_i = \alpha_n \\
-            \texttt{\$}\,\ETS\,\,\texttt{when}\,\,\ov{\texttt{$\alpha_n$:}\,\ETT_n} & if\,\,\exists{n = length(\ov{\texttt{@spec \TSE}})},\,\dsb{\TSE_n} \approx \dsb{x(\ov{\TST_n}) :: \TST_n\,\,\texttt{when}\,\ov{\alpha_n: \TST_n}} \\
-            \texttt{\$}\,\ETS & otherwise
+            \texttt{\$}\,\dsb{\TSE} & \textsl{if}\,\,\,\,\dsb{\ov{\texttt{@spec \TSE}}}\,\approx\,\dsb{\texttt{@spec \TSE}}
+            \\
+            \texttt{\$}\,\dsb{\ov{\TSE}, \apstrph{\TSE}} & \textsl{if}\,\,\,\,\dsb{\ov{\texttt{@spec \TSE}}}\,\approx\,\dsb{\ov{\texttt{@spec \TSE}}\texttt{, @spec $\apstrph{\TSE}$}}
+         \end{array}
+      \right.
+      \\
+      \dsb{\TSE} = 
+      \left\{
+         \begin{array}{ll}
+            \texttt{$\fun{\dsb{\ov{\ETT_1}}}{\dsb{\ETT_2}}$ when $\ov{\alpha: \dsb{\TST_3}}$} 
+            & \textsl{if}\,\,\,\,\dsb{\TSE}\,\approx\,\dsb{\TSFn{\ov{\ETT_1}}{\ETT_2}\,\,\texttt{when $\ov{\alpha: \TST_3}$}} 
+            \\
+            \texttt{$\fun{\dsb{\ov{\ETT_1}}}{\dsb{\ETT_2}}$} & \textsl{otherwise}
+         \end{array}
+      \right.
+      \\
+      \dsb{\ov{\TSE}, \apstrph{\TSE}} =
+      \left\{
+         \begin{array}{ll}
+            \texttt{$\bigcap{\ov{(\fun{\dsb{\ov{\ETT_1}}}{\dsb{\ETT_2}})}}$ and $\fun{\dsb{\ov{\apstrph{\ETT_1}}}}{\dsb{\apstrph{\ETT_2}}}[\apstrph{\alpha} \coloneq \apstrph{\beta}]$ when $\ov{\alpha: \dsb{\TST_3}}$, $\ov{\apstrph{\beta}: \dsb{\apstrph{\TST_3}}}$} 
+            & \textsl{if}\,\,\,\,\texttt{$\dsb{\TSE_i} \approx \fun{\dsb{\ov{\ETT_1}}}{\dsb{\ETT_2}}$ when $\ov{\alpha: \dsb{\TST_3}}$} 
+            \\ & \textsl{and}\,\,\,\,\texttt{$\dsb{\apstrph{\TSE}} \approx \fun{\dsb{\ov{\apstrph{\ETT_1}}}}{\dsb{\apstrph{\ETT_2}}}$ when $\ov{\apstrph{\alpha}: \dsb{\apstrph{\TST_3}}}$} 
+            \\ & \ov{\alpha} \cap \ov{\apstrph{\alpha}} \neq \emptyset
+            \\
+            \texttt{$\bigcap{\ov{(\fun{\dsb{\ov{\ETT_1}}}{\dsb{\ETT_2}})}}$ and $\fun{\dsb{\ov{\apstrph{\ETT_1}}}}{\dsb{\apstrph{\ETT_2}}}$ when $\ov{\alpha: \dsb{\TST_3}}$, $\ov{\apstrph{\alpha}: \dsb{\apstrph{\TST_3}}}$} 
+            & \textsl{if}\,\,\,\,\texttt{$\dsb{\TSE_i} \approx \fun{\dsb{\ov{\ETT_1}}}{\dsb{\ETT_2}}$ when $\ov{\alpha: \dsb{\TST_3}}$} 
+            \\ & \textsl{and}\,\,\,\,\texttt{$\dsb{\apstrph{\TSE}} \approx \fun{\dsb{\ov{\apstrph{\ETT_1}}}}{\dsb{\apstrph{\ETT_2}}}$ when $\ov{\apstrph{\alpha}: \dsb{\apstrph{\TST_3}}}$} 
+            \\
+            \texttt{$\bigcap{\ov{(\fun{\dsb{\ov{\ETT_1}}}{\dsb{\ETT_2}})}}$ and $\fun{\dsb{\ov{\apstrph{\ETT_1}}}}{\dsb{\apstrph{\ETT_2}}}$ }& \textsl{otherwise}
+         \end{array}
+      \right.
+      \\ \\ \\ \\
+      \dsb{\ov{\texttt{@spec \TSE}}\texttt{, @spec \TSE'}} = 
+      \left\{
+         \begin{array}{ll}
+            \texttt{\$ $\bigcap{(\fun{\ov{\dsb{\ETT_1}}}{\dsb{\ETT_2}})}$ and $\dsb{\TSE\texttt{'}}$} 
+            & \textsl{if}\,\,\,\,\dsb{\ov{\TSE}}\,\approx\,\bigcap{(\fun{\ov{\dsb{\ETT_1}}}{\dsb{\ETT_2}})}
+            \\
+            \texttt{\$ $\bigcap{(\fun{\ov{\dsb{\ETT_1}}}{\dsb{\ETT_2}})}$ and $\dsb{\TSE\texttt{'}}$ when $\ov{\alpha: \dsb{\TST_3}}$} 
+            & \textsl{if}\,\,\,\,\dsb{\TSE_i}\,|\,\dsb{\TSE'}\approx\,\fun{\ov{\dsb{\ETT_1}}}{\dsb{\ETT_2}}\,\,\texttt{when $\ov{\alpha: \dsb{\TST_3}}$} 
+            \\
+            \texttt{\$ $\bigcap{(\fun{\ov{\dsb{\ETT_1}}}{\dsb{\ETT_2}})}$ and $\dsb{\TSE\texttt{'}}$ when $\ov{\alpha: \dsb{\TST_3}}$} 
+            & \textsl{if}\,\,\,\,\dsb{\TSE_i}\,|\,\dsb{\TSE'}\approx\,\fun{\ov{\dsb{\ETT_1}}}{\dsb{\ETT_2}}\,\,\texttt{when $\ov{\alpha: \dsb{\TST_3}}$} 
+            \\
          \end{array}
       \right.
       \\
@@ -404,6 +444,12 @@
 \end{figure}
 
 
+            % \texttt{\$}\,\ETS\,\,\texttt{when}\,\,\ov{\texttt{$\alpha'_n$:}\,\ETT'_n} & if\,\,\exists{n = length(\ov{\texttt{@spec \TSE}})},\,\dsb{\TSE_n} \approx \dsb{x(\ov{\TST_n}) :: \TST_n\,\,\texttt{when}\,\ov{\alpha_n: \TST_n}}
+            % \\ & where\,\,[\alpha_n/\alpha_n'], [\TST_n/\TST_n']\,\,iff\,\,\exists{0\le i<n},\,\alpha_i = \alpha_n \\
+            % \texttt{\$}\,\ETS\,\,\texttt{when}\,\,\ov{\texttt{$\alpha_n$:}\,\ETT_n} & if\,\,\exists{n = length(\ov{\texttt{@spec \TSE}})},\,\dsb{\TSE_n} \approx \dsb{x(\ov{\TST_n}) :: \TST_n\,\,\texttt{when}\,\ov{\alpha_n: \TST_n}} \\
+            % \texttt{\$}\,\ETS & otherwise
+
+            
 % TypeSpec and Elixir type are structurally different while they share semantic similarities
 
 % A function annotation in TypeSpec mainly consists of "@spec", input type, and output type. 
@@ -470,29 +516,29 @@
       \\ 
       \dsb{\texttt{nonempty\_maybe\_improper\_list(\TST$_1$, \TST$_2$)}} = \texttt{non\_empty\_list($\dsb{\TST_1}$, $\dsb{\TST_2}$)}
       \\ 
-      \dsb{\texttt{<<>>}} = undefined
+      \dsb{\texttt{<<>>}} = \textsl{undefined}
       \\ 
       \dsb{\texttt{<<\_::$n$>>}} = 
       \left\{
          \begin{array}{ll}
-            \texttt{binary()} & if\,\,\,\,n = 8 \\
-            undefined & otherwise
+            \texttt{binary()} & \textsl{if}\,\,\,\,n = 8 \\
+            \textsl{undefined} & \textsl{otherwise}
          \end{array}
       \right.
       \\ 
       \dsb{\texttt{<<\_::\_*$n$>>}} = 
       \left\{
          \begin{array}{ll}
-            \texttt{binary()} & if\,\,\,\,n = 8 \\
-            undefined & otherwise
+            \texttt{binary()} & \textsl{if}\,\,\,\,n = 8 \\
+            \textsl{undefined} & \textsl{otherwise}
          \end{array}
       \right.
       \\ 
       \dsb{\texttt{<<\_::$n$, \_::\_*$n$>>}} = 
       \left\{
          \begin{array}{ll}
-            \texttt{binary()} & if\,\,\,\,n = 8 \\
-            undefined & otherwise
+            \texttt{binary()} & \textsl{if}\,\,\,\,n = 8 \\
+            \textsl{undefined} & \textsl{otherwise}
          \end{array}
       \right.
       \\ 
@@ -501,8 +547,8 @@
       \dsb{\texttt{(\fun{...}{\TST})}} = 
       \left\{
          \begin{array}{ll}
-            \texttt{fun()} & if\,\,\,\,\dsb{\TST} \approx \texttt{term()} \\
-            undefined & otherwise
+            \texttt{fun()} & \textsl{if}\,\,\,\,\dsb{\TST} \approx \texttt{term()} \\
+            \textsl{undefined} & \textsl{otherwise}
          \end{array}
       \right.
       \\ 
@@ -522,28 +568,21 @@
       \dsb{\texttt{required(\TST$_1$) => \TST$_2$}} = 
       \left\{
          \begin{array}{ll}
-            \texttt{:$k$ => $\dsb{\TST_2}$} & if\,\,\,\,\dsb{\TST_1}\,\,\approx\,\,\texttt{:}k \\
-            undefined & otherwise
+            \texttt{:$k_1$ => $\dsb{\TST_2}$,\,...,\,:$k_n$ => $\dsb{\TST_2}$} & \textsl{if}\,\,\,\,\dsb{\TST_1}\,\,\approx\,\,\texttt{:}k \\
+            \texttt{\ETK$_1$ => if\_set($\dsb{\TST_2}$),\,...,\,\ETK$_n$ => if\_set($\dsb{\TST_2}$)} & \textsl{if}\,\,\,\,\dsb{\TST_1}\,\,\approx\,\,\ETK_i\,\,\textsl{where }\ETK_i\,\neq\,\texttt{:}k \\
+            \textsl{undefined} & \textsl{otherwise}
          \end{array}
       \right.
       \\ 
       \dsb{\texttt{optional(\TST$_1$) => \TST$_2$}} = 
       \left\{
          \begin{array}{ll}
-            \texttt{:$k$ => $\dsb{\TST_2}$} & if\,\,\,\,\dsb{\TST_1}\,\,\approx\,\,\texttt{:}k \\
-            \texttt{\ETK\,\,=> if\_set($\dsb{\TST_2}$)} & if\,\,\,\,\dsb{\TST_1}\,\,\approx\,\,\ETK \\
-            undefined & otherwise
+            \texttt{\ETK$_1$\,\,=> if\_set($\dsb{\TST_2}$),\,...,\,\ETK$_n$\,\,=> if\_set($\dsb{\TST_2}$)}
+            & \textsl{if}\,\,\,\,\dsb{\TST_2}\,\,\approx\,\,\ETK_1\,\texttt{or\,...\,or}\,\ETK_n \\
+            \textsl{undefined} & \textsl{otherwise}
          \end{array}
       \right.
 
-      \\ \\ Idea: \\
-      \dsb{\texttt{required(\TST$_1$) => \TST$_2$}} = 
-      \left\{
-         \begin{array}{ll}
-            \texttt{:$k$ => $\dsb{\TST_2}$} & if\,\,\,\,\dsb{\TST_1}\,\,\approx\,\,\texttt{:}k \\
-            undefined & otherwise
-         \end{array}
-      \right.
 
    \end{translationfig}
    \caption{Translation in Fields}
