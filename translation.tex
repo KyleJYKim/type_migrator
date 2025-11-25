@@ -39,7 +39,7 @@
 \newcommand{\OpenTuple}[1] {\texttt{\{}\hspace{.07em}\mbox{\ensuremath{#1}}\texttt{,}\,\texttt{..}\hspace{.07em}\texttt{\}}}
 % \newcommand{\dsb}[1]{\mathopen{\llbracket}#1\mathclose{\rrbracket}}
 \newcommand{\dsb}[1]{[\![ #1 ]\!]}
-\newcommand{\apstrph}[1]{#1^{\texttt{'}}}
+\newcommand{\prm}[1]{#1^{\prime}}
 
 %%% Definitions %%%
 \newcommand{\FWE} {\texttt{E}}
@@ -137,7 +137,7 @@
       \\ &&\bnfor& \texttt{$n$} \bnfor \text{$n$..$n'$}
       \\
       \textbf{Fields} & \TSF &\bnfeq&
-      \texttt{required(\TST)\,=>\,\TST} \bnfor \texttt{optional(\TST)\,=>\,\TST} 
+      \texttt{required(\TST)\,=>\,\TST} \bnfor \texttt{optional(\TST)\,=>\,\TST}
       \end{grammarfig}
    \small(where $x$ ranges over expression variables, $\alpha$ ranges over type variables, 
    $n$ ranges over integers with $n<n'$, and $k$ ranges over atom names)
@@ -158,14 +158,14 @@
       \texttt{$\alpha$} \bnfor \text{$n$..$n$} \bnfor \gor{\ETT}{\ETT} \bnfor \gand{\ETT}{\ETT} \bnfor \gnot{\ETT}
       \\ &&\bnfor& \ETK \bnfor \texttt{term()} \bnfor \texttt{none()} \bnfor \texttt{dynamic()}
       \\ &&\bnfor& \tuple{\ov{\ETT}} \bnfor \tuple{\ov{\ETT},\texttt{...}} \bnfor \map{\ov{\ETF}} \bnfor \map{\texttt{...},\ov{\ETF}}
-      \\ &&\bnfor& \texttt{(\fun{$\ov{\ETT}$}{\ETT})} \bnfor \texttt{non\_empty\_list(\ETT, \ETT)}
+      \\ &&\bnfor& \texttt{(\fun{$\ov{\ETT}$}{\ETT})} \bnfor \texttt{empty\_list()} \bnfor \texttt{non\_empty\_list(\ETT, \ETT)}
       \\
       \textbf{Key types} & \ETK &\bnfeq&
       \texttt{atom()} \bnfor \texttt{:$k$}
       \\ &&\bnfor& \texttt{pid()} \bnfor \texttt{port()} \bnfor \texttt{reference()}
       \\ &&\bnfor& \texttt{float()} \bnfor \texttt{integer()} \bnfor \texttt{binary()}
       \\ &&\bnfor& \texttt{tuple()} \bnfor \texttt{open\_map()} \bnfor \texttt{fun()}
-      \\ &&\bnfor& \texttt{empty\_list()} \bnfor \texttt{non\_empty\_list(term(), empty\_list())}
+      \\ &&\bnfor& \texttt{list()}
       \\
       \textbf{Fields} & \ETF &\bnfeq&
       \texttt{:$k$\,=>\,\ETT} \bnfor \texttt{\ETK\,=>\,if\_set(\ETT)}
@@ -387,56 +387,60 @@
 
 \begin{figure} [H]
    \begin{translationfig}
-      \dsb{\ov{\texttt{@spec \TSE}}} = 
-      \left\{
-         \begin{array}{ll}
-            \texttt{\$}\,\dsb{\TSE} & \textsl{if}\,\,\,\,\dsb{\ov{\texttt{@spec \TSE}}}\,\approx\,\dsb{\texttt{@spec \TSE}}
-            \\
-            \texttt{\$}\,\dsb{\ov{\TSE}, \apstrph{\TSE}} & \textsl{if}\,\,\,\,\dsb{\ov{\texttt{@spec \TSE}}}\,\approx\,\dsb{\ov{\texttt{@spec \TSE}}\texttt{, @spec $\apstrph{\TSE}$}}
-         \end{array}
-      \right.
+      \dsb{\texttt{@spec \TSE}} = \texttt{\$}\,\dsb{\TSE}
       \\
-      \dsb{\TSE} = 
-      \left\{
-         \begin{array}{ll}
-            \texttt{$\fun{\dsb{\ov{\ETT_1}}}{\dsb{\ETT_2}}$ when $\ov{\alpha: \dsb{\TST_3}}$} 
-            & \textsl{if}\,\,\,\,\dsb{\TSE}\,\approx\,\dsb{\TSFn{\ov{\ETT_1}}{\ETT_2}\,\,\texttt{when $\ov{\alpha: \TST_3}$}} 
-            \\
-            \texttt{$\fun{\dsb{\ov{\ETT_1}}}{\dsb{\ETT_2}}$} & \textsl{otherwise}
-         \end{array}
-      \right.
+      \dsb{\ov{\texttt{@spec \TSE}}\texttt{, @spec $\prm{\TSE}$}} = \texttt{\$}\,\dsb{\ov{\TSE}, \prm{\TSE}}
       \\
-      \dsb{\ov{\TSE}, \apstrph{\TSE}} =
-      \left\{
-         \begin{array}{ll}
-            \texttt{$\bigcap{\ov{(\fun{\dsb{\ov{\ETT_1}}}{\dsb{\ETT_2}})}}$ and $\fun{\dsb{\ov{\apstrph{\ETT_1}}}}{\dsb{\apstrph{\ETT_2}}}[\apstrph{\alpha} \coloneq \apstrph{\beta}]$ when $\ov{\alpha: \dsb{\TST_3}}$, $\ov{\apstrph{\beta}: \dsb{\apstrph{\TST_3}}}$} 
-            & \textsl{if}\,\,\,\,\texttt{$\dsb{\TSE_i} \approx \fun{\dsb{\ov{\ETT_1}}}{\dsb{\ETT_2}}$ when $\ov{\alpha: \dsb{\TST_3}}$} 
-            \\ & \textsl{and}\,\,\,\,\texttt{$\dsb{\apstrph{\TSE}} \approx \fun{\dsb{\ov{\apstrph{\ETT_1}}}}{\dsb{\apstrph{\ETT_2}}}$ when $\ov{\apstrph{\alpha}: \dsb{\apstrph{\TST_3}}}$} 
-            \\ & \ov{\alpha} \cap \ov{\apstrph{\alpha}} \neq \emptyset
-            \\
-            \texttt{$\bigcap{\ov{(\fun{\dsb{\ov{\ETT_1}}}{\dsb{\ETT_2}})}}$ and $\fun{\dsb{\ov{\apstrph{\ETT_1}}}}{\dsb{\apstrph{\ETT_2}}}$ when $\ov{\alpha: \dsb{\TST_3}}$, $\ov{\apstrph{\alpha}: \dsb{\apstrph{\TST_3}}}$} 
-            & \textsl{if}\,\,\,\,\texttt{$\dsb{\TSE_i} \approx \fun{\dsb{\ov{\ETT_1}}}{\dsb{\ETT_2}}$ when $\ov{\alpha: \dsb{\TST_3}}$} 
-            \\ & \textsl{and}\,\,\,\,\texttt{$\dsb{\apstrph{\TSE}} \approx \fun{\dsb{\ov{\apstrph{\ETT_1}}}}{\dsb{\apstrph{\ETT_2}}}$ when $\ov{\apstrph{\alpha}: \dsb{\apstrph{\TST_3}}}$} 
-            \\
-            \texttt{$\bigcap{\ov{(\fun{\dsb{\ov{\ETT_1}}}{\dsb{\ETT_2}})}}$ and $\fun{\dsb{\ov{\apstrph{\ETT_1}}}}{\dsb{\apstrph{\ETT_2}}}$ }& \textsl{otherwise}
-         \end{array}
-      \right.
-      \\ \\ \\ \\
-      \dsb{\ov{\texttt{@spec \TSE}}\texttt{, @spec \TSE'}} = 
-      \left\{
-         \begin{array}{ll}
-            \texttt{\$ $\bigcap{(\fun{\ov{\dsb{\ETT_1}}}{\dsb{\ETT_2}})}$ and $\dsb{\TSE\texttt{'}}$} 
-            & \textsl{if}\,\,\,\,\dsb{\ov{\TSE}}\,\approx\,\bigcap{(\fun{\ov{\dsb{\ETT_1}}}{\dsb{\ETT_2}})}
-            \\
-            \texttt{\$ $\bigcap{(\fun{\ov{\dsb{\ETT_1}}}{\dsb{\ETT_2}})}$ and $\dsb{\TSE\texttt{'}}$ when $\ov{\alpha: \dsb{\TST_3}}$} 
-            & \textsl{if}\,\,\,\,\dsb{\TSE_i}\,|\,\dsb{\TSE'}\approx\,\fun{\ov{\dsb{\ETT_1}}}{\dsb{\ETT_2}}\,\,\texttt{when $\ov{\alpha: \dsb{\TST_3}}$} 
-            \\
-            \texttt{\$ $\bigcap{(\fun{\ov{\dsb{\ETT_1}}}{\dsb{\ETT_2}})}$ and $\dsb{\TSE\texttt{'}}$ when $\ov{\alpha: \dsb{\TST_3}}$} 
-            & \textsl{if}\,\,\,\,\dsb{\TSE_i}\,|\,\dsb{\TSE'}\approx\,\fun{\ov{\dsb{\ETT_1}}}{\dsb{\ETT_2}}\,\,\texttt{when $\ov{\alpha: \dsb{\TST_3}}$} 
-            \\
-         \end{array}
-      \right.
+      \dsb{\TSFn{\ov{\TST_1}}{\TST_2}} = \fun{\dsb{\ov{\TST_1}}}{\dsb{\TST_2}}
       \\
+      \dsb{\TSFn{\ov{\TST_1}}{\TST_2}\,\,\texttt{when $\ov{\alpha:\,\TST_3}$}} = \fun{\dsb{\ov{\TST_1}}}{\dsb{\TST_2}}\,\,\texttt{when $\ov{\alpha:\,\dsb{\TST_3}}$}
+      \\ \\
+      \dsb{\ov{\TSE}, \TSFn{\ov{\prm{\TST_1}}}{\prm{\TST_2}}} = 
+      \left\{
+         \begin{array}{ll}
+            \ETS\,\,\texttt{and}\,\,\fun{\dsb{\ov{\prm{\ETT_1}}}}{\dsb{\prm{\ETT_2}}}\,\,\texttt{when}\,\,\ov{\alpha: \dsb{\TST_3}}
+            & \textsl{if}\,\,\,\,\dsb{\ov{\TSE}}\,\approx\,\ETS\,\,\texttt{when}\,\,\ov{\alpha: \dsb{\TST_3}}
+            \\
+            \dsb{\ov{\TSE}}\,\,\texttt{and}\,\,\fun{\dsb{\ov{\prm{\ETT_1}}}}{\dsb{\prm{\ETT_2}}} 
+            & \textsl{otherwise}
+         \end{array}
+      \right.
+      \\ \\
+      \dsb{\ov{\TSE}, \TSFn{\ov{\prm{\TST_1}}}{\prm{\TST_2}}\,\,\texttt{when $\ov{\prm{\alpha}:\,\prm{\TST_3}}$}} = 
+      \left\{
+         \begin{array}{ll}
+            \ETS\,\,\texttt{and}\,\,\fun{\dsb{\ov{\prm{\ETT_1}}}}{\dsb{\prm{\ETT_2}}}\,\,\texttt{when}\,\,\ov{\alpha: \dsb{\TST_3}}\texttt{,}\,\ov{\prm{\alpha}: \dsb{\prm{\TST_3}}}
+            & \textsl{if}\,\,\,\,\dsb{\ov{\TSE}}\,\approx\,\ETS\,\,\texttt{when}\,\,\ov{\alpha: \dsb{\TST_3}}
+            \\ & \textsl{and}\,\,\,\,\ov{\alpha}\,\cap\,\ov{\prm{\alpha}} = \emptyset
+            \\
+            \ETS\,\,\texttt{and}\,\,\fun{\dsb{\ov{\prm{\ETT_1}}}}{\dsb{\prm{\ETT_2}}}[\prm{\alpha}\coloneq\prm{\beta}]\,\,\texttt{when}\,\,\ov{\alpha: \dsb{\TST_3}}\texttt{,}\,\ov{\prm{\beta}: \dsb{\prm{\TST_3}}}
+            & \textsl{if}\,\,\,\,\dsb{\ov{\TSE}}\,\approx\,\ETS\,\,\texttt{when}\,\,\ov{\alpha: \dsb{\TST_3}}
+            \\ & \textsl{and}\,\,\,\,\ov{\alpha}\,\cap\,\ov{\prm{\alpha}} \neq \emptyset
+            \\
+            \dsb{\ov{\TSE}}\,\,\texttt{and}\,\,\fun{\dsb{\ov{\prm{\ETT_1}}}}{\dsb{\prm{\ETT_2}}}\,\,\texttt{when}\,\,\ov{\prm{\alpha}: \dsb{\prm{\TST_3}}}
+            & \textsl{otherwise}
+         \end{array}
+      \right.
+
+
+
+      % \\ \\ \\ \\ \\ \\
+      % \dsb{\ov{\TSE}, \prm{\TSE}}\\ = 
+      % \left\{
+      %    \begin{array}{ll}
+      %       \texttt{$\bigcap{\ov{(\fun{\dsb{\ov{\ETT_1}}}{\dsb{\ETT_2}})}}$ and $\fun{\dsb{\ov{\prm{\ETT_1}}}}{\dsb{\prm{\ETT_2}}}[\prm{\alpha} \coloneq \prm{\beta}]$ when $\ov{\alpha: \dsb{\TST_3}}$, $\ov{\prm{\beta}: \dsb{\prm{\TST_3}}}$} 
+      %       & \textsl{if}\,\,\,\,\texttt{$\dsb{\TSE_i} \approx \fun{\dsb{\ov{\ETT_1}}}{\dsb{\ETT_2}}$ when $\ov{\alpha: \dsb{\TST_3}}$} 
+      %       \\ & \textsl{and}\,\,\,\,\texttt{$\dsb{\prm{\TSE}} \approx \fun{\dsb{\ov{\prm{\ETT_1}}}}{\dsb{\prm{\ETT_2}}}$ when $\ov{\prm{\alpha}: \dsb{\prm{\TST_3}}}$} 
+      %       \\ & \ov{\alpha} \cap \ov{\prm{\alpha}} \neq \emptyset
+      %       \\
+      %       \texttt{$\bigcap{\ov{(\fun{\dsb{\ov{\ETT_1}}}{\dsb{\ETT_2}})}}$ and $\fun{\dsb{\ov{\prm{\ETT_1}}}}{\dsb{\prm{\ETT_2}}}$ when $\ov{\alpha: \dsb{\TST_3}}$, $\ov{\prm{\alpha}: \dsb{\prm{\TST_3}}}$} 
+      %       & \textsl{if}\,\,\,\,\texttt{$\dsb{\TSE_i} \approx \fun{\dsb{\ov{\ETT_1}}}{\dsb{\ETT_2}}$ when $\ov{\alpha: \dsb{\TST_3}}$} 
+      %       \\ & \textsl{and}\,\,\,\,\texttt{$\dsb{\prm{\TSE}} \approx \fun{\dsb{\ov{\prm{\ETT_1}}}}{\dsb{\prm{\ETT_2}}}$ when $\ov{\prm{\alpha}: \dsb{\prm{\TST_3}}}$} 
+      %       \\
+      %       \texttt{$\bigcap{\ov{(\fun{\dsb{\ov{\ETT_1}}}{\dsb{\ETT_2}})}}$ and $\fun{\dsb{\ov{\prm{\ETT_1}}}}{\dsb{\prm{\ETT_2}}}$ }& \textsl{otherwise}
+      %    \end{array}
+      % \right.
+      \\ \\
       \dsb{\epsilon} = %\texttt{\fun{dynamic()}{dynamic()}}
    \end{translationfig}
    \caption{Translation in Annotations}
@@ -510,7 +514,7 @@
       \\ 
       \dsb{\tuple{\ov{\TST}}} = \tuple{\dsb{\ov{\TST}}}
       \\ 
-      \dsb{\map{\ov{\TSF}}} = \map{\dsb{\ov{\TSF}}}
+      \dsb{\map{\texttt{\TSF$_1$,\,\,...,\,\,\TSF$_n$}}} = \oplus_{i=1..n}\dsb{\map{\TSF_i}} %\dsb{\map{\ov{\texttt{\TSF}}}} = \oplus\dsb{\map{\ov{\TSF}}}
       \\ 
       \dsb{\texttt{[]}} = \texttt{empty\_list()}
       \\ 
@@ -557,6 +561,7 @@
       \dsb{n\texttt{..}n'} = n\texttt{-}\texttt{-}n'
       
    \end{translationfig}
+   \\ \small(where $\oplus$ merges field types and \texttt{-}\texttt{-} is invisible to the users)
    \caption{Translation in Types}
    \label{app:translation-in-types}
 \end{figure}
@@ -565,26 +570,98 @@
 
 \begin{figure} [H]
    \begin{translationfig}
-      \dsb{\texttt{required(\TST$_1$) => \TST$_2$}} = 
+      \dsb{\map{\texttt{required(\TST) => $\prm{\TST}$}}} = 
       \left\{
          \begin{array}{ll}
-            \texttt{:$k_1$ => $\dsb{\TST_2}$,\,...,\,:$k_n$ => $\dsb{\TST_2}$} & \textsl{if}\,\,\,\,\dsb{\TST_1}\,\,\approx\,\,\texttt{:}k \\
-            \texttt{\ETK$_1$ => if\_set($\dsb{\TST_2}$),\,...,\,\ETK$_n$ => if\_set($\dsb{\TST_2}$)} & \textsl{if}\,\,\,\,\dsb{\TST_1}\,\,\approx\,\,\ETK_i\,\,\textsl{where }\ETK_i\,\neq\,\texttt{:}k \\
+            \map{\texttt{:$k$\,\,=>\,\,$\dsb{\prm{\TST}}$}}
+            & \textsl{if}\,\,\,\,\dsb{\TST}\,\,\approx\,\,\texttt{:}k
+            \\
+            \map{\texttt{(\ETK\,\,=>\,\,if\_set($\dsb{\prm{\TST}}$))}}\,\,\texttt{and\,\,not}\,\,\map{}
+            & \textsl{if}\,\,\,\,\dsb{\TST}\,\,\approx\,\,\ETK\,\,\textsl{and}\,\,\dsb{\TST}\,\neq\,\texttt{:}k 
+            \\
             \textsl{undefined} & \textsl{otherwise}
          \end{array}
       \right.
-      \\ 
-      \dsb{\texttt{optional(\TST$_1$) => \TST$_2$}} = 
+      \\ \\
+      \dsb{\map{\texttt{optional(\TST) => $\prm{\TST}$}}} = 
       \left\{
          \begin{array}{ll}
-            \texttt{\ETK$_1$\,\,=> if\_set($\dsb{\TST_2}$),\,...,\,\ETK$_n$\,\,=> if\_set($\dsb{\TST_2}$)}
-            & \textsl{if}\,\,\,\,\dsb{\TST_2}\,\,\approx\,\,\ETK_1\,\texttt{or\,...\,or}\,\ETK_n \\
+            \map{\texttt{:$k$\,\,=>\,\,$\dsb{\prm{\TST}}$}}\,\,\texttt{or}\,\,\map{}
+            & \textsl{if}\,\,\,\,\dsb{\TST}\,\,\approx\,\,\texttt{:}k
+            \\
+            \map{\texttt{\ETK\,\,=> if\_set($\dsb{\prm{\TST}}$)} }
+            & \textsl{if}\,\,\,\,\dsb{\TST}\,\,\approx\,\,\ETK\,\,\textsl{and}\,\,\dsb{\TST}\,\neq\,\texttt{:}k 
+            \\
             \textsl{undefined} & \textsl{otherwise}
          \end{array}
       \right.
-
-
+      \\ \\
+      \dsb{\map{\texttt{required(\TST$_1$) => $\prm{\TST_1}$}}}\,\oplus\,\dsb{\map{\texttt{required(\TST$_2$) => $\prm{\TST_2}$}}}
+      \\ = %\dsb{\texttt{required(\TST$_1$) => $\prm{\TST_1}$}}\,\,\texttt{and}\,\,\dsb{\texttt{required(\TST$_2$) => $\prm{\TST_2}$}}
+      \left\{
+         \begin{array}{ll}
+            \map{\texttt{:$k_1$\,\,=>\,\,$\dsb{\prm{\TST_1}}$,\,:$k_2$\,\,=>\,\,$\dsb{\prm{\TST_2}}$}}
+            & \textsl{if}\,\,\,\,\dsb{\TST_1}\,\,\approx\,\,\texttt{:}k_1\,\,\textsl{and}\,\,\dsb{\TST_2}\,\,\approx\,\,\texttt{:}k_2
+            \\ \\
+            \map{\texttt{:$k_1$\,\,=>\,\,$\dsb{\prm{\TST_1}}$,\,\ETK$_2$\,\,=> if\_set($\dsb{\prm{\TST_2}}$)}}
+            & \textsl{if}\,\,\,\,\dsb{\TST_1}\,\,\approx\,\,\texttt{:}k_1\,\,\textsl{and}\,\,\dsb{\TST_2}\,\,\approx\,\,\ETK_2
+            \\ \texttt{and\,\,not}\,\,\map{\texttt{:$k_1$\,\,=>\,\,$\dsb{\prm{\TST_1}}$}}\texttt{)}
+            & \textsl{and}\,\,\dsb{\TST_2}\,\neq\,\texttt{:}k_2
+            \\ \\
+            \map{\texttt{\ETK$_1$\,\,=> if\_set($\dsb{\prm{\TST_1}}$),\,\ETK$_2$\,\,=> if\_set($\dsb{\prm{\TST_2}}$)}} 
+            & \textsl{if}\,\,\,\,\dsb{\TST_1}\,\,\approx\,\,\ETK_1\,\,\textsl{and}\,\,\dsb{\TST_1}\,\neq\,\texttt{:}k
+            \\ \texttt{and\,\,not}\,\,\texttt{(\map{}\,\,or\,\,\map{\texttt{\ETK$_1$\,\,=> if\_set($\dsb{\prm{\TST_1}}$)}}\,\,or\,\,\map{\texttt{\ETK$_2$\,\,=> if\_set($\dsb{\prm{\TST_2}}$)}})}
+            & \textsl{and}\,\,\dsb{\TST_2}\,\,\approx\,\,\ETK_2\,\,\textsl{and}\,\,\dsb{\TST_2}\,\neq\,\texttt{:}k
+         \end{array}
+      \right.
+      \\ \\
+      \dsb{\map{\texttt{optional(\TST$_1$) => $\prm{\TST_1}$}}}\,\oplus\,\dsb{\map{\texttt{optional(\TST$_2$) => $\prm{\TST_2}$}}}
+      \\ = 
+      \left\{
+         \begin{array}{ll}
+            \map{\texttt{:$k_1$\,\,=>\,\,$\dsb{\prm{\TST_1}}$,\,:$k_2$\,\,=>\,\,$\dsb{\prm{\TST_2}}$}}
+            & \textsl{if}\,\,\,\,\dsb{\TST_1}\,\,\approx\,\,\texttt{:}k_1\,\,\textsl{and}\,\,\dsb{\TST_2}\,\,\approx\,\,\texttt{:}k_2
+            \\ \texttt{or\,\,}\map{}\texttt{\,\,or\,\,}\map{\texttt{:$k_1$\,\,=>\,\,$\dsb{\prm{\TST_1}}$}}\texttt{\,\,or\,\,}\map{\texttt{:$k_2$\,\,=>\,\,$\dsb{\prm{\TST_2}}$}}
+            \\ \\
+            \map{\texttt{:$k_1$\,\,=>\,\,$\dsb{\prm{\TST_1}}$,\,\ETK$_2$\,\,=> if\_set($\dsb{\prm{\TST_2}}$)}}
+            & \textsl{if}\,\,\,\,\dsb{\TST_1}\,\,\approx\,\,\texttt{:}k_1\,\,\textsl{and}\,\,\dsb{\TST_2}\,\,\approx\,\,\ETK_2
+            \\ \texttt{or\,\,}\map{}\texttt{\,\,or\,\,}\map{\texttt{:$k_1$\,\,=>\,\,$\dsb{\prm{\TST_1}}$}}\texttt{\,\,or\,\,}\map{\texttt{\ETK$_2$\,\,=> if\_set($\dsb{\prm{\TST_2}}$)}}
+            & \textsl{and}\,\,\dsb{\TST_2}\,\neq\,\texttt{:}k_2
+            \\ \\
+            \map{\texttt{\ETK$_1$\,\,=> if\_set($\dsb{\prm{\TST_1}}$),\,\ETK$_2$\,\,=> if\_set($\dsb{\prm{\TST_2}}$)}} 
+            & \textsl{if}\,\,\,\,\dsb{\TST_1}\,\,\approx\,\,\ETK_1\,\,\textsl{and}\,\,\dsb{\TST_1}\,\neq\,\texttt{:}k_1
+            \\ & \textsl{and}\,\,\dsb{\TST_2}\,\,\approx\,\,\ETK_2\,\,\textsl{and}\,\,\dsb{\TST_2}\,\neq\,\texttt{:}k_2
+         \end{array}
+      \right.
+      \\ \\
+      \dsb{\map{\texttt{required(\TST$_1$) => $\prm{\TST_1}$}}}\,\oplus\,\dsb{\map{\texttt{optional(\TST$_2$) => $\prm{\TST_2}$}}}
+      \\ = 
+      \left\{
+         \begin{array}{ll}
+            \map{\texttt{:$k_1$\,\,=>\,\,$\dsb{\prm{\TST_1}}$,\,:$k_2$\,\,=>\,\,$\dsb{\prm{\TST_2}}$}}\texttt{\,\,or\,\,}\map{\texttt{:$k_1$\,\,=>\,\,$\dsb{\prm{\TST_1}}$}}
+            & \textsl{if}\,\,\,\,\dsb{\TST_1}\,\,\approx\,\,\texttt{:}k_1\,\,\textsl{and}\,\,\dsb{\TST_2}\,\,\approx\,\,\texttt{:}k_2
+            \\ \\
+            \map{\texttt{:$k_1$\,\,=>\,\,$\dsb{\prm{\TST_1}}$,\,\ETK$_2$\,\,=> if\_set($\dsb{\prm{\TST_2}}$)}}
+            & \textsl{if}\,\,\,\,\dsb{\TST_1}\,\,\approx\,\,\texttt{:}k_1\,\,\textsl{and}\,\,\dsb{\TST_2}\,\,\approx\,\,\ETK_2
+            \\ & \textsl{and}\,\,\dsb{\TST_2}\,\neq\,\texttt{:}k_2
+            \\ \\
+            \texttt{(}\map{\texttt{\ETK$_1$\,\,=> if\_set($\dsb{\prm{\TST_1}}$),\,:$k_2$\,\,=>\,\,$\dsb{\prm{\TST_2}}$}}\texttt{\,\,and\,\,not\,\,}\map{\texttt{:$k_2$\,\,=>\,\,$\dsb{\prm{\TST_2}}$}}\texttt{)}
+            & \textsl{if}\,\,\,\,\dsb{\TST_1}\,\,\approx\,\,\ETK_1\,\,\textsl{and}\,\,\dsb{\TST_1}\,\neq\,\texttt{:}k_1
+            \\ \texttt{or\,\,}(\map{\texttt{\ETK$_1$\,\,=> if\_set($\dsb{\prm{\TST_1}}$)}}\texttt{\,\,and\,\,not\,\,}\map{})
+            & \textsl{and}\,\,\dsb{\TST_2}\,\,\approx\,\,\texttt{:}k_2
+            \\ \\
+            \texttt{(}\map{\texttt{\ETK$_1$\,\,=> if\_set($\dsb{\prm{\TST_1}}$),\,\ETK$_2$\,\,=> if\_set($\dsb{\prm{\TST_2}}$)}}
+            & \textsl{if}\,\,\,\,\dsb{\TST_1}\,\,\approx\,\,\ETK_1\,\,\textsl{and}\,\,\dsb{\TST_1}\,\neq\,\texttt{:}k_1
+            \\ \texttt{\,\,and\,\,not\,\,}\map{\texttt{\ETK$_2$\,\,=> if\_set($\dsb{\prm{\TST_2}}$}}\texttt{)}\texttt{\,\,or\,\,}(\map{\texttt{\ETK$_1$\,\,=> if\_set($\dsb{\prm{\TST_1}}$)}}\texttt{\,\,and\,\,not\,\,}\map{})
+            & \textsl{and}\,\,\dsb{\TST_2}\,\,\approx\,\,\ETK_2\,\,\textsl{and}\,\,\dsb{\TST_2}\,\neq\,\texttt{:}k_2
+         \end{array}
+      \right.
+      \\ \\
+      %\texttt{seems like $\oplus$ is just an "and" operator...}
+      \\
    \end{translationfig}
+   \\
+   %\small(where order matters with \texttt{required(\TST)})
    \caption{Translation in Fields}
    \label{app:translation-in-fields}
 \end{figure}

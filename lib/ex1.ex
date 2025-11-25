@@ -16,8 +16,9 @@ defmodule Ex1 do
   def id_redundancy(x) when is_float(x), do: x + 1
   def id_redundancy(x) when is_float(x), do: x + 1.0
 
-  improper_list(term)
-  non_empty_list(term, list)
+  @spec id_records(%{required(atom()) => integer() | atom(), optional(:a) => any()}) :: %{required(atom()) => any(), optional(atom()) => any()}
+  def id_records(x), do: x
+
 
 
 
@@ -64,6 +65,9 @@ defmodule Ex1 do
     def id_redundancy(), do: Ex1.id_redundancy(1)
     """
     """
+
+    #@spec id_records() :: %{required(:atom) => integer(), optional(atom()) => any()}
+    def id_records(), do: Ex1.id_records(%{:a => 0})
 
   end
 
