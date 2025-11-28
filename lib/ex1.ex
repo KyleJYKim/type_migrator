@@ -16,9 +16,18 @@ defmodule Ex1 do
   def id_redundancy(x) when is_float(x), do: x + 1
   def id_redundancy(x) when is_float(x), do: x + 1.0
 
-  @spec id_records(%{required(atom()) => integer() | atom(), optional(:a) => any()}) :: %{required(atom()) => any(), optional(atom()) => any()}
-  def id_records(x), do: x
 
+  # Optional: order matters, following functions show different results
+  # left-most overwrites the following fields if it's a supertype
+  @spec id_records1(%{optional(atom()) => atom(), optional(:a) => integer()}) :: map()
+  def id_records1(x), do: x
+  # left-most adds up to the following fields if it's a subtype
+  @spec id_records2(%{optional(:a) => integer(), optional(atom()) => atom()}) :: map()
+  def id_records2(x), do: x
+
+  # absent optional to be required
+  @spec id_records3(%{optional(:a) => integer(), optional(:b) => integer()}) :: map()
+  def id_records3(x), do: x
 
 
 
@@ -67,8 +76,11 @@ defmodule Ex1 do
     """
 
     #@spec id_records() :: %{required(:atom) => integer(), optional(atom()) => any()}
-    def id_records(), do: Ex1.id_records(%{:a => 0})
+    def id_records1(), do: Ex1.id_records1(%{:a => 1, :b => :r})
+    def id_records2(), do: Ex1.id_records2(%{:a => 1, :b => :r})
 
+    def id_records3(), do: Ex1.id_records3(%{:a => 1, :c => :r})
+    def id_records3(), do: Ex1.id_records3(%{:a => 1, :b => 1, :c => :r})
   end
 
   # @spec weak_identity(integer()) :: integer()
