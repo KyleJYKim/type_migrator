@@ -29,7 +29,15 @@ defmodule Ex1 do
   @spec id_records3(%{optional(:a) => integer(), optional(:b) => integer()}) :: map()
   def id_records3(x), do: x
 
-
+  # left-most is ALWAYS predominant to the following fields with subtype keys and thus the value types are ignored!
+  @spec id_records4(%{required(atom()) => integer(), optional(:b) => binary()}) :: map()
+  def id_records4(x), do: x
+  @spec id_records5(%{required(atom()) => integer(), optional(atom()) => binary()}) :: map()
+  def id_records5(x), do: x
+  @spec id_records6(%{optional(atom()) => binary(), required(atom()) => integer()}) :: map()
+  def id_records6(x), do: x
+  @spec id_records7(%{optional(:a) => binary(), optional(atom()) => integer()}) :: map()
+  def id_records7(x), do: x
 
   defmodule In do
     # @spec id_exhaustive() :: any()
@@ -76,11 +84,16 @@ defmodule Ex1 do
     """
 
     #@spec id_records() :: %{required(:atom) => integer(), optional(atom()) => any()}
-    def id_records1(), do: Ex1.id_records1(%{:a => 1, :b => :r})
-    def id_records2(), do: Ex1.id_records2(%{:a => 1, :b => :r})
+    #def id_records1(), do: Ex1.id_records1(%{:a => 1, :b => :r})
+    #def id_records2(), do: Ex1.id_records2(%{:a => 1, :b => :r})
 
-    def id_records3(), do: Ex1.id_records3(%{:a => 1, :c => :r})
-    def id_records3(), do: Ex1.id_records3(%{:a => 1, :b => 1, :c => :r})
+    #def id_records3(), do: Ex1.id_records3(%{:a => 1, :c => :r})
+    #def id_records3(), do: Ex1.id_records3(%{:a => 1, :b => 1, :c => :r})
+
+    def id_records4(), do: Ex1.id_records4(%{:b => 1})
+    #def id_records5(), do: Ex1.id_records5(%{:c => 8, :b => "d"})
+    #def id_records6(), do: Ex1.id_records6(%{:c => "d", :b => "d"})
+    #def id_records7(), do: Ex1.id_records7(%{:a => 1})
   end
 
   # @spec weak_identity(integer()) :: integer()

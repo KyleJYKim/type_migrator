@@ -39,7 +39,7 @@
 \newcommand{\OpenTuple}[1] {\texttt{\{}\hspace{.07em}\mbox{\ensuremath{#1}}\texttt{,}\,\texttt{..}\hspace{.07em}\texttt{\}}}
 % \newcommand{\dsb}[1]{\mathopen{\llbracket}#1\mathclose{\rrbracket}}
 \newcommand{\dsb}[1]{[\![ #1 ]\!]}
-\newcommand{\rcd}[3]{\ll\texttt{#1;\,#2;\,#3}\gg}
+\newcommand{\rcd}[3]{\langle\!\langle\texttt{#1;\,#2;\,#3}\rangle\!\rangle}
 \newcommand{\prm}[1]{#1^{\prime}}
 
 %%% Definitions %%%
@@ -574,8 +574,11 @@
       \dsb{\map{\texttt{required(\TST) => $\prm{\TST}$}}} = 
       \left\{
          \begin{array}{ll}
-            \rcd{\ETK}{if\_set($\dsb{\prm{\TST}}$)}{$\emptyset$}\setminus\rcd{$\bot$}{$\bot$}{$\emptyset$}
-            & \textsl{if}\,\,\,\,\dsb{\TST}\,\,\approx\,\,\ETK
+            \map{\texttt{:$k$\,\,=>\,\,$\dsb{\prm{\TST}}$}}
+            & \textsl{if}\,\,\,\,\dsb{\TST}\,\,\approx\,\,\texttt{:}k
+            \\
+            \map{\texttt{\ETK\,\,=>\,\,if\_set($\dsb{\prm{\TST}}$)}}\,\,\texttt{and\,\,not}\,\,\map{}
+            & \textsl{if}\,\,\,\,\dsb{\TST}\,\,\approx\,\,\ETK\textsl{\,\,and\,\,}\dsb{\TST}\,\not\approx\,\texttt{:}k 
             \\
             \textsl{undefined} & \textsl{otherwise}
          \end{array}
@@ -584,36 +587,36 @@
       \dsb{\map{\texttt{optional(\TST) => $\prm{\TST}$}}} = 
       \left\{
          \begin{array}{ll}
-            \rcd{\ETK}{if\_set($\dsb{\prm{\TST}}$)}{$\emptyset$}
+            \map{\texttt{\ETK\,\,=>\,\,if\_set($\dsb{\prm{\TST}}$)}}
             & \textsl{if}\,\,\,\,\dsb{\TST}\,\,\approx\,\,\ETK
             \\
             \textsl{undefined} & \textsl{otherwise}
          \end{array}
       \right.
       \\ \\
-
-      \bigoplus_{i=1..n}\,\dsb{\map{\TSF_i}} = \bigwedge_{i=1..n}\,\dsb{\map{\TSF_i}}
+      \map{\texttt{:$k$\,\,=>\,\,$\dsb{\prm{\TST}}$}} = 
+      \rcd{($\dsb{\prm{\TST}}_{:k}$)}{$\emptyset$}{term()}
       \\ \\
-      \rcd{\ETK}{if\_set($\dsb{\prm{\TST}}$)}{$\emptyset$}\setminus\rcd{$\bot$}{$\bot$}{$\emptyset$}
-      \,\,=\,\,\rcd{\ETK\,$\wedge\neg\bot$}{if\_set($\dsb{\prm{\TST}}\wedge\neg\bot$)}{$\emptyset$}
+      \map{\texttt{\ETK\,\,=>\,\,if\_set($\dsb{\prm{\TST}}$)}}\,\,\texttt{and\,\,not}\,\,\map{} = 
+      \rcd{$\emptyset$}{$\dsb{\prm{\TST}}_{\ETK}$}{($\dsb{\prm{\TST}}_{\ETK}$,\,term())}
+      \\ \\
+      \map{\texttt{\ETK\,\,=>\,\,if\_set($\dsb{\prm{\TST}}$)}} = 
+      \rcd{$\emptyset$}{$\dsb{\prm{\TST}}_{\ETK}$}{(\,term())}
+      \\ \\
+      \bigoplus_{i=1..n}\,\dsb{\map{\TSF_i}} = 
+      \rcd{$\bigvee_i$($\dsb{\prm{\TST}}_{:k}$)$_i$}{$\bigvee_i\dsb{\prm{\TST}}_{\ETK}$}{$\bigvee_i\dsb{\prm{\TST}}$\,$\vee$\,term()}
+      \\ \\
+      IN THE CASES OF SUBTYPE RELATIONSHIP IS INVOLVED!!!!
+      \\ \\
       \\ \\
 
-
-
-      \\ \\
-
-
-      Old:\\ \\
-
-
+      Old: \\
+      \\
       \dsb{\map{\texttt{required(\TST) => $\prm{\TST}$}}} = 
       \left\{
          \begin{array}{ll}
-            \rcd{:$k$}{$\dsb{\prm{\TST}}$}{$\emptyset$}
-            & \textsl{if}\,\,\,\,\dsb{\TST}\,\,\approx\,\,\texttt{:}k
-            \\
             \rcd{\ETK}{if\_set($\dsb{\prm{\TST}}$)}{$\emptyset$}\setminus\rcd{$\bot$}{$\bot$}{$\emptyset$}
-            & \textsl{if}\,\,\,\,\dsb{\TST}\,\,\approx\,\,\ETK\textsl{\,\,and\,\,}\dsb{\TST}\,\not\approx\,\texttt{:}k
+            & \textsl{if}\,\,\,\,\dsb{\TST}\,\,\approx\,\,\ETK
             \\
             \textsl{undefined} & \textsl{otherwise}
          \end{array}
@@ -629,6 +632,14 @@
          \end{array}
       \right.
       \\ \\
+
+      
+
+
+
+      \\ \\
+
+
 
       \bigoplus_{i=1..n}\,\dsb{\map{\texttt{required(\TST$_i$) => $\prm{\TST_i}$}}}
       \\ =\,\,
