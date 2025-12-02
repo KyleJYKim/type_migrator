@@ -39,7 +39,7 @@
 \newcommand{\OpenTuple}[1] {\texttt{\{}\hspace{.07em}\mbox{\ensuremath{#1}}\texttt{,}\,\texttt{..}\hspace{.07em}\texttt{\}}}
 % \newcommand{\dsb}[1]{\mathopen{\llbracket}#1\mathclose{\rrbracket}}
 \newcommand{\dsb}[1]{[\![ #1 ]\!]}
-\newcommand{\rcd}[3]{\langle\!\langle\texttt{#1;\,#2;\,#3}\rangle\!\rangle}
+\newcommand{\rcd}[3]{\langle\!\langle\texttt{[#1];\,[#2];\,[#3]}\rangle\!\rangle}
 \newcommand{\prm}[1]{#1^{\prime}}
 
 %%% Definitions %%%
@@ -594,23 +594,76 @@
          \end{array}
       \right.
       \\ \\
-      \map{\texttt{:$k$\,\,=>\,\,$\dsb{\prm{\TST}}$}} = 
-      \rcd{($\dsb{\prm{\TST}}_{:k}$)}{$\emptyset$}{term()}
+      \begin{array}{lll}
+         \map{\texttt{:$k$\,\,=>\,\,$\dsb{\prm{\TST}}$}} &\equiv &
+         \rcd{$\dsb{\prm{\TST}}^{:k}$}{$\emptyset$}{term()}
+         \\ \\
+         \map{\texttt{\ETK\,\,=>\,\,if\_set($\dsb{\prm{\TST}}$)}}\,\,\texttt{and\,\,not}\,\,\map{} &\equiv &
+         \rcd{$\emptyset$}{$\dsb{\prm{\TST}}^{\ETK}$}{$\dsb{\prm{\TST}}^{\ETK}$,\,term()}
+         \\ \\
+         \map{\texttt{\ETK\,\,=>\,\,if\_set($\dsb{\prm{\TST}}$)}} &\equiv&
+         \rcd{$\emptyset$}{$\dsb{\prm{\TST}}^{\ETK}$}{term()}
+      \end{array}
       \\ \\
-      \map{\texttt{\ETK\,\,=>\,\,if\_set($\dsb{\prm{\TST}}$)}}\,\,\texttt{and\,\,not}\,\,\map{} = 
-      \rcd{$\emptyset$}{$\dsb{\prm{\TST}}_{\ETK}$}{($\dsb{\prm{\TST}}_{\ETK}$,\,term())}
-      \\ \\
-      \map{\texttt{\ETK\,\,=>\,\,if\_set($\dsb{\prm{\TST}}$)}} = 
-      \rcd{$\emptyset$}{$\dsb{\prm{\TST}}_{\ETK}$}{(\,term())}
-      \\ \\
-      \bigoplus_{i=1..n}\,\dsb{\map{\TSF_i}} = 
-      \rcd{$\bigvee_i$($\dsb{\prm{\TST}}_{:k}$)$_i$}{$\bigvee_i\dsb{\prm{\TST}}_{\ETK}$}{$\bigvee_i\dsb{\prm{\TST}}$\,$\vee$\,term()}
-      \\ \\
-      IN THE CASES OF SUBTYPE RELATIONSHIP IS INVOLVED!!!!
-      \\ \\
+      \dsb{\map{\TSF_1}}\,\oplus\,\dsb{\map{\TSF_2}} = 
+      \left\{
+         \begin{array}{ll}
+            \rcd{$\dsb{\prm{\TST_1}}^{:k}$}{$\dsb{\prm{\TST_2}}^{\ETK_2}\setminus\dsb{\prm{\TST_2}}^{:k}$}{term()}
+            & \textsl{if}\,\,\,\,\dsb{\TST_1}\,\approx\,\texttt{:}k\textsl{\,\,and\,\,}\dsb{\TST_2}\,\approx\,\texttt{atom()}
+            \\
+            \rcd{$\emptyset$}{$\dsb{\prm{\TST_2}}^{\ETK_2}$}{$\dsb{\prm{\TST_2}}^{\ETK_2}$,\,term()}
+            & \textsl{if}\,\,\,\,\dsb{\TST_1}\,\approx\,\texttt{atom()}\textsl{\,\,and\,\,}\dsb{\TST_2}\,\approx\,\texttt{:}k
+            \\
+            \dsb{\map{\TSF_1}}
+            & \textsl{if}\,\,\,\,\ETK_1\,\approx\,\ETK_2
+            \\
+            \dsb{\map{\TSF_1}}\,\cup\,\dsb{\map{\TSF_2}}
+            & \textsl{if}\,\,\,\,\ETK_1\,\not\approx\,\ETK_2
+            \\
+            \textsl{undefined} & \textsl{otherwise}
+         \end{array}
+      \right.
       \\ \\
 
+      \\ \\
+      
+      
+      % \rcd{($\dsb{\prm{\TST_1}}^{:k}$)}{$\emptyset$}{term()}
+      % \,\,\oplus\,\,
+      % \rcd{$\emptyset$}{$\dsb{\prm{\TST_2}}^{\ETK_2}$}{($\dsb{\prm{\TST_2}}^{\ETK_2}$,\,term())}
+      % \\ =
+      % \left\{
+      %    \begin{array}{ll}
+      %       \rcd{($\dsb{\prm{\TST_1}}^{:k}$)}{$\dsb{\prm{\TST_2}}^{\ETK_2}\setminus\dsb{\prm{\TST_2}}^{:k}$}{($\dsb{\prm{\TST_2}}^{\ETK_2}$,\,term())}
+      %       & \textsl{if}\,\,\,\,\ETK_2\,\approx\,\texttt{atom()}
+      %       \\
+      %       \rcd{($\dsb{\prm{\TST_1}}^{:k}$)}{$\dsb{\prm{\TST_2}}^{\ETK_2}$}{($\dsb{\prm{\TST_2}}^{\ETK_2}$,\,term())}
+      %       & \textsl{if}\,\,\,\,\ETK_2\,\not\approx\,\texttt{atom()}
+      %    \end{array}
+      % \right.
+      % \\ \\
+
+
       Old: \\
+      \\ \\
+      \bigoplus_{i=1..n}\,\dsb{\map{\TSF_i}} = 
+      \begin{array}{ll}
+         \rcd{$\bigvee_{\alpha}$($\dsb{\prm{\TST_{\alpha}}}_{:k_{\alpha}}$)}{$\bigcup_{\beta}\dsb{\prm{\TST_{\beta}}}_{\ETK_{\beta}}$}{$\bigcup_{\beta}\dsb{\prm{\TST_{\beta}}}_{\ETK_{\beta}}$\,$\vee$\,term()}
+         & \textsl{if}\,\,\,\,\texttt{:}k_\alpha \not\leq \ETK_\beta
+         \textsl{\,\,and\,\,}\ETK_{\beta_j} \not\approx \ETK_{\beta_h}
+      \end{array}
+      \\ \\
+      %\small(\forall_{1 < \alpha\neq\beta < n}\textsl{\,\,and\,\,}\forall_{})
+      \\ \\
+      %{optional(:a) => T, optional(atom()) => T1}    % :a => T | atom()\:a => T1
+      %{required(:a) => T, optional(atom()) => T1}    % :a => T & optional(atom()\:a) => T1
+      %{optional(:a) => T, required(atom()) => T1}    % :a => T | atom()\:a => T1
+      %{required(:a) => T, required(atom()) => T1}    % :a => T & optional(atom()\:a) => T1
+
+      %{optional(atom()) => T, optional(:a) => T1}    % atom() => T
+      %{required(atom()) => T, optional(:a) => T1}    % atom() => T
+      %{optional(atom()) => T, required(:a) => T1}    % atom() => T
+      %{required(atom()) => T, required(:a) => T1}    % atom() => T
       \\
       \dsb{\map{\texttt{required(\TST) => $\prm{\TST}$}}} = 
       \left\{

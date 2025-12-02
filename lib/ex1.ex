@@ -30,7 +30,7 @@ defmodule Ex1 do
   def id_records3(x), do: x
 
   # left-most is ALWAYS predominant to the following fields with subtype keys and thus the value types are ignored!
-  @spec id_records4(%{required(atom()) => integer(), optional(:b) => binary()}) :: map()
+  @spec id_records4(%{optional(:a) => integer(), optional(atom()) => binary()}) :: map()
   def id_records4(x), do: x
   @spec id_records5(%{required(atom()) => integer(), optional(atom()) => binary()}) :: map()
   def id_records5(x), do: x
@@ -90,7 +90,7 @@ defmodule Ex1 do
     #def id_records3(), do: Ex1.id_records3(%{:a => 1, :c => :r})
     #def id_records3(), do: Ex1.id_records3(%{:a => 1, :b => 1, :c => :r})
 
-    def id_records4(), do: Ex1.id_records4(%{:b => 1})
+    def id_records4(), do: Ex1.id_records4(%{:a => "s"})
     #def id_records5(), do: Ex1.id_records5(%{:c => 8, :b => "d"})
     #def id_records6(), do: Ex1.id_records6(%{:c => "d", :b => "d"})
     #def id_records7(), do: Ex1.id_records7(%{:a => 1})
