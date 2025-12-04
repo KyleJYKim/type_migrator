@@ -10,7 +10,7 @@
       \texttt{$\alpha$} & \text{type variables}
       \\ &&\bnfor& \ETK \bnfor \texttt{term()} \bnfor \texttt{none()} \bnfor \texttt{dynamic()} &\text{basic types}
       \\ &&\bnfor&  \gor{\ETT}{\ETT} \bnfor \gand{\ETT}{\ETT} \bnfor \gnot{\ETT} & \text{type connectives}
-      \\ &&\bnfor& \texttt{$n$..$n$} \bnfor \texttt{-inf..}n\bnfor n\texttt{..+inf}& \text{integers (internal representation)}
+      \\ &&\bnfor& \texttt{$n$..$n$} \bnfor \texttt{infty..}n\bnfor n\texttt{..infty}& \text{integers (internal representation)}
       \\ &&\bnfor& \tuple{\ov{\ETT}} \bnfor \tuple{\ov{\ETT},\texttt{...}} \bnfor \map{\ov{\ETF}} \bnfor \map{\texttt{...},\ov{\ETF}}\bnfor\texttt{(\fun{$\ov{\ETT}$}{\ETT})}& \text{type constructors}
       \\ &&\bnfor& \texttt{empty\_list()} \bnfor \texttt{non\_empty\_list(\ETT, \ETT)}
       \\
@@ -24,8 +24,9 @@
       \textbf{Fields} & \ETF &\bnfeq&
       \texttt{:$k$\,=>\,\ETT} \bnfor \texttt{\ETK\,=>\,if\_set(\ETT)}
    \end{grammarfig}
-   \small(where $x$ ranges over expression variables, $\alpha$ ranges over type variables, 
-   $n$ ranges over integers (integers internal representation: type not available to the programmer), and $k$ ranges over atom names)
+   \noindent
+   where $x$ ranges over expression variables, $\alpha$ ranges over type variables, 
+   $n$ ranges over integers (integers internal representation: types not available to the programmer), and $k$ ranges over atom names. (N.B., the notation $\ov{E}$ denotes a possibly empty sequence of elements $E$ separated by commas apart from \tuple{\ov{\ETT},\texttt{...}} and \map{\texttt{...},\ov{\ETF}} where it denotes a non-empty sequence. Also, in $\ov\ETF$ each \ETF{} must have a different keytype)
    \caption{Elixir Type}
    \label{app:elixir-type-syntax}
 \end{figure}
