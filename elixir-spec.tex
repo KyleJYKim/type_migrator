@@ -1,0 +1,34 @@
+\documentclass{article}
+\usepackage{graphicx}
+
+\usepackage{amsmath, amssymb, mathtools}
+
+\usepackage[T1]{fontenc}
+\usepackage[scaled]{beramono} % nice monospaced font for \texttt
+\usepackage{mathpartir} % for inference/grammar-like notation (optional)
+
+\usepackage{graphicx}
+\usepackage{caption}
+
+\usepackage{array}
+
+\usepackage[dvipsnames]{xcolor}
+\usepackage{float}
+
+\usepackage{stmaryrd}
+
+\usepackage[
+  left=1.8cm,
+  right=1.8cm,
+  top=2cm,
+  bottom=2cm
+]{geometry}
+
+
+\input{macros.tex}
+
+\begin{document}
+\section{Elixir Type Specification Syntax}
+\input{fig-elixir-types.tex}
+\input{fig-elixir-sugar-builtin.tex}
+\end{document}

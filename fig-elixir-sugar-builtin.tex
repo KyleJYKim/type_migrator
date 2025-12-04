@@ -1,0 +1,63 @@
+% --- Built-in Types in Elixir Type ---
+\begin{table} [H]
+   \setlength{\arrayrulewidth}{0.2mm}
+   \setlength{\tabcolsep}{5pt}
+   \renewcommand{\arraystretch}{1.5}
+   \centering
+   \begin{tabular}{ || m{17em}| m{32em} || } 
+      \hline
+      \textbf{Built-in types}          &  \textbf{Defined as} \\
+      \hline
+
+      \hline
+      
+      \texttt{boolean()}               &  \texttt{:true or :false} \\
+      \hline
+     \texttt{non\_empty\_list(\ETT)}  &  \texttt{non\_empty\_list(\ETT, empty\_list())} \\
+      \hline
+       \texttt{list(\ETT, \ETT')}              &  \texttt{empty\_list() or non\_empty\_list(\ETT, \ETT')} \\
+      \hline
+     \texttt{list(\ETT)}              &  \texttt{empty\_list() or non\_empty\_list(\ETT)} \\
+      \hline
+      \texttt{list()}                  &  \texttt{empty\_list() or non\_empty\_list(term())} \\
+      \hline
+      \texttt{improper\_list()}        &  \texttt{non\_empty\_list(term(), not list())} \\
+      \hline
+   \end{tabular}
+   %\small()
+   \caption{Elixir Type Built-in Types}
+   \label{app:elixir-type-builtin-types}
+\end{table}
+
+% --- Syntactic Sugars in Elixir Type ---
+\begin{table} [H]
+   \setlength{\arrayrulewidth}{0.2mm}
+   \setlength{\tabcolsep}{5pt}
+   \renewcommand{\arraystretch}{1.5}
+   \centering
+   \begin{tabular}{ || m{17em}| m{32em} || } 
+      \hline
+      \textbf{Syntactic sugar}         &  \textbf{Expanded as} \\
+      \hline
+
+      \hline
+      
+      \texttt{\{...\}}                 &  \texttt{tuple()} \\
+      \hline
+      \texttt{\%\{...\}}               &  \texttt{open\_map()} \\
+      \hline
+      \texttt{$k$:\,\TST}              &  \texttt{:$k$\,\,=>\,\,\TST} \\
+      \hline
+      \texttt{\ETK\,\,=>\,\,not\_set()}    &  \texttt{\ETK\,\,=>\,\,if\_set(none())} \\
+      \hline
+      \texttt{\ETK\,\,=>\;\TST} \hfill(\emph{for }$\ETK\not\equiv\texttt{:$k$}$)   &  \texttt{\ETK\,\,=>\,\,if\_set(\TST)} \\
+      \hline
+  % :$k_1$ | $\cdots$ | :$k_n$ => \ETT &  :$k_1$ => \ETT, $\cdots$, :$k_n$ => \ETT \\
+      % \hline
+      % \ETK$_1$ | $\cdots$ | \ETK$_n$ => \ETT &  \ETK$_1$ => if\_set(\ETT), $\cdots$, \ETK$_n$ => if\_set(\ETT) \\
+      % \hline
+   \end{tabular}
+   %\small()
+   \caption{Elixir Type Syntactic Sugars}
+   \label{app:elixir-type-syntactic-sugars}
+\end{table}
