@@ -15,11 +15,11 @@
       \hline
       \texttt{non\_empty\_list(\ETT)}  &  \texttt{non\_empty\_list(\ETT, empty\_list())} \\
       \hline
-       \texttt{list(\ETT, \ETT')}      &  \texttt{empty\_list() or non\_empty\_list(\ETT, \ETT')} \\
+      \texttt{list(\ETT, \ETT')}      &  \texttt{empty\_list() or non\_empty\_list(\ETT, $\prm{\ETT}$)} \\
       \hline
-      \texttt{list(\ETT)}              &  \texttt{empty\_list() or non\_empty\_list(\ETT)} \\
+      \texttt{list(\ETT)}              &  \texttt{empty\_list() or non\_empty\_list(\ETT, $\prm{\ETT}$)} \\
       \hline
-      \texttt{list()}                  &  \texttt{empty\_list() or non\_empty\_list(term())} \\
+      \texttt{list()}                  &  \texttt{empty\_list() or non\_empty\_list(term(), empty\_list())} \\
       \hline
    \end{tabular}
    %\small()
