@@ -1,0 +1,131 @@
+% --- Built-in Types in TypeSpec ---
+\begin{table} [H]
+   \setlength{\arrayrulewidth}{0.2mm}
+   \setlength{\tabcolsep}{5pt}
+   \renewcommand{\arraystretch}{1.5}
+   \centering
+   %\begin{tabular}{||c|c||}
+   \begin{tabular}{ || m{17em}| m{32em} || } 
+      \hline
+      \textbf{Built-in types}          &  \textbf{Defined as} \\
+      \hline
+
+      \hline
+      
+      \texttt{term()}                  &  \texttt{any()} \\
+      \hline
+      \texttt{arity()}                 &  \texttt{0..255} \\
+      \hline
+      \texttt{*as\_boolean(\TST)}      &	\TST \\
+      \hline
+      \texttt{binary()}                &  \texttt{<<\_::\_*8>>}\\
+      \hline
+      \texttt{nonempty\_binary()}      &	\texttt{<<\_::8, \_::\_*8>>} \\
+      \hline
+      \texttt{bitstring()}             &	\texttt{<<\_::\_*1>>} \\
+      \hline
+      \texttt{nonempty\_bitstring()}   &	\texttt{<<\_::1, \_::\_*1>>} \\
+      \hline
+      \texttt{boolean()}               &	\texttt{:true | :false} \\
+      \hline
+      \texttt{byte()}                  &	\texttt{0..255} \\
+      \hline
+
+      \texttt{nonempty\_list(\TST)}    &  \texttt{nonempty\_maybe\_improper\_list(\TST, [])} \\
+      \hline
+      \texttt{list(\TST)}              &  \texttt{[] | nonempty\_list(\TST)} \\
+      \hline
+      
+      \texttt{nonempty\_list()}        &	\texttt{nonempty\_list(any())} \\
+      \hline
+      
+      \texttt{*nonempty\_improper\_list(\TST$_1$, \TST$_2$)}  &  \texttt{nonempty\_maybe\_improper\_list(\TST$_1$, \TST$_2$)} \\
+      \hline
+      \texttt{maybe\_improper\_list(\TST$_1$, \TST$_2$)}     &  \texttt{[] | nonempty\_improper\_list(\TST$_1$, \TST$_2$)} \\
+      \hline
+      \texttt{maybe\_improper\_list()}                       &	\texttt{maybe\_improper\_list(any(), any())} \\
+      \hline
+      \texttt{nonempty\_maybe\_improper\_list()}             &	\texttt{nonempty\_maybe\_improper\_list(any(), any())} \\
+      \hline
+      
+
+      \texttt{char()}                  &	\texttt{0..0x10FFFF} \\
+      \hline
+      \texttt{charlist()}              &	\texttt{list(char())} \\
+      \hline
+      \texttt{nonempty\_charlist()}    &	\texttt{nonempty\_list(char())} \\
+      \hline
+      \texttt{fun()}                   &	\texttt{(... -> any())} \\
+      \hline
+      \texttt{function()}              &	\texttt{fun()} \\
+      \hline
+      \texttt{identifier()}            &	\texttt{pid()\,|\,port()\,|\,reference()} \\
+      \hline
+      \texttt{iodata()}                &	\texttt{iolist()\,|\,binary()} \\
+      \hline
+      \texttt{iolist()}                &	\texttt{maybe\_improper\_list(byte()\,|\,binary()\,|\,iolist(),\,binary()\,|\,[])} \\
+      \hline
+      \texttt{keyword()}               &	\texttt{[\{atom(), any()\}]} \\
+      \hline
+      \texttt{keyword(\TST)}           &	\texttt{[\{atom(), \TST\}]} \\
+      \hline
+
+      \texttt{mfa()}                   &	\texttt{\{module(), atom(), arity()\}} \\
+      \hline
+      \texttt{module()}                &	\texttt{atom()} \\
+      \hline
+      \texttt{no\_return()}            &	\texttt{none()} \\
+      \hline
+      \texttt{node()}                  &	\texttt{atom()} \\
+      \hline
+      \texttt{number()}                &	\texttt{integer() | float()} \\
+      \hline
+      \texttt{struct()}                &	\texttt{\%\{:\_\_struct\_\_ => atom(), optional(atom()) => any()\}} \\
+      \hline
+      \texttt{timeout()}               &	\texttt{:infinity | non\_neg\_integer()} \\
+      \hline
+
+   \end{tabular}
+
+   \small(built-in types with prepending asterisk (*) are only listed for documentation)
+   \caption{TypeSpec Built-in Types}
+   \label{app:typespec-builtin-types}
+\end{table}
+
+
+% --- Syntactic Sugars in TypeSpec ---
+\begin{table} [H]
+   \setlength{\arrayrulewidth}{0.2mm}
+   \setlength{\tabcolsep}{5pt}
+   \renewcommand{\arraystretch}{1.5}
+   \centering
+   \begin{tabular}{ || m{17em}| m{32em} || } 
+      \hline
+      \textbf{Syntactic sugar}         &  \textbf{Expanded as} \\
+      \hline
+      
+      \hline
+      
+      \texttt{true}                    &  \texttt{:true} \\
+      \hline
+      \texttt{false}                   &  \texttt{:false} \\
+      \hline
+      \texttt{nil}                     &  \texttt{:nil} \\
+      \hline
+      
+      \texttt{[\TST, ...]}             &  \texttt{nonempty\_list(\TST)} \\
+      \hline
+      \texttt{[\TST]}                  &  \texttt{list(\TST)} \\
+      \hline
+      
+      \texttt{\TST$_1$ => \TST$_2$}    &  \texttt{required(\TST$_1$) => \TST$_2$} \\
+      \hline
+      \texttt{$k$:\,\TST}              &  \texttt{:$k$\,\,=>\,\,\TST} \\
+      \hline
+      \texttt{\%$k$\{$\ov{\TSF}$\}}    &	\map{\texttt{:\_\_struct\_\_\,\,=>\,\,:$k$, $\ov{\TSF}$}} \\
+      \hline
+   \end{tabular}
+   %\small()
+   \caption{TypeSpec Syntactic Sugars}
+   \label{app:typespec-syntactic-sugars}
+\end{table}

@@ -5,13 +5,14 @@
 \newcommand{\gnot}[1]{\texttt{not}\;#1}
 \newcommand{\gand}[2]{#1\;\texttt{and}\;#2}
 \newcommand{\gor}[2]{#1\;\texttt{or}\;#2}
+\newcommand{\nl}{\\ [2mm]}
 % Function type pretty-printer: (T1,..,Tn) -> T
 \newcommand{\fun}[2]{#1\,\texttt{->}\,#2}
 \newcommand{\map}[1] {\texttt{\%\{}\hspace{.07em}\mbox{\ensuremath{#1}}\hspace{.07em}\texttt{\}}}
 \newcommand{\tuple}[1] {\texttt{\{}\hspace{.07em}\mbox{\ensuremath{#1}}\hspace{.07em}\texttt{\}}}
 \newcommand{\OpenTuple}[1] {\texttt{\{}\hspace{.07em}\mbox{\ensuremath{#1}}\texttt{,}\,\texttt{..}\hspace{.07em}\texttt{\}}}
 % \newcommand{\dsb}[1]{\mathopen{\llbracket}#1\mathclose{\rrbracket}}
-\newcommand{\dsb}[1]{[\![ #1 ]\!]}
+\newcommand{\dsb}[1]{[\![\hspace{.07em}#1\hspace{.07em}]\!]}
 \newcommand{\rcd}[3]{\langle\!\langle\texttt{[#1];\,[#2];\,[#3]}\rangle\!\rangle}
 \newcommand{\prm}[1]{#1^{\prime}}
 \newcommand{\ifset}[1]{\texttt{if\_set(}{#1}\texttt{)}}

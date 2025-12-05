@@ -43,7 +43,8 @@ defmodule Ex1 do
   @spec id_records8(%{required(atom()) => integer(), required(:a) => binary()}) :: map()
   def id_records8(x), do: x
 
-
+  @spec id_fun((:a -> binary())) :: function()
+  def id_fun(f), do: f
 
   defmodule In do
     # @spec id_exhaustive() :: any()
@@ -102,8 +103,19 @@ defmodule Ex1 do
     #def id_records7(), do: Ex1.id_records7(%{:a => 1})
 
     #def id_records8(), do: Ex1.id_records8(%{:a => 1})
-    def id_records8(), do: Ex1.id_records8(%{})
-    #def id_records4(), do: Ex1.id_records4(%{:d => 1})
+    """
+    function() and dynamic()
+    (... -> any())
+    [[bitstring]]: binary()
+
+    remove improper_list()
+    """
+
+
+
+    @spec fun(1) :: 2
+    def fun(x) when x == 1, do: x+1
+    def id_fun(), do: Ex1.id_fun(In.fun())
   end
 
   # @spec weak_identity(integer()) :: integer()

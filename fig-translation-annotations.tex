@@ -1,0 +1,43 @@
+
+\begin{figure} [H]
+   \begin{translationfig}
+      \dsb{\texttt{@spec \TSE}} = \texttt{\$}\,\dsb{\TSE}
+      \nl
+      \dsb{\ov{\texttt{@spec \TSE}}\texttt{,\,\,@spec $\prm{\TSE}$}} = \texttt{\$\,\,}\dsb{\ov{\TSE}\texttt{,\,\,}\prm{\TSE}}
+      \nl
+      \dsb{\TSFn{\ov{\TST_1}}{\TST_2}} = \fun{\dsb{\ov{\TST_1}}}{\dsb{\TST_2}}
+      \nl
+      \dsb{\TSFn{\ov{\TST_1}}{\TST_2}\texttt{\,\,when\,\,}\ov{\alpha:\,\TST_3}} = \fun{\dsb{\ov{\TST_1}}}{\dsb{\TST_2}}\texttt{\,\,when\,\,}\ov{\alpha\texttt{:\,\,}\dsb{\TST_3}}
+      \nl
+      \dsb{\ov{\TSE}\texttt{,\,\,}\TSFn{\ov{\prm{\TST_1}}}{\prm{\TST_2}}} = 
+      \left\{
+         \begin{array}{ll}
+            \ETS\texttt{\,\,and\,\,}\fun{\dsb{\ov{\prm{\ETT_1}}}}{\dsb{\prm{\ETT_2}}}\texttt{\,\,when\,\,}\ov{\alpha\texttt{:\,\,}\dsb{\TST_3}}
+            & \textsl{if}\,\,\,\,\dsb{\ov{\TSE}}\,\approx\,\ETS\texttt{\,\,when\,\,}\ov{\alpha\texttt{:\,\,}\dsb{\TST_3}}
+            \nl
+            \dsb{\ov{\TSE}}\texttt{\,\,and\,\,}\fun{\dsb{\ov{\prm{\ETT_1}}}}{\dsb{\prm{\ETT_2}}} 
+            & \textsl{otherwise}
+         \end{array}
+      \right.
+      \nl \nl
+      \dsb{\ov{\TSE}\texttt{,\,\,}\TSFn{\ov{\prm{\TST_1}}}{\prm{\TST_2}}\texttt{\,\,when\,\,}\ov{\prm{\alpha}:\,\prm{\TST_3}}} = 
+      \left\{
+         \begin{array}{ll}
+            \ETS\texttt{\,\,and\,\,}\fun{\dsb{\ov{\prm{\ETT_1}}}}{\dsb{\prm{\ETT_2}}}\texttt{\,\,when\,\,}\ov{\alpha\texttt{:\,\,}\dsb{\TST_3}}\texttt{,\,\,}\ov{\prm{\alpha}\texttt{:\,\,}\dsb{\prm{\TST_3}}}
+            & \textsl{if}\,\,\,\,\dsb{\ov{\TSE}}\,\approx\,\ETS\texttt{\,\,when\,\,}\ov{\alpha\texttt{:\,\,}\dsb{\TST_3}}
+            \\ [1mm] 
+            & \textsl{and}\,\,\,\,\ov{\alpha}\,\cap\,\ov{\prm{\alpha}}\,=\,\emptyset
+            \nl
+            \ETS\texttt{\,\,and\,\,}\fun{\dsb{\ov{\prm{\ETT_1}}}}{\dsb{\prm{\ETT_2}}}[\prm{\alpha}\coloneq\prm{\beta}]\texttt{\,\,when\,\,}\ov{\alpha\texttt{:\,\,}\dsb{\TST_3}}\texttt{,\,\,}\ov{\prm{\beta}\texttt{:\,\,}\dsb{\prm{\TST_3}}}
+            & \textsl{if}\,\,\,\,\dsb{\ov{\TSE}}\,\approx\,\ETS\texttt{\,\,when\,\,}\ov{\alpha\texttt{:\,\,}\dsb{\TST_3}}
+            \\ [1mm] 
+            & \textsl{and}\,\,\,\,\ov{\alpha}\,\cap\,\ov{\prm{\alpha}}\,\neq\,\emptyset
+            \nl
+            \dsb{\ov{\TSE}}\texttt{\,\,and\,\,}\fun{\dsb{\ov{\prm{\ETT_1}}}}{\dsb{\prm{\ETT_2}}}\texttt{\,\,when\,\,}\ov{\prm{\alpha}\texttt{:\,\,}\dsb{\prm{\TST_3}}}
+            & \textsl{otherwise}
+         \end{array}
+      \right.
+   \end{translationfig}
+   \caption{Translation in Annotations}
+   \label{app:translation-in-annotations}
+\end{figure}
