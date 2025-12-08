@@ -43,7 +43,7 @@ defmodule Ex1 do
   @spec id_records8(%{required(atom()) => integer(), required(:a) => binary()}) :: map()
   def id_records8(x), do: x
 
-  @spec id_fun((:a -> binary())) :: function()
+  @spec id_fun((:a -> binary()))::function()
   def id_fun(f), do: f
 
   defmodule In do
@@ -115,7 +115,7 @@ defmodule Ex1 do
 
     @spec fun(1) :: 2
     def fun(x) when x == 1, do: x+1
-    def id_fun(), do: Ex1.id_fun(In.fun())
+    def id_fun(), do: Ex1.id_fun(&fun/1)
   end
 
   # @spec weak_identity(integer()) :: integer()

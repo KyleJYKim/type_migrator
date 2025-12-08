@@ -1,133 +1,136 @@
-# defmodule Parser.TypespecParser do
-#   @moduledoc """
-#   Documentation for `Parser.TypespecParser`.
-#   Input: a codebase (including TypeSpec)
-#   Output: a rewritten codebase (to Elixir Type System with set-theoretic types (Descr?))
+defmodule Parser.TypespecParser do
+  @moduledoc """
+  Input: an elixir file with TypeSpec
+  Output: a list of Ts_info structure.
 
-#   1. Open the target file.
-#   2. Detect a TypeSpec and rewrite it
-#   3. Move on to the next line and repeat the second process until the EOF.
-#   """
+  1. Open the target file.
+  2. Detect a TypeSpec and take the information.
+  3. Append the info. in the list.
+  4. Repeat 2~3 until the end of the file.
+  5. Return the list.
+  """
+  alias Structure.TypespecInfo, as: TsInfo
 
-#   def main(args) do
-#     args
-#     |> List.first()
-#     |> convert_typespec()
-#   end
+  @doc """
+    # TypeSpec Info. Extraction
+    # - starting line number
+    # - occupying line count  (in case of multiple @spec)
+    # - a clause or clauses of typespec
+    # => [%Typspec_info{line_number: integer(), line_count: integer(), ast: binary()}]
+  """
+  #@spec process(binary()) :: TsInfo.t()
+  def process(path) do
+    path                        # Let's put check function whether it is code or not, later.
+    |> File.read!               # => String
+    |> Code.string_to_quoted!   # => AST
+    |> extract_spec             # => TypeSpec info
+    |> analyze_spec             # => List of TypespecInfo struct
 
-#   def convert_typespec(path) do
-#     #pid = CDuceRepl.spawn()  # ...what's it for?
+    #|> compile_expr()             # transform AST to another language
+    #|> ok_or_error()
+    #|> synthesis(env_with_stdlib(), CDuceRepl.spawn())
+  end
 
-#     try do
-#       {time, result} = :timer.tc(&process/1, [path])
-
-#       #CDuceRepl.close(pid)
-
-#       #handle_output(result, time)
-#     catch
-#       {:CompileError, msg} ->
-#         #CDuceRepl.close(pid)
-
-#         IO.puts("CompileError:\n#{msg}")
-#     end
-#   end
-
-#   defp process(path) do
-#     path
-#     |> open_code_in_string     #|> Let's put check function whether it is code or not, later.
-#     |> convert_to_quoted       # transform input to AST
-#     |> convert_to_elixirtype   # transform AST to ETS
-
-#     #|> compile_expr()             # transform AST to another language
-#     #|> ok_or_error()
-#     #|> synthesis(env_with_stdlib(), CDuceRepl.spawn())
-#   end
-
-
-#   defp open_code_in_string(path) do
-#     File.read!(path)
-#   end
-
-#   defp convert_to_quoted(str) do
-#     """
-#     It returns the AST if it succeeds, raises an exception otherwise.
-#     The exception is a TokenMissingError in case a token is missing
-#     (usually because the expression is incomplete),
-#     MismatchedDelimiterError (in case of mismatched opening and closing delimiters)
-#     and SyntaxError otherwise.
-#     """
-#     Code.string_to_quoted!(str)
-#   end
+  @doc """
+  Hierarchy of TypeSpec AST:
+    {:@, _meta,
+      [{:spec, _meta,
+        [{:"::", _meta,
+          [
+            {:function_name, _meta, [{:input, _meta, _}]},
+            {:output, _meta, _}
+          ]
+        }]
+      }]
+    }
+  """
+  def extract_spec(ast) do
+    case ast do
+      {:@, _, [{:spec, _, [{:"::", _, spec}]}]} -> spec
+      _ -> :not_spec
+    end
+  end
 
 
-# """
-# defmodule SpecFinder do
-#   def find_specs(ast) do
-#     Macro.prewalk(ast, [], fn
-#       {:@, _, [{:spec, _, [spec]}]} = node, acc ->
-#         {node, [spec | acc]}
+  def analyze_spec(spec) when spec != :not_spec do
 
-#       node, acc ->
-#         {node, acc}
-#     end)
-#     |> elem(1)
-#     |> Enum.reverse()
-#   end
-# end
+    [{name, _, input}, output] = spec
 
-# {:ok, ast} = Code.string_to_quoted(File.read!("descr.ex"))
-# IO.inspect(SpecFinder.find_specs(ast))
-# """
+    name = Atom.to_string(name)
 
+    walker_fun = fn
+      {{:., [], [{_, _, [module]}, type]}, [], []} = node,
+      acc -> {node, Atom.to_string(module) <> "." <> Atom.to_string(type) <> "() " <> acc}
 
-#   defp convert_to_elixirtype(ast) do
+      {:|, [], [{type, [], []}, _]} = node,
+      acc -> {node, Atom.to_string(type) <> " or " <> acc}
 
-#     """
-#     iex> quote do: @spec weak_identity(integer()) :: integer()
+      {type, [], []} = node,
+      acc ->  {node, Atom.to_string(type) <> "() " <> acc}
 
-#     {:@, [context: Elixir, imports: [{1, Kernel}]],
-#      [
-#        {:spec, [context: Elixir],
-#         [
-#           {:"::", [],
-#            [{:weak_identity, [], [{:integer, [], []}]}, {:integer, [], []}]}
-#         ]}
-#       ]}
+      :_ = singleton,
+      acc -> {singleton, [":" <> (Atom.to_string(singleton)) <> " " <> acc]}
+    end
 
-#     iex> quote do: @spec weak_identity(integer()) :: String.t()
-#     {:@, [context: Elixir, imports: [{1, Kernel}]],
-#     [
-#       {:spec, [context: Elixir],
-#         [
-#           {:"::", [],
-#           [
-#             {:function_name, [], [{:integer, [], []}]},
-#             {{:., [], [{:__aliases__, [alias: false], [:String]}, :t]}, [], []}
-#           ]}
-#         ]}
-#       ]}
-#     """
+    # function type is missing!!!
+    input = Enum.map(input, fn x -> {_, type} = Macro.prewalk(x, "", walker_fun); type  end)
 
-#     # 22/10/2025 Let's convert to typex-consumable type,
-#     # i.e., function_name :: type() -> type()
-#     {converted, changes} = Macro.prewalk(ast, [],
-#       fn
-#         {:@, _meta,
-#         [{:spec, _meta,
-#           [{:"::", _meta,
-#             [{name, _meta,
-#               [{input, _meta, _}, {output, _meta, _}]
-#               }]
-#             }]
-#           }]
-#         } -> "#{name} :: "
-#       end)
+    {_, output} = Macro.prewalk(output, "",
+    fn
+      {{:., [], [{_, _, [module]}, type]}, [], []} = node,
+      acc -> {node, Atom.to_string(module) <> "." <> Atom.to_string(type) <> "() " <> acc}
+
+      {:|, [], [{type, [], []}, _]} = node,
+      acc -> {node, Atom.to_string(type) <> " or " <> acc}
+
+      {type, [], []} = node,
+      acc ->  {node, Atom.to_string(type) <> "() " <> acc}
+
+      :_ = singleton,
+      acc -> {singleton, [":" <> (Atom.to_string(singleton)) <> " " <> acc]}
+    end)
+
+    %TsInfo{name: name, input: input, output: output}
 
 
-#     # Macro.to_string/2
-#     # The opposite of converting a string to its quoted form is Macro.to_string/2,
-#     # which converts a quoted form to a string/binary representation.
-#   end
 
 
-# end
+  end
+  """
+  {:@, _, [{:spec, _, [{:"::", _, [{name, _, input}, output]}]}]} = quote do: @spec f(integer()) :: integer()
+  Simple types:
+    any(), term(), dynamic(), none()
+    atom(), float(), integer(),
+    neg_integer(), non_neg_integer(), pos_integer()
+    pid(), port(), reference()
+
+
+    sample:
+    alias Parser.TypespecParser, as: Ps
+    ast = quote do: @spec fun(integer()) :: atom() | integer()
+    spec = ast |> Ps.extract_spec
+    spec |> Ps.analyze_spec
+
+  """
+
+"""
+defmodule SpecFinder do
+  def find_specs(ast) do
+    Macro.prewalk(ast, [], fn
+      {:@, _, [{:spec, _, [spec]}]} = node, acc ->
+        {node, [spec | acc]}
+
+      node, acc ->
+        {node, acc}
+    end)
+    |> elem(1)
+    |> Enum.reverse()
+  end
+end
+
+{:ok, ast} = Code.string_to_quoted(File.read!("descr.ex"))
+IO.inspect(SpecFinder.find_specs(ast))
+"""
+
+
+end
