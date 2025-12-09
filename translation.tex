@@ -155,8 +155,11 @@ More precisely, the previous translation is undefined in the following cases:
    \item Bitstrings with size specifications that are not a multiple of 8 bits (e.g., \texttt{<<\_::3>>}).
    \item The type \texttt{...->\TST} when the translation of $\TST$ is not equivalent to \texttt{term()} (explain why this type is not interesting).
    \item .... 
-   \item $\dsb{\texttt{required(\TST) => $\prm{\TST}$}}$ and $\dsb{\texttt{optional(\TST) => $\prm{\TST}$}}$ are undefined when the translation of $\dsb{\TST}$ is not equivalent to a disjunction of pairwise distinct key types.
+   \item $\dsb{\texttt{required(\TST) => $\prm{\TST}$}}$ and $\dsb{\texttt{optional(\TST) => $\prm{\TST}$}}$ are undefined when $\dsb{\TST}$ is not equivalent to a disjunction of pairwise distinct key types.
 \end{itemize}
+In the rest of this section we give a conservative extension of the translation defined so far that is total, i.e., it is defined for every TypeSpec type. The extension consists in defining approximations for the cases where the previous translation is undefined.
+
+
 
 Elixir type has no plan to support bitstring types that is finer types than texttt{binary()}, hence, it is not possible to directly translate any bitstring types 
 However, most of the bitstring representatives could be trivially translated to texttt{binary()}.
