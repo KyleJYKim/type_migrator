@@ -153,7 +153,7 @@ The translation defined so far is partial since some TypeSpec types do not have 
 More precisely, the previous translation is undefined in the following cases:
 \begin{itemize}
    \item Bitstrings with size specifications that are not a multiple of 8 bits (e.g., \texttt{<<\_::3>>}).
-   \item The type \texttt{\fun{\dots}{\TST}} when the translation of $\TST$ is not equivalent to \texttt{term()} (explain why this type is not interesting).
+   \item The type \texttt{\fun{\dots}{\TST}} when the translation of $\TST$ is not equivalent to \texttt{any()} (explain why this type is not interesting).
    \item .... (n..n)
    \item $\dsb{\texttt{required(\TST) => $\prm{\TST}$}}$ and $\dsb{\texttt{optional(\TST) => $\prm{\TST}$}}$ are undefined when $\dsb{\TST}$ is not equivalent to a disjunction of pairwise distinct key types.
 \end{itemize}
@@ -184,220 +184,19 @@ Since Bitstrings exist to generalize binaries as mentioned above, the specificat
 
 \subsection{Approximation of Top Function Type}
 
+The top function type is union of all the functions with every arity to the top type as defined in Figure~\ref{app:bitstring-segment-types}.
+Since the top function type already takes over all the other function types, it becomes not worthy to have all the other function types that the return type is a subtype of the top type.
+In the perspective of memory space, it is only costly to define and have all the function types because the maximum arity is 255.
 
+\begin{figure} [H]
+   \[\begin{array}{rcll}
+         \texttt{\fun{\dots}{any()}} \equiv \texttt{\fun{$none$}{any()}\,\,$|$\,\,\dots\,\,$|$\,\,\fun{(none()$_1$, \dots, none()$_{255}$)}{any()}}
+   \end{array}\]
+   \caption{Top Function Type}
+   \label{app:top-function-type}
+\end{figure}
 
-
-
-
-%       \\ \\
-%       \bigoplus_{i \in I}\texttt{[$\dsb{\TSF_i}$]}\,\oplus\,\texttt{$\dsb{\TSF}$}
-%       \\ =
-%       \left\{
-%          \begin{array}{ll}
-%             \bigoplus_{i \in I}\texttt{[$\dsb{\TSF_i}$]}\setminus\texttt{[:$k_j$\,\,=>\,\,if\_set($\dsb{\prm{\TST_j}}$)]}
-%             \texttt{\,\,or\,\,}\texttt{\ETK\,\,=>\,\,if\_set($\dsb{\prm{\TST}}$)}
-%             & \textsl{if}\,\,\,\texttt{:$k_j\in$[\ETK$_i$]}\textsl{\,\,and\,\,}\ETK\,\approx\,\texttt{atom()}
-%             \\
-%             \bigoplus_{i \in I}\texttt{[$\dsb{\TSF_i}$]}\setminus\texttt{[:$k$\,\,=>\,\,$\dsb{\prm{\TST_j}}$]}
-%             \texttt{\,\,and\,\,}\texttt{:$k$\,\,=>\,\,$\dsb{\prm{\TST}}$}
-%             & \textsl{if}\,\,\,\,\ETK_j\in\texttt{[\ETK$_i$]}\textsl{\,\,and\,\,}\ETK_j\approx\,\texttt{atom()}\textsl{\,\,and\,\,}\dsb{\TSF}\,\approx\texttt{:$k$\,\,=>\,\,$\dsb{\prm{\TST}}$}
-%             \\
-%             \bigoplus_{i \in I}\texttt{[$\dsb{\TSF_i}$]}
-%             \texttt{\,\,and\,\,}\texttt{:$k$\,\,=>\,\,$\dsb{\prm{\TST}}$}
-%             & \textsl{if}\,\,\,\,\ETK_i\not\approx\,\texttt{atom()}\textsl{\,\,and\,\,}\dsb{\TSF}\,\approx\texttt{:$k$\,\,=>\,\,$\dsb{\prm{\TST}}$}
-%             \\
-%             \bigoplus_{i \in I}\texttt{[$\dsb{\TSF_i}$]}\setminus\texttt{[$\ETK_j$\,\,=>\,\,if\_set($\dsb{\prm{\TST_j}}$)]}
-%             \texttt{\,\,or\,\,}\texttt{\ETK\,\,=>\,\,if\_set($\dsb{\prm{\TST}}$)}
-%             & \textsl{if}\,\,\,\,\ETK_j\in\texttt{[\ETK$_i$]}\textsl{\,\,and\,\,}\ETK_j\,\approx\,\ETK
-%             \\
-%             \bigoplus_{i \in I}\texttt{[$\dsb{\TSF_i}$]}
-%             \texttt{\,\,or\,\,}\texttt{\ETK\,\,=>\,\,if\_set($\dsb{\prm{\TST}}$)}
-%             & \textsl{if}\,\,\,\,\ETK_i\not\approx\,\ETK\textsl{\,\,and\,\,}\dsb{\TSF}\,\not\approx\texttt{:$k$\,\,=>\,\,$\dsb{\prm{\TST}}$}
-%             \\
-%             \textsl{undefined} & \textsl{otherwise}
-%          \end{array}
-%       \right.
-%       \\ \\
-
-%       % TAKE FFFFFF instead of =>...\\ \\
-%       % \bigoplus_{i \in I}\texttt{[\ETK$_i$\,\,=>\,\,if\_set($\dsb{\prm{\TST_i}}$)]}\,\oplus\,\texttt{\ETK\,\,=>\,\,if\_set($\dsb{\prm{\TST}}$)}
-%       % \\ \small(where,\,\,j > i\,\,and\,\,j \in I)
-%       % \\ =
-%       % \left\{
-%       %    \begin{array}{ll}
-%       %       \bigoplus_{i \in I}\texttt{[\ETK$_i$\,\,=>\,\,if\_set($\dsb{\prm{\TST_i}}$)]}\setminus\texttt{[:$k_j$\,\,=>\,\,if\_set($\dsb{\prm{\TST_j}}$)]}\texttt{\,\,and\,\,}\texttt{\ETK\,\,=>\,\,if\_set($\dsb{\prm{\TST}}$)}
-%       %       & \textsl{if}\,\,\,\,\texttt{:$k_j\in$[\ETK$_i$]}\textsl{\,\,and\,\,}\ETK\,\approx\,\texttt{atom()}
-%       %       \\
-%       %       \bigoplus_{i \in I}\texttt{[\ETK$_i$\,\,=>\,\,if\_set($\dsb{\prm{\TST_i}}$)]}\texttt{\,\,and\,\,}\texttt{:$k$\,\,=>\,\,if\_set($\dsb{\prm{\TST}}$)}
-%       %       & \textsl{if}\,\,\,\,\texttt{atom()$\in$[\ETK$_i$]}\textsl{\,\,and\,\,}\ETK_j\,\approx\,\texttt{:$k$}
-%       %       \\
-%       %       \dsb{\map{\TSF_1}}
-%       %       & \textsl{if}\,\,\,\,\ETK_1\,\approx\,\ETK_2
-%       %       \\
-%       %       \dsb{\map{\TSF_1}}\,\cup\,\dsb{\map{\TSF_2}}
-%       %       & \textsl{if}\,\,\,\,\ETK_1\,\not\approx\,\ETK_2
-%       %       \\
-%       %       \textsl{undefined} & \textsl{otherwise}
-%       %    \end{array}
-%       % \right.
-%       \\ \\
-%       \\ \\
-%       % only singleton types are taken as "required"
-%       %{optional(:a) => T, optional(atom()) => T1}    % :a => T | atom()\:a => T1
-%       %{required(:a) => T, optional(atom()) => T1}    % :a => T & optional(atom()\:a) => T1
-%       %{optional(:a) => T, required(atom()) => T1}    % :a => T | atom()\:a => T1
-%       %{required(:a) => T, required(atom()) => T1}    % :a => T & optional(atom()\:a) => T1
-
-%       %{optional(atom()) => T, optional(:a) => T1}    % atom() => T
-%       %{required(atom()) => T, optional(:a) => T1}    % atom() => T
-%       %{optional(atom()) => T, required(:a) => T1}    % atom() => T
-%       %{required(atom()) => T, required(:a) => T1}    % atom() => T
-
-%       % dialyzer passes even without the absent of "required" types...
-%       % is this a dialyzer bug with "required" types?
-%       \\
-      
-      
-%       % \rcd{($\dsb{\prm{\TST_1}}^{:k}$)}{$\emptyset$}{term()}
-%       % \,\,\oplus\,\,
-%       % \rcd{$\emptyset$}{$\dsb{\prm{\TST_2}}^{\ETK_2}$}{($\dsb{\prm{\TST_2}}^{\ETK_2}$,\,term())}
-%       % \\ =
-%       % \left\{
-%       %    \begin{array}{ll}
-%       %       \rcd{($\dsb{\prm{\TST_1}}^{:k}$)}{$\dsb{\prm{\TST_2}}^{\ETK_2}\setminus\dsb{\prm{\TST_2}}^{:k}$}{($\dsb{\prm{\TST_2}}^{\ETK_2}$,\,term())}
-%       %       & \textsl{if}\,\,\,\,\ETK_2\,\approx\,\texttt{atom()}
-%       %       \\
-%       %       \rcd{($\dsb{\prm{\TST_1}}^{:k}$)}{$\dsb{\prm{\TST_2}}^{\ETK_2}$}{($\dsb{\prm{\TST_2}}^{\ETK_2}$,\,term())}
-%       %       & \textsl{if}\,\,\,\,\ETK_2\,\not\approx\,\texttt{atom()}
-%       %    \end{array}
-%       % \right.
-%       % \\ \\
-
-
-%       Old: \\
-%       \\ \\
-%       \bigoplus_{i=1..n}\,\dsb{\map{\TSF_i}} = 
-%       \begin{array}{ll}
-%          \rcd{$\bigvee_{\alpha}$($\dsb{\prm{\TST_{\alpha}}}_{:k_{\alpha}}$)}{$\bigcup_{\beta}\dsb{\prm{\TST_{\beta}}}_{\ETK_{\beta}}$}{$\bigcup_{\beta}\dsb{\prm{\TST_{\beta}}}_{\ETK_{\beta}}$\,$\vee$\,term()}
-%          & \textsl{if}\,\,\,\,\texttt{:}k_\alpha \not\leq \ETK_\beta
-%          \textsl{\,\,and\,\,}\ETK_{\beta_j} \not\approx \ETK_{\beta_h}
-%       \end{array}
-%       \\ \\
-%       %\small(\forall_{1 < \alpha\neq\beta < n}\textsl{\,\,and\,\,}\forall_{})
-%       \\ \\
-%       \dsb{\map{\texttt{required(\TST) => $\prm{\TST}$}}} = 
-%       \left\{
-%          \begin{array}{ll}
-%             \rcd{\ETK}{if\_set($\dsb{\prm{\TST}}$)}{$\emptyset$}\setminus\rcd{$\bot$}{$\bot$}{$\emptyset$}
-%             & \textsl{if}\,\,\,\,\dsb{\TST}\,\,\approx\,\,\ETK
-%             \\
-%             \textsl{undefined} & \textsl{otherwise}
-%          \end{array}
-%       \right.
-%       \\ \\
-%       \dsb{\map{\texttt{optional(\TST) => $\prm{\TST}$}}} = 
-%       \left\{
-%          \begin{array}{ll}
-%             \rcd{\ETK}{if\_set($\dsb{\prm{\TST}}$)}{$\emptyset$}
-%             & \textsl{if}\,\,\,\,\dsb{\TST}\,\,\approx\,\,\ETK
-%             \\
-%             \textsl{undefined} & \textsl{otherwise}
-%          \end{array}
-%       \right.
-%       \\ \\
-
-      
-
-
-
-%       \\ \\
-
-
-
-%       \bigoplus_{i=1..n}\,\dsb{\map{\texttt{required(\TST$_i$) => $\prm{\TST_i}$}}}
-%       \\ =\,\,
-%       \rcd{$\bigwedge_i\ETK_i$}{$\bigwedge_i$if\_set($\dsb{\prm{\TST_i}}$)}{$\bigcup_i S_i$}
-%       \\
-%       \\
-%       \\
-
-
-%       \bigoplus_{i=1..n}\,\dsb{\map{\texttt{required(\TST$_i$) => $\prm{\TST_i}$}}}
-%       \\ =\,\,
-%       \rcd{$\bigwedge_i\ETK_i$}{$\bigwedge_i$if\_set($\dsb{\prm{\TST_i}}$)}{$\bigcup_i S_i$}
-%       \bigoplus_{i=1..n}\,\dsb{\map{\texttt{required(\TST$_i$) => $\prm{\TST_i}$}}}\,\,\oplus\,\rcd{:$k$}{$\dsb{\prm{\TST}}$}{$\emptyset$}
-%       \\ =\,\,
-%       \rcd{$\bigwedge_i\ETK_i$}{$\bigwedge_i$if\_set($\dsb{\prm{\TST_i}}$)}{$\bigcup_i S_i$}\smallsetminus\rcd{$\bot$}{$\bot$}{$\emptyset$}\,\wedge\,\rcd{:$k$}{$\dsb{\prm{\TST}}$}{$\emptyset$}
-%       \\ \\
-
-%       \oplus\,\dsb{\map{...,\,\texttt{optional(\TST$_1$) => $\prm{\TST_1}$}}}\,\oplus\,\dsb{\map{\texttt{optional(\TST$_2$) => $\prm{\TST_2}$}}}
-%       \\ = 
-%       \oplus\,\dsb{\map{...,\,\texttt{optional(\TST$_1$) => $\prm{\TST_1}$}}}\,\bigcup\,\dsb{\map{\texttt{optional(\TST$_2$) => $\prm{\TST_2}$}}}
-
-%       \\ \\ \\ \\
-%       \dsb{\map{\texttt{required(\TST) => $\prm{\TST}$}}} = 
-%       \left\{
-%          \begin{array}{ll}
-%             \map{\texttt{:$k$\,\,=>\,\,$\dsb{\prm{\TST}}$}}
-%             & \textsl{if}\,\,\,\,\dsb{\TST}\,\,\approx\,\,\texttt{:}k
-%             \\
-%             \map{\texttt{\ETK\,\,=>\,\,if\_set($\dsb{\prm{\TST}}$)}}\,\,\texttt{and\,\,not}\,\,\map{}
-%             & \textsl{if}\,\,\,\,\dsb{\TST}\,\,\approx\,\,\ETK\textsl{\,\,and\,\,}\dsb{\TST}\,\not\approx\,\texttt{:}k 
-%             \\
-%             \textsl{undefined} & \textsl{otherwise}
-%          \end{array}
-%       \right.
-%       \\ \\
-%       \dsb{\map{\texttt{optional(\TST) => $\prm{\TST}$}}} = 
-%       \left\{
-%          \begin{array}{ll}
-%             \map{\texttt{\ETK\,\,=>\,\,if\_set($\dsb{\prm{\TST}}$)}}
-%             & \textsl{if}\,\,\,\,\dsb{\TST}\,\,\approx\,\,\ETK
-%             \\
-%             \textsl{undefined} & \textsl{otherwise}
-%          \end{array}
-%       \right.
-%       \\ \\
-%       \dsb{\map{\texttt{required(\TST$_1$) => $\prm{\TST_1}$}}}\,\oplus\,\dsb{\map{\texttt{required(\TST$_2$) => $\prm{\TST_2}$}}}
-%       \\ = %\dsb{\texttt{required(\TST$_1$) => $\prm{\TST_1}$}}\,\,\texttt{and}\,\,\dsb{\texttt{required(\TST$_2$) => $\prm{\TST_2}$}}
-%       \left\{
-%          \begin{array}{ll}
-%             \map{\texttt{:$k_1$\,\,=>\,\,$\dsb{\prm{\TST_1}}$,\,:$k_2$\,\,=>\,\,$\dsb{\prm{\TST_2}}$}}
-%             & \textsl{if}\,\,\,\,\dsb{\TST_1}\,\,\approx\,\,\texttt{:}k_1\textsl{\,\,and\,\,}\dsb{\TST_2}\,\,\approx\,\,\texttt{:}k_2
-%             \\ \\
-%             \map{\texttt{:$k_1$\,\,=>\,\,$\dsb{\prm{\TST_1}}$,\,\ETK$_2$\,\,=>\,\,if\_set($\dsb{\prm{\TST_2}}$)}}
-%             & \textsl{if}\,\,\,\,\dsb{\TST_1}\,\,\approx\,\,\texttt{:}k_1\textsl{\,\,and\,\,}\dsb{\TST_2}\,\,\approx\,\,\ETK_2
-%             \\ \texttt{and\,\,not\,\,}\map{\texttt{:$k_1$\,\,=>\,\,$\dsb{\prm{\TST_1}}$}}\texttt{)}
-%             & \textsl{and\,\,}\dsb{\TST_2}\,\not\approx\,\texttt{:}k_2
-%             \\ \\
-%             \map{\texttt{\ETK$_1$\,\,=>\,\,if\_set($\dsb{\prm{\TST_1}}$),\,\ETK$_2$\,\,=>\,\,if\_set($\dsb{\prm{\TST_2}}$)}} 
-%             & \textsl{if}\,\,\,\,\dsb{\TST_1}\,\,\approx\,\,\ETK_1\textsl{\,\,and\,\,}\dsb{\TST_2}\,\,\approx\,\,\ETK_2
-%             \\ \texttt{and\,\,not\,\,}\texttt{(\map{\texttt{\ETK$_1$\,\,=>\,\,if\_set($\dsb{\prm{\TST_1}}$)}}\,\,or\,\,\map{\texttt{\ETK$_2$\,\,=>\,\,if\_set($\dsb{\prm{\TST_2}}$)}})}
-%             & \textsl{and\,\,}\dsb{\TST_1}\,\not\approx\,\texttt{:}k_1\textsl{\,\,and\,\,}\dsb{\TST_2}\,\not\approx\,\texttt{:}k_2
-%          \end{array}
-%       \right.
-%       \\ \\
-%       \dsb{\map{\texttt{required(\TST$_1$) => $\prm{\TST_1}$}}}\,\oplus\,\dsb{\map{\texttt{optional(\TST$_2$) => $\prm{\TST_2}$}}}
-%       \\ = 
-%       \left\{
-%          \begin{array}{ll}
-%             \map{\texttt{:$k_1$\,\,=>\,\,$\dsb{\prm{\TST_1}}$,\,\ETK$_2$\,\,=>\,\,if\_set($\dsb{\prm{\TST_2}}$)}}
-%             & \textsl{if}\,\,\,\,\dsb{\TST_1}\,\,\approx\,\,\texttt{:}k_1\textsl{\,\,and\,\,}\dsb{\TST_2}\,\,\approx\,\,\ETK_2
-%             \\ \\
-%             \texttt{(}\map{\texttt{\ETK$_1$\,\,=>\,\,if\_set($\dsb{\prm{\TST_1}}$),\,\ETK$_2$\,\,=>\,\,if\_set($\dsb{\prm{\TST_2}}$)}}
-%             & \textsl{if}\,\,\,\,\dsb{\TST_1}\,\,\approx\,\,\ETK_1\textsl{\,\,and\,\,}\dsb{\TST_2}\,\,\approx\,\,\ETK_2
-%             \\ \texttt{and\,\,not\,\,}\texttt{\map{\texttt{\ETK$_2$\,\,=>\,\,if\_set($\dsb{\prm{\TST_2}}$)}}}
-%          \end{array}
-%       \right.
-%       \\ \\
-%       \dsb{\map{\texttt{optional(\TST$_1$) => $\prm{\TST_1}$}}}\,\oplus\,\dsb{\map{\texttt{optional(\TST$_2$) => $\prm{\TST_2}$}}}
-%       = \map{\texttt{\ETK$_1$\,\,=> if\_set($\dsb{\prm{\TST_1}}$),\,\ETK$_2$\,\,=> if\_set($\dsb{\prm{\TST_2}}$)}} 
-%    \end{translationfig}
-%    \\
-%    %\small(where order matters with \texttt{required(\TST)})
-%    \caption{Translation in Fields}
-%    \label{app:translation-in-fields}
-% \end{figure}
+Hence, we can approximate the top functions as \texttt{\fun{\dots}{any()}} that the return types are not \texttt{any()}.
 
 
 \end{document}
