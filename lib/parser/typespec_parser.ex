@@ -58,43 +58,48 @@ defmodule Parser.TypespecParser do
 
     name = Atom.to_string(name)
 
-    walker_fun = fn
-      {{:., [], [{_, _, [module]}, type]}, [], []} = node,
-      acc -> {node, Atom.to_string(module) <> "." <> Atom.to_string(type) <> "() " <> acc}
+    walker = fn
+      [head | []], walker_fun
+      -> (
+        (head |> walker_fun.(walker_fun))
+      )
 
-      {:|, [], [{type, [], []}, _]} = node,
-      acc -> {node, Atom.to_string(type) <> " or " <> acc}
+      [head | tail], walker_fun
+      -> (
+        (head |> walker_fun.(walker_fun)) <> ", " <> (tail |> walker_fun.(walker_fun))
+      )
 
-      {type, [], []} = node,
-      acc ->  {node, Atom.to_string(type) <> "() " <> acc}
+      {{:., [], [{_, _, [module]}, type]}, [], []}, walker_fun
+      -> (
+        type = type |> walker_fun.(walker_fun)
+        Atom.to_string(module) <> "." <> type <> "()"
+      )
 
-      :_ = singleton,
-      acc -> {singleton, [":" <> (Atom.to_string(singleton)) <> " " <> acc]}
+      {:|, [], [left, right]}, walker_fun
+      -> (
+        left = left |> walker_fun.(walker_fun)
+        right = right |> walker_fun.(walker_fun)
+        left <> " or " <> right
+      )
+
+      {:->, [], [left, right]}, walker_fun
+      -> (
+        left = left |> walker_fun.(walker_fun)
+        right = right |> walker_fun.(walker_fun)
+        "(" <> left <> " -> " <> right <> ")"
+      )
+
+      {type, [], []}, _
+      -> Atom.to_string(type) <> "()"
+
+      singleton, _ when is_atom(singleton)
+      -> ":" <> Atom.to_string(singleton)
     end
 
-    # function type is missing!!!
-    input = Enum.map(input, fn x -> {_, type} = Macro.prewalk(x, "", walker_fun); type  end)
-
-    {_, output} = Macro.prewalk(output, "",
-    fn
-      {{:., [], [{_, _, [module]}, type]}, [], []} = node,
-      acc -> {node, Atom.to_string(module) <> "." <> Atom.to_string(type) <> "() " <> acc}
-
-      {:|, [], [{type, [], []}, _]} = node,
-      acc -> {node, Atom.to_string(type) <> " or " <> acc}
-
-      {type, [], []} = node,
-      acc ->  {node, Atom.to_string(type) <> "() " <> acc}
-
-      :_ = singleton,
-      acc -> {singleton, [":" <> (Atom.to_string(singleton)) <> " " <> acc]}
-    end)
+    input = input |> walker.(walker)
+    output = output |> walker.(walker)
 
     %TsInfo{name: name, input: input, output: output}
-
-
-
-
   end
   """
   {:@, _, [{:spec, _, [{:"::", _, [{name, _, input}, output]}]}]} = quote do: @spec f(integer()) :: integer()
@@ -107,7 +112,7 @@ defmodule Parser.TypespecParser do
 
     sample:
     alias Parser.TypespecParser, as: Ps
-    ast = quote do: @spec fun(integer()) :: atom() | integer()
+    ast = quote do: @spec fun(:a, (atom() -> integer())) :: atom() | integer() | binary()
     spec = ast |> Ps.extract_spec
     spec |> Ps.analyze_spec
 
