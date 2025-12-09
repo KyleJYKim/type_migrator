@@ -95,7 +95,7 @@
 
 \subsection{Translation of Fields}
 
-Let $\tau$ range over the right-hand side type of field types, that is, $\tau$ is either $\TST$ or $\ifset\TST$. We consider lists whose elements are of the form \texttt{\ETK\,\,=>\,\,$\tau$}. Given such a list $L$ we write $\ETK\in L$ is there exist $\tau$ such that the element \texttt{\ETK\,\,=>\,\,$\tau$} belongs to $L$. We denote by \textsf{Empty} the lists that maps all the non-singleton keyttypes to \texttt{not\_set()}.  
+Let $\tau$ range over the right-hand side type of field types, that is, $\tau$ is either $\TST$ or $\ifset\TST$. We consider lists whose elements are of the form \texttt{\ETK\,\,=>\,\,$\tau$}. Given such a list $L$ we write $\ETK\in L$ is there exist $\tau$ such that the element \texttt{\ETK\,\,=>\,\,$\tau$} belongs to $L$. We denote by \textsf{Empty} the lists that maps all the non-singleton keytypes to \texttt{not\_set()}.  
 
 Given two field lists $L_1$ and $L_2$, we write $L_1 \oplus L_2$ the list obtained by adding to $L_1$ all the fields elements $\ETK\fto\tau$ of $L_2$ such that $\ETK\not\in L_1$. Formally:
 \begin{figure} [H]
@@ -146,7 +146,17 @@ All it remains to do is to define the translation of field types. If $\ETK_1,...
    \label{app:translation-in-field-types}
 \end{figure}
 
+\section{Total Approximating Translation of TypeSpec into Elixir Types}
 
+The translation defined so far is partial since some TypeSpec types do not have a corresponding Elixir type. This is not a weakness of the Elixir type system, but rather a consequence of the design choices made for Elixir types, to keep them as simple as possible while still being useful. However, it is possible to define a total translation from TypeSpec types to Elixir types that approximates the original TypeSpec type. This total translation can be useful in some contexts, for example when we want to ensure that every TypeSpec type can be represented in Elixir types, even if approximately.
+
+More precisely, the previous translation is undefined in the following cases:
+\begin{itemize}
+   \item ... binaries with size specifications that are not a multiple of 8 bits (e.g., \texttt{<<\_:3>>}). Explain why these types are not interesting.
+   \item The type \texttt{...->\TST} when the translation of $\TST$ is not equivalent to \texttt{term()} (explain why this type is not interesting).
+   \item .... 
+   \item $\dsb{\texttt{required(\TST) => $\prm{\TST}$}}$ and $\dsb{\texttt{optional(\TST) => $\prm{\TST}$}}$ are undefined when the translation of $\dsb{\TST}$ is not equivalent to a disjunction of pairwise distinct key types.
+\end{itemize}
 %       \\ \\
 %       \bigoplus_{i \in I}\texttt{[$\dsb{\TSF_i}$]}\,\oplus\,\texttt{$\dsb{\TSF}$}
 %       \\ =
