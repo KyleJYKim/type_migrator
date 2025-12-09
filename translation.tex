@@ -152,11 +152,39 @@ The translation defined so far is partial since some TypeSpec types do not have 
 
 More precisely, the previous translation is undefined in the following cases:
 \begin{itemize}
-   \item ... binaries with size specifications that are not a multiple of 8 bits (e.g., \texttt{<<\_:3>>}). Explain why these types are not interesting.
+   \item Bitstrings with size specifications that are not a multiple of 8 bits (e.g., \texttt{<<\_::3>>}).
    \item The type \texttt{...->\TST} when the translation of $\TST$ is not equivalent to \texttt{term()} (explain why this type is not interesting).
    \item .... 
    \item $\dsb{\texttt{required(\TST) => $\prm{\TST}$}}$ and $\dsb{\texttt{optional(\TST) => $\prm{\TST}$}}$ are undefined when the translation of $\dsb{\TST}$ is not equivalent to a disjunction of pairwise distinct key types.
 \end{itemize}
+
+Elixir type has no plan to support bitstring types that is finer types than texttt{binary()}, hence, it is not possible to directly translate any bitstring types 
+However, most of the bitstring representatives could be trivially translated to texttt{binary()}.
+According to the Erlang documentation, Bitstrings are a later generalization of binaries, so many texts and much information about binaries apply just as well for bitstrings.
+%https://www.erlang.org/doc/system/expressions#bit-syntax-expressions
+In other words, the purpose of bitstrings is to construct binaries in more precise manner.
+Elixir provides type segments as Figure~\ref{app:bitstring-segment-types} that specify the $unit*size$ instead of direct notation with digits.
+Interestingly, all the default segments are divisible by 8, that leads bitstring values to be accepted as binary types.
+
+\begin{figure} [H]
+   \[\begin{array}{rcll}
+         Segment\,\,Type = \texttt{integer $|$ float $|$ binary $|$ bytes $|$ bitstring $|$ bits $|$ utf8 $|$ utf16 $|$ utf32}
+   \end{array}\]
+   \caption{Bitstring Segment Types}
+   \label{app:bitstring-segment-types}
+\end{figure}
+
+Despite the rare use cases, bitstring types are still designed to be recognize $unit$ and $size$ other than digits divisible by 8 and these are not strictly accepted as \texttt{binary()}.
+These types can be addressed as texttt{binary() and dynamic()}.
+Since Bitstrings exist to generalize binaries as mentioned above, the specification should describe a binary type and otherwise realized at compile time.
+
+
+
+
+
+
+
+
 %       \\ \\
 %       \bigoplus_{i \in I}\texttt{[$\dsb{\TSF_i}$]}\,\oplus\,\texttt{$\dsb{\TSF}$}
 %       \\ =
