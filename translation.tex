@@ -29,11 +29,11 @@
 
 \begin{document}
 
-\section{Formalization in TypeSpec}
+\section{TypeSpec Syntax Specification}
 
 \input{fig-typespec-types.tex}
 
-\subsection{TypeSpec Built-in Types and Syntactic Sugars}
+\subsection{TypeSpec Built-in Types and Syntactic Sugar}
 
 \input{fig-typespec-sugar-builtin.tex}
 
@@ -42,14 +42,14 @@
 
 
 
-\section{Formalization in Elixir Type}
+\section{Elixir Types Syntax Specification}
 \input{fig-elixir-types.tex}
 
-\subsection{Elixir Type Built-in Types and Syntactic Sugars}
+\subsection{Elixir Type Built-in Types and Syntactic Sugar}
 
 \input{fig-elixir-sugar-builtin.tex}
 
-\section{Translation from TypeSpec to Elixir Type}
+\section{Translation from TypeSpec to Elixir Types}
 
 \begin{figure} [H]
    \begin{grammarfig}
@@ -60,7 +60,7 @@
 \end{figure}
 
 
-\subsection{Translation in Annotations}
+\subsection{Translation of TypeSpec Specification into Elixir Annotations}
 
 \input{fig-translation-annotations.tex}
 
@@ -89,11 +89,11 @@
 % However, it is not regarded since the former provides higher precision necessitating the presence of functions matching the annotations
 
 
-\subsection{Translation in Types}
+\subsection{Translation of TypeSpec into Elixir Types}
 
 \input{fig-translation-types.tex}
 
-\subsection{Translation in Fields}
+\subsection{Translation of Fields}
 
 Let $\tau$ range over the right-hand side type of field types, that is, $\tau$ is either $\TST$ or $\ifset\TST$. We consider lists whose elements are of the form \texttt{\ETK\,\,=>\,\,$\tau$}. Given such a list $L$ we write $\ETK\in L$ is there exist $\tau$ such that the element \texttt{\ETK\,\,=>\,\,$\tau$} belongs to $L$. We denote by \textsf{Empty} the lists that maps all the non-singleton keyttypes to \texttt{not\_set()}.  
 
@@ -141,7 +141,7 @@ All it remains to do is to define the translation of field types. If $\ETK_1,...
          \end{array}
       \right.
 \end{translationfig}
-   \\[4mm] where each $\ETK_i$ in the list is pairwise distinct to one another.
+   \\[4mm] where all $\ETK_i$'s in $I$ are pairwise distinct.
    \caption{Translation in Field Types}
    \label{app:translation-in-field-types}
 \end{figure}
