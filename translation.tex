@@ -152,11 +152,14 @@ The translation defined so far is partial since some TypeSpec types do not have 
 
 More precisely, the previous translation is undefined in the following cases:
 \begin{itemize}
-   \item ... binaries with size specifications that are not a multiple of 8 bits (e.g., \texttt{<<\_:3>>}). Explain why these types are not interesting.
+   \item Bitcodes with size specifications that are not a multiple of 8 bits (e.g., \texttt{<<\_:3>>}). Explain why these types are not interesting.
    \item The type \texttt{...->\TST} when the translation of $\TST$ is not equivalent to \texttt{term()} (explain why this type is not interesting).
    \item .... 
-   \item $\dsb{\texttt{required(\TST) => $\prm{\TST}$}}$ and $\dsb{\texttt{optional(\TST) => $\prm{\TST}$}}$ are undefined when the translation of $\dsb{\TST}$ is not equivalent to a disjunction of pairwise distinct key types.
+   \item $\dsb{\texttt{required(\TST) => $\prm{\TST}$}}$ and $\dsb{\texttt{optional(\TST) => $\prm{\TST}$}}$ are undefined when $\dsb{\TST}$ is not equivalent to a disjunction of pairwise distinct key types.
 \end{itemize}
+In the rest of this section we give a conservative extension of the translation defined so far that is total, i.e., it is defined for every TypeSpec type. The extension consists in defining approximations for the cases where the previous translation is undefined.
+
+
 %       \\ \\
 %       \bigoplus_{i \in I}\texttt{[$\dsb{\TSF_i}$]}\,\oplus\,\texttt{$\dsb{\TSF}$}
 %       \\ =
