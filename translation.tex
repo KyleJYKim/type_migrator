@@ -159,7 +159,7 @@ More precisely, the previous translation is undefined in the following cases:
 \end{itemize}
 In the rest of this section we give a conservative extension of the translation defined so far that is total, i.e., it is defined for every TypeSpec type. The extension consists in defining approximations for the cases where the previous translation is undefined.
 
-\subsection{Approximation of Bitstring}
+\subsection{Approximation of Bitstring Types}
 
 Elixir type has no plan to support bitstring types that is finer types than \texttt{binary()}, hence, it is not possible to directly translate any bitstring types 
 However, most of the bitstring representatives could be trivially translated to \texttt{binary()}.
@@ -181,10 +181,44 @@ Despite the rare use cases, bitstring types are still designed to be recognize $
 These types can be addressed as \texttt{binary() and dynamic()}.
 Since Bitstrings exist to generalize binaries as mentioned above, the specification should describe a binary type and otherwise realized at compile time.
 
+\begin{figure} [H]
+   \begin{translationfig}
+      \dsb{\texttt{<<>>}} \approx \texttt{binary() and dynamic()}
+      \nl 
+      \dsb{\texttt{<<\_::$n$>>}} \approx 
+      \left\{
+         \begin{array}{ll}
+            \texttt{binary()} & \textsl{if}\,\,\,\,n \bmod 8 = 0
+            \nl
+            \texttt{binary() and dynamic()} & \textsl{otherwise}
+         \end{array}
+      \right.
+      \nl 
+      \dsb{\texttt{<<\_::\_*$n$>>}} \approx 
+      \left\{
+         \begin{array}{ll}
+            \texttt{binary()} & \textsl{if}\,\,\,\,n \bmod 8 = 0
+            \nl
+            \texttt{binary() and dynamic()} & \textsl{otherwise}
+         \end{array}
+      \right.
+      \nl
+      \dsb{\texttt{<<\_::$n$,\,\,\_::\_*$n$>>}} \approx 
+      \left\{
+         \begin{array}{ll}
+            \texttt{binary()} & \textsl{if}\,\,\,\,n \bmod 8 = 0
+            \nl
+            \texttt{binary() and dynamic()} & \textsl{otherwise}
+         \end{array}
+      \right.
+   \end{translationfig}
+   \caption{Approximation of Field Types}
+   \label{app:approximation-of-field-types}
+\end{figure}
 
-\subsection{Approximation of Top Function Type}
+\subsection{Approximation of Top Function Types}
 
-The top function type is union of all the functions with every arity to the top type as defined in Figure~\ref{app:bitstring-segment-types}.
+The top function type is union of all the functions with every arity to the top type as defined in Figure~\ref{app:top-function-type}.
 Since the top function type already takes over all the other function types, it becomes not worthy to have all the other function types that the return type is a subtype of the top type.
 In the perspective of memory space, it is only costly to define and have all the function types because the maximum arity is 255.
 
@@ -196,7 +230,30 @@ In the perspective of memory space, it is only costly to define and have all the
    \label{app:top-function-type}
 \end{figure}
 
-Hence, we can approximate the top functions as \texttt{\fun{\dots}{any()}} that the return types are not \texttt{any()}.
+However, Elixir type will not directly define \texttt{fun()} as Figure~\ref{app:top-function-type}, due to the triviality of defining the list of function with all the possible arity.
+While Elixir types restrict the top type to be only \texttt{fun()}, keeping the semantic approach to the top function, 
+TypeSpec has allowed to specify the return type of the top type which have to be taken into account when translating it.
+Therefore, we can finally approximate them into \texttt{fun() and dynamic()} in order to the type to be determined at compile time.
+
+\begin{figure} [H]
+   \begin{translationfig}
+      \dsb{\texttt{(\fun{\dots}{\TST})}} \approx
+      \left\{
+         \begin{array}{ll}
+            \texttt{fun()} & \textsl{if}\,\,\,\,\dsb{\TST}\,\approx\,\texttt{term()}
+            \nl
+            \texttt{fun() and dynamic()} & \textsl{otherwise}
+         \end{array}
+      \right.
+   \end{translationfig}
+   \caption{Approximation of Field Types}
+   \label{app:approximation-of-field-types}
+\end{figure}
+
+
+
+\subsection{Approximation of Field Types}
+
 
 
 \end{document}
