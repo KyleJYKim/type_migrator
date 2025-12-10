@@ -113,17 +113,12 @@ $\dsb{\map{\texttt{\TSF$_1$,\,...,\,\TSF$_n$}}} =\textsf{\textsl{map}($\bigoplus
 All it remains to do is to define the translation of field types. If $\ETK_1,...,\ETK_n$ are pairwise distinct key types, we write \texttt{[$\bigvee_{i=1}^n \ETK_i\fto\tau$]} for the list \texttt{[$\ETK_1\fto\tau,\cdots,\ETK_n\fto\tau$]}. Then the translation of single field types is defined in Figure~\ref{app:translation-in-field-types}.:
 \begin{figure} [H]
    \begin{translationfig}
- %     \dsb{\map{\texttt{\TSF$_1$,\,...,\,\TSF$_n$}}} = \map{\bigoplus_{i=n}^{1}\texttt{[$\dsb{\TSF_i}$]}\texttt{\,\,or\,\,\ETK\,\,=>\,\,not\_set()}}
-      \\ \\
       \dsb{\texttt{required(\TST) => $\prm{\TST}$}} = 
       \left\{
          \begin{array}{ll}
             \texttt{[\,:$k$\,\,=>\,\,$\dsb{\prm{\TST}}$\,]}
             & \textsl{if}\,\,\,\,\dsb{\TST}\,\,\approx\,\,\texttt{:}k
             \nl
-%            \texttt{\ETK\,\,=>\,\,if\_set($\dsb{\prm{\TST}}$)}
-%            & \textsl{if}\,\,\,\,\dsb{\TST}\,\,\approx\,\,\ETK\textsl{\,\,and\,\,}\dsb{\TST}\,\not\approx\,\texttt{:}k 
-%            \\
             \texttt{[\,}\bigvee_{i \in I}\ETK_i\fto\ifset{\dsb{\prm{\TST}}}\texttt{\,]}
             & \textsl{if}\,\,\,\,\dsb{\TST}\,\,\approx\,\,\bigvee_{i \in I}\ETK_i\textsl{\,\,and\,\,}\dsb{\TST}\,\not\approx\,\texttt{:}k %(\ETK_i\text{'s are pairwise distinct}) 
             \nl
@@ -140,7 +135,7 @@ All it remains to do is to define the translation of field types. If $\ETK_1,...
             \textsl{undefined} & \textsl{otherwise}
          \end{array}
       \right.
-\end{translationfig}
+   \end{translationfig}
    \\[4mm] where all $\ETK_i$'s in $I$ are pairwise distinct.
    \caption{Translation in Field Types}
    \label{app:translation-in-field-types}
@@ -212,8 +207,8 @@ Since Bitstrings exist to generalize binaries as mentioned above, the specificat
          \end{array}
       \right.
    \end{translationfig}
-   \caption{Approximation of Field Types}
-   \label{app:approximation-of-field-types}
+   \caption{Approximation of bitstring Types}
+   \label{app:approximation-of-bitstring-types}
 \end{figure}
 
 \subsection{Approximation of Top Function Types}
@@ -231,9 +226,10 @@ In the perspective of memory space, it is only costly to define and have all the
 \end{figure}
 
 However, Elixir type will not directly define \texttt{fun()} as Figure~\ref{app:top-function-type}, due to the triviality of defining the list of function with all the possible arity.
-While Elixir types restrict the top type to be only \texttt{fun()}, keeping the semantic approach to the top function, 
+While Elixir type restricts the top type to be only \texttt{fun()}, keeping the semantic approach to the top function, 
 TypeSpec has allowed to specify the return type of the top type which have to be taken into account when translating it.
-Therefore, we can finally approximate them into \texttt{fun() and dynamic()} in order to the type to be determined at compile time.
+Nevertheless, this leniency in expressiveness means nothing in practice, given that the Dialyzer does not differentiate the return type but only perceive any form of the top types as \texttt{...->any()}.
+These finally lead approximation of the any top function types into \texttt{fun() and dynamic()}.
 
 \begin{figure} [H]
    \begin{translationfig}
@@ -246,14 +242,45 @@ Therefore, we can finally approximate them into \texttt{fun() and dynamic()} in 
          \end{array}
       \right.
    \end{translationfig}
-   \caption{Approximation of Field Types}
-   \label{app:approximation-of-field-types}
+   \caption{Approximation of Top Function Type}
+   \label{app:approximation-of-top-function-type}
 \end{figure}
-
 
 
 \subsection{Approximation of Field Types}
 
+\begin{figure} [H]
+   \begin{translationfig}
+      \dsb{\texttt{required(\TST) => $\prm{\TST}$}} \approx
+      \left\{
+         \begin{array}{ll}
+            \texttt{[\,:$k$\,\,=>\,\,$\dsb{\prm{\TST}}$\,]}
+            & \textsl{if}\,\,\,\,\dsb{\TST}\,\,\approx\,\,\texttt{:}k
+            \nl
+            \texttt{[\,}\bigvee_{i \in I}\ETK_i\fto\ifset{\dsb{\prm{\TST}}}\texttt{\,]}
+            & \textsl{if}\,\,\,\,\dsb{\TST}\,\,\approx\,\,\bigvee_{i \in I}\ETK_i\textsl{\,\,and\,\,}\dsb{\TST}\,\not\approx\,\texttt{:}k %(\ETK_i\text{'s are pairwise distinct}) 
+            \nl
+            
+            & \textsl{if}\,\,\,\,\dsb{\TST}\,\,\lnapprox\,\,\bigvee_{i \in I}\ETK_i
+            \nl
+
+            & \textsl{if}\,\,\,\,\dsb{\TST}\,\,\not\le\,\,\bigvee_{i \in I}\ETK_i\textsl{\,\,and\,\,}\dsb{\TST}\,\,\approx\,\,\ETT\setminus\bigvee_{i \in I}\ETK_i
+         \end{array}
+      \right.
+      \nl \nl
+      \dsb{\texttt{optional(\TST) => $\prm{\TST}$}} \approx
+      \left\{
+         \begin{array}{ll}
+            \texttt{[\,}\bigvee_{i \in I}\ETK_i\fto\ifset{\dsb{\prm{\TST}}}\texttt{\,]}
+            & \textsl{if}\,\,\,\,\dsb{\TST}\,\,\approx\,\,\bigvee_{i \in I}\ETK_i
+            \nl
+            \textsl{undefined} & \textsl{otherwise}
+         \end{array}
+      \right.
+   \end{translationfig}
+   \caption{Approximation of Field Types}
+   \label{app:approximation-of-field-types}
+\end{figure}
 
 
 \end{document}
