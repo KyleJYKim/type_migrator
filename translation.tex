@@ -156,12 +156,12 @@ In the rest of this section we give a conservative extension of the translation 
 
 \subsection{Approximation of Bitstring Types}
 
-Elixir type has no plan to support bitstring types that is finer types than \texttt{binary()}, hence, it is not possible to directly translate any bitstring types 
+Elixir Types has no plan to support bitstring types that is finer types than \texttt{binary()}, hence, it is not possible to directly translate any bitstring types 
 However, most of the bitstring representatives could be trivially translated to \texttt{binary()}.
-According to the Erlang documentation, Bitstrings are a later generalization of binaries, so many texts and much information about binaries apply just as well for bitstrings.
+According to the Erlang documentation, bitstrings are a later generalization of binaries, so many texts and much information about binaries apply just as well for bitstrings.
 %https://www.erlang.org/doc/system/expressions#bit-syntax-expressions
 In other words, the purpose of bitstrings is to construct binaries in more precise manner.
-Elixir provides type segments as Figure~\ref{app:bitstring-segment-types} that specify the $unit*size$ instead of direct notation with digits.
+Elixir Types provides type segments as Figure~\ref{app:bitstring-segment-types} that specify the $unit*size$ instead of direct notation with digits.
 Interestingly, all the default segments are divisible by 8, that leads bitstring values to be accepted as binary types.
 
 \begin{figure} [H]
@@ -174,7 +174,7 @@ Interestingly, all the default segments are divisible by 8, that leads bitstring
 
 Despite the rare use cases, bitstring types are still designed to be recognize $unit$ and $size$ other than digits divisible by 8 and these are not strictly accepted as \texttt{binary()}.
 These types can be addressed as \texttt{binary() and dynamic()}.
-Since Bitstrings exist to generalize binaries as mentioned above, the specification should describe a binary type and otherwise realized at compile time.
+Since bitstrings exist to generalize binaries as mentioned above, the specification should describe a binary type and otherwise realized at compile time.
 
 \begin{figure} [H]
    \begin{translationfig}
@@ -225,8 +225,8 @@ In the perspective of memory space, it is only costly to define and have all the
    \label{app:top-function-type}
 \end{figure}
 
-However, Elixir type will not directly define \texttt{fun()} as Figure~\ref{app:top-function-type}, due to the triviality of defining the list of function with all the possible arity.
-While Elixir type restricts the top type to be only \texttt{fun()}, keeping the semantic approach to the top function, 
+However, Elixir Types will not directly define \texttt{fun()} as Figure~\ref{app:top-function-type}, due to the triviality of defining the list of function with all the possible arity.
+While Elixir Types restricts the top type to be only \texttt{fun()}, keeping the semantic approach to the top function, 
 TypeSpec has allowed to specify the return type of the top type which have to be taken into account when translating it.
 Nevertheless, this leniency in expressiveness means nothing in practice, given that the Dialyzer does not differentiate the return type but only perceive any form of the top types as \texttt{...->any()}.
 These finally lead approximation of the any top function types into \texttt{fun() and dynamic()}.
@@ -248,6 +248,104 @@ These finally lead approximation of the any top function types into \texttt{fun(
 
 
 \subsection{Approximation of Field Types}
+
+Approximating field types is more delicate than the others hence care must be taken.
+That is TypeSpec allows all the types to be specified as key types of field types.
+Whereas, Elixir Types' syntax has separate key types so that the type system does not deal with infinite set of types when it comes to field typing.
+There comes four cases when the filed types are not key types:
+
+\begin{itemize}
+   \item Approximated as type variables.
+   \item Not approximated exactly as key types but subtypes of them.
+   \item Not approximated exactly as key types but supertypes of them.
+   \item Neither subtypes nor supertypes of key types.
+\end{itemize}
+
+The first case is simple since they are eventually types belong to the syntax.
+All it requires is to recursively evaluate it.
+
+% subtype approx...
+
+
+\begin{figure} [H]
+   \begin{translationfig}
+      \dsb{\texttt{[]}} = \texttt{empty\_list()}
+      \nl 
+      \dsb{\texttt{<<>>}} = \textsl{undefined}
+      \nl 
+      \dsb{\texttt{<<\_::$n$>>}} =
+      \left\{
+         \begin{array}{ll}
+            \texttt{binary()} & \textsl{if}\,\,\,\,n \bmod 8 = 0
+            \nl
+            \texttt{undefined} & \textsl{otherwise}
+         \end{array}
+      \right.
+      \nl 
+      \dsb{\texttt{<<\_::\_*$n$>>}} = 
+      \left\{
+         \begin{array}{ll}
+            \texttt{binary()} & \textsl{if}\,\,\,\,n \bmod 8 = 0
+            \nl
+            \texttt{undefined} & \textsl{otherwise}
+         \end{array}
+      \right.
+      \nl
+      \dsb{\texttt{<<\_::$n$,\,\,\_::\_*$n$>>}} = 
+      \left\{
+         \begin{array}{ll}
+            \texttt{binary()} & \textsl{if}\,\,\,\,n \bmod 8 = 0
+            \nl
+            \texttt{undefined} & \textsl{otherwise}
+         \end{array}
+      \right.
+      \nl 
+      \dsb{\texttt{neg\_integer}} = \texttt{infty..-1}
+      \nl 
+      \dsb{\texttt{non\_neg\_integer}} = \texttt{0..infty}
+      \nl 
+      \dsb{\texttt{pos\_integer}} = \texttt{1..infty}
+      \nl 
+      \dsb{n} = n\texttt{..}n
+      \nl 
+      \dsb{n\texttt{..}n'} = n\texttt{..}n'
+   \end{translationfig}
+   \caption{Subtypes of Keytypes}
+   \label{app:subtypes-of-keytypes}
+\end{figure}
+
+
+\begin{figure} [H]
+   \begin{translationfig}
+      \dsb{\tuple{\ov{\TST}}} = \tuple{\dsb{\ov{\TST}}}
+      \nl 
+      \dsb{\map{\texttt{\TSF$_1$,\,\,\dots,\,\,\TSF$_n$}}} = \textsf{\textsl{map}($\bigoplus_{i=1}^{n}\dsb{\TSF_i}$)} %\dsb{\map{\ov{\texttt{\TSF}}}} = \oplus\dsb{\map{\ov{\TSF}}}
+      \nl 
+      \dsb{\texttt{nonempty\_maybe\_improper\_list(\TST$_1$, \TST$_2$)}} = \texttt{non\_empty\_list($\dsb{\TST_1}$, $\dsb{\TST_2}$)}
+      \nl 
+      \dsb{\texttt{(\fun{$\ov{\TST}}{\TST}$)}} = \texttt{(\fun{$\dsb{\ov{\TST}}$}$\dsb{\TST}$)}
+   \end{translationfig}
+   \caption{Supertypes of Keytypes}
+   \label{app:supertypes-of-keytypes}
+\end{figure}
+
+
+\begin{figure} [H]
+   \begin{translationfig}
+      \dsb{\TST_1\,\,|\,\,\TST_2} = \gor{\dsb{\TST_1}}{\dsb{\TST_2}}
+      \nl 
+      \dsb{\texttt{any()}} = \texttt{term()}
+      \nl 
+      \dsb{\texttt{none()}} = \texttt{none()}
+   \end{translationfig}
+   \caption{No Approximation in Keytypes}
+   \label{app:no-approximation-in-keytypes}
+\end{figure}
+
+
+
+
+
 
 \begin{figure} [H]
    \begin{translationfig}
