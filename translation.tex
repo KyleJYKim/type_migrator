@@ -246,60 +246,10 @@ These finally lead approximation of the any top function types into \texttt{fun(
    \label{app:approximation-of-top-function-type}
 \end{figure}
 
-
-\subsection{Approximation of Field Types}
-
-Approximating field types is more delicate than the others hence care must be taken.
-That is TypeSpec allows all the types to be specified as key types of field types.
-Whereas, Elixir Types' syntax has separate key types so that the type system does not deal with infinite set of types when it comes to field typing.
-There comes four cases when the filed types are not key types:
-
-\begin{itemize}
-   \item Approximated as type variables.
-   \item Not approximated exactly as key types but subtypes of them.
-   \item Not approximated exactly as key types but supertypes of them.
-   \item Neither subtypes nor supertypes of key types.
-\end{itemize}
-
-The first case is simple since they are eventually types belong to the syntax.
-All it requires is to recursively evaluate it.
-
-% subtype approx...
-
+\subsection{Approximation of Range Types}
 
 \begin{figure} [H]
-   \begin{translationfig}
-      \dsb{\texttt{[]}} = \texttt{empty\_list()}
-      \nl 
-      \dsb{\texttt{<<>>}} = \textsl{undefined}
-      \nl 
-      \dsb{\texttt{<<\_::$n$>>}} =
-      \left\{
-         \begin{array}{ll}
-            \texttt{binary()} & \textsl{if}\,\,\,\,n \bmod 8 = 0
-            \nl
-            \texttt{undefined} & \textsl{otherwise}
-         \end{array}
-      \right.
-      \nl 
-      \dsb{\texttt{<<\_::\_*$n$>>}} = 
-      \left\{
-         \begin{array}{ll}
-            \texttt{binary()} & \textsl{if}\,\,\,\,n \bmod 8 = 0
-            \nl
-            \texttt{undefined} & \textsl{otherwise}
-         \end{array}
-      \right.
-      \nl
-      \dsb{\texttt{<<\_::$n$,\,\,\_::\_*$n$>>}} = 
-      \left\{
-         \begin{array}{ll}
-            \texttt{binary()} & \textsl{if}\,\,\,\,n \bmod 8 = 0
-            \nl
-            \texttt{undefined} & \textsl{otherwise}
-         \end{array}
-      \right.
-      \nl 
+   \[\begin{array}{l}
       \dsb{\texttt{neg\_integer}} = \texttt{infty..-1}
       \nl 
       \dsb{\texttt{non\_neg\_integer}} = \texttt{0..infty}
@@ -309,37 +259,115 @@ All it requires is to recursively evaluate it.
       \dsb{n} = n\texttt{..}n
       \nl 
       \dsb{n\texttt{..}n'} = n\texttt{..}n'
-   \end{translationfig}
+      \nl
+   \end{array}\]
+   \caption{Range Types}
+   \label{app:range-types}
+\end{figure}
+
+
+\subsection{Approximation of Field Types}
+
+Approximating field types is more delicate than the others hence care must be taken.
+That is TypeSpec allows all the types to be specified as key types of field types.
+Whereas, Elixir Types' syntax has separate key types so that the type system does not deal with infinite set of types when it comes to field typing.
+There comes four cases when the filed types are not key types:
+
+\begin{itemize}
+   \item Type variables.
+   \item Subtypes of key types.
+   \item Supertypes of key types.
+   \item Neither subtypes nor supertypes of key types.
+\end{itemize}
+
+The first case is simple since they are eventually types belong to the syntax.
+All it requires is to recursively evaluate it.
+
+As most of the types are evaluated as subtypes of key types, 
+it is sound to under-approximate them to their supertypes in key types.
+For example, Figure~\ref{app:record-value-access-function} shows a simple identity function that takes a record. 
+
+\begin{figure} [H]
+   \[\begin{array}{l}
+      \texttt{@spec record\_val(\%\{\{atom()\}\,\,=>\,\,integer()\})\,\,::\,\,integer()}
+      \\
+      \texttt{def record\_val(x) when is\_map\_key(x,\,\,\{:ok\}),\,\,do:\,\,Map.get(x,\,\,\{:ok\})}
+   \end{array}\]
+   \nl 
+   \[\begin{array}{c}
+      \dsb{\texttt{@spec id\_record(\%\{\{atom()\} => integer()\}) :: integer()}}
+      \nl\rotatebox[origin=c]{90}{$\approx$}\nl
+      \dsb{\texttt{@spec id\_record(\%\{tuple() => integer()\}) :: integer()}}
+      \nl\rotatebox[origin=c]{90}{$\approx$}\nl
+      \texttt{\$ \%\{tuple() => integer()\} -> integer()}
+   \end{array}\]
+   \caption{Record Value Access Function}
+   \label{app:record-value-access-function}
+\end{figure}
+
+The key type is specified to accept tuple with a singe atom type,
+but Dialyzer will pass when the example function is applied to records with any type of tuples as key types.
+That is complemented by conservative approximations of Elixir Types in pattern/guard analysis:
+it states that a type cannot express the exact domain of a function
+and henceforth under-approximation is used with the guards/pattern that can filter out unintended types of values, which is called potentially accepted type.
+
+\begin{figure} [H]
+   \[\begin{array}{rcl}
+      \dsb{\texttt{[]}} &\lessapprox& \texttt{list()}
+      \nl 
+      \dsb{\tuple{\ov{\TST}}} &\lessapprox& \texttt{tuple()}
+      \nl 
+      \dsb{\texttt{(\fun{$\ov{\TST}}{\TST}$)}} &\lessapprox& \texttt{fun()}
+   \end{array}\]
    \caption{Subtypes of Keytypes}
    \label{app:subtypes-of-keytypes}
 \end{figure}
 
+\texttt{list()} in key types is semantically a set of all the list types and \texttt{nonempty\_maybe\_improper\_list()} in TypeSpec is a basic type to describe all kind of lists including the empty list and improper lists.
+What hinders us from direct translation is that \texttt{list()} does not include improper lists hence to be a subtype of \texttt{nonempty\_maybe\_improper\_list()}.
+Notwithstanding, this is not a interesting part for the improper lists not meant to be used as the name suggests.
+The over-approximation of \texttt{nonempty\_maybe\_improper\_list()}, therefore, is sound to be \texttt{list()}.
+% Furthermore, Elixir Types is not aware of improper lists types since it is not even a kind of type often used and recognized by users.
+% Which ensures safeness of this over-approximation for the future works in Elixir Types.
 
 \begin{figure} [H]
-   \begin{translationfig}
-      \dsb{\tuple{\ov{\TST}}} = \tuple{\dsb{\ov{\TST}}}
-      \nl 
-      \dsb{\map{\texttt{\TSF$_1$,\,\,\dots,\,\,\TSF$_n$}}} = \textsf{\textsl{map}($\bigoplus_{i=1}^{n}\dsb{\TSF_i}$)} %\dsb{\map{\ov{\texttt{\TSF}}}} = \oplus\dsb{\map{\ov{\TSF}}}
-      \nl 
-      \dsb{\texttt{nonempty\_maybe\_improper\_list(\TST$_1$, \TST$_2$)}} = \texttt{non\_empty\_list($\dsb{\TST_1}$, $\dsb{\TST_2}$)}
-      \nl 
-      \dsb{\texttt{(\fun{$\ov{\TST}}{\TST}$)}} = \texttt{(\fun{$\dsb{\ov{\TST}}$}$\dsb{\TST}$)}
-   \end{translationfig}
+   \[\begin{array}{rcl}
+      \dsb{\texttt{nonempty\_maybe\_improper\_list(\TST$_1$, \TST$_2$)}} &\gtrapprox& \texttt{list()}
+   \end{array}\]
    \caption{Supertypes of Keytypes}
    \label{app:supertypes-of-keytypes}
 \end{figure}
 
+Even though the last cases in TypeSpec are not in the key types in Elixir Types, they can be easily translated semantically.
+Firstly, since \texttt{|} is not a type but a type operator, it can simply be approximated per se.
+Following Figure~\ref{app:semantical-comprehension-of-operator} displays different syntaxes with the same semantics.
 
 \begin{figure} [H]
-   \begin{translationfig}
-      \dsb{\TST_1\,\,|\,\,\TST_2} = \gor{\dsb{\TST_1}}{\dsb{\TST_2}}
+   \[\begin{array}{c}
+      \dsb{\texttt{@spec fun(\%\{atom() | binary() => integer()\}) :: integer()}}
+      \nl\rotatebox[origin=c]{90}{$\approx$}\nl
+      \texttt{\$ \%\{atom() or binary() => integer()\} -> integer()}
+      \nl\rotatebox[origin=c]{90}{$\approx$}\nl
+      \texttt{\$ \%\{atom() => integer() or binary() => integer()\} -> integer()}
+      \nl\rotatebox[origin=c]{90}{$\approx$}\nl
+      \texttt{\$ \%\{atom() => integer()\} or \%\{binary() => integer()\} -> integer()}
+   \end{array}\]
+   \caption{Semantical Comprehension of Or Operator}
+   \label{app:semantical-comprehension-of-operator}
+\end{figure}
+
+\texttt{none()} is empty map, but \texttt{any()} is map or union of every type to a value type...
+
+\begin{figure} [H]
+   \[\begin{array}{rcl}
+      \dsb{\TST_1\,\,|\,\,\TST_2} &\approx& 
       \nl 
-      \dsb{\texttt{any()}} = \texttt{term()}
+      \dsb{\texttt{any()}} &\approx& 
       \nl 
-      \dsb{\texttt{none()}} = \texttt{none()}
-   \end{translationfig}
-   \caption{No Approximation in Keytypes}
-   \label{app:no-approximation-in-keytypes}
+      \dsb{\texttt{none()}} &\approx& 
+   \end{array}\]
+   \caption{Semantical Approximation in Key Types}
+   \label{app:semantical-approximation-in-key-types}
 \end{figure}
 
 
