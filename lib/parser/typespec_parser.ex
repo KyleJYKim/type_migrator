@@ -58,23 +58,25 @@ defmodule Parser.TypespecParser do
 
     name = Atom.to_string(name)
 
+    # depth first
     walker = fn
-      [head | []], walker_fun
-      -> (
-        (head |> walker_fun.(walker_fun))
-      )
-
+      # Since Input types could be multiple, they come as lists.
+      # In the case (... -> T), it go through here.
       [head | tail], walker_fun
       -> (
-        (head |> walker_fun.(walker_fun)) <> ", " <> (tail |> walker_fun.(walker_fun))
+        if Enum.empty?(tail),
+          do: (head |> walker_fun.(walker_fun)),
+          else: (head |> walker_fun.(walker_fun)) <> ", " <> (tail |> walker_fun.(walker_fun))
       )
 
+      # Remote module type (e.g., String.t())
       {{:., [], [{_, _, [module]}, type]}, [], []}, walker_fun
       -> (
         type = type |> walker_fun.(walker_fun)
         Atom.to_string(module) <> "." <> type <> "()"
       )
 
+      # T | T
       {:|, [], [left, right]}, walker_fun
       -> (
         left = left |> walker_fun.(walker_fun)
@@ -82,16 +84,25 @@ defmodule Parser.TypespecParser do
         left <> " or " <> right
       )
 
+      # (\overline{T} -> T) AND (... -> T)
       {:->, [], [left, right]}, walker_fun
       -> (
-        left = left |> walker_fun.(walker_fun)
+        left = case left do
+          [{:..., [], []}] -> "..."
+          left -> left |> walker_fun.(walker_fun)
+        end
+
         right = right |> walker_fun.(walker_fun)
         "(" <> left <> " -> " <> right <> ")"
       )
 
+      # RESHAPE IT TO PARSER AFTER TRANSLATOR!!!
+
+      # Simple form of basic types (any(), none(), atom(), pid(), port(), reference(), float(), integer(), neg_integer(), non_neg_integer(), pos_integer(), tuple())
       {type, [], []}, _
       -> Atom.to_string(type) <> "()"
 
+      # Singleton types (:k)
       singleton, _ when is_atom(singleton)
       -> ":" <> Atom.to_string(singleton)
     end
@@ -112,7 +123,7 @@ defmodule Parser.TypespecParser do
 
     sample:
     alias Parser.TypespecParser, as: Ps
-    ast = quote do: @spec fun(:a, (atom() -> integer())) :: atom() | integer() | binary()
+    ast = quote do: @spec funny_fun(:a, ((... -> binary()) -> integer())) :: atom() | integer() | binary()
     spec = ast |> Ps.extract_spec
     spec |> Ps.analyze_spec
 
