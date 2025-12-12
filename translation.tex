@@ -338,7 +338,7 @@ The over-approximation of \texttt{nonempty\_maybe\_improper\_list()}, therefore,
    \label{app:supertypes-of-keytypes}
 \end{figure}
 
-Even though the last cases in TypeSpec are not in the key types in Elixir Types, they can be easily translated semantically.
+Even though the last cases in TypeSpec are not in the key types in Elixir Types, they can be semantically translated.
 Firstly, since \texttt{|} is not a type but a type operator, it can simply be approximated per se.
 Following Figure~\ref{app:semantical-comprehension-of-operator} displays different syntaxes with the same semantics.
 
@@ -356,22 +356,14 @@ Following Figure~\ref{app:semantical-comprehension-of-operator} displays differe
    \label{app:semantical-comprehension-of-operator}
 \end{figure}
 
-\texttt{none()} is empty map, but \texttt{any()} is map or union of every type to a value type...
 
-\begin{figure} [H]
-   \[\begin{array}{rcl}
-      \dsb{\TST_1\,\,|\,\,\TST_2} &\approx& 
-      \nl 
-      \dsb{\texttt{any()}} &\approx& 
-      \nl 
-      \dsb{\texttt{none()}} &\approx& 
-   \end{array}\]
-   \caption{Semantical Approximation in Key Types}
-   \label{app:semantical-approximation-in-key-types}
-\end{figure}
-
-
-
+With a little autopsy on \texttt{any()} and \texttt{none()} as key types, comprehending it does not require a lot of effort; what they do in field types.
+\texttt{any()} as a key type expands to unions of all the types mapping to a value type.
+On the contrary, \texttt{none()} eradicates the field in the record type, for there is no field type without a key type. 
+Imagine a type system only with a set of types, i.e., \texttt{\{any(), none(), integer(), float(), binary()\}}.
+Then, the translation of \texttt{\%\{any()\,\,=>\,\,integer()\}} expands it to \texttt{\%\{(none() or integer() or float() or binary())\,\,=>\,\,integer()\}}
+Whereas, \texttt{\%\{none()\,\,=>\,\,any()\}} is collapsed into \texttt{\%\{\}} which is an empty record type.
+It all seems easy and sound, except one nuisance that risen by the need of listing all the types to translate \texttt{any()} in key types.
 
 
 

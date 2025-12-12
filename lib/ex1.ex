@@ -46,7 +46,7 @@ defmodule Ex1 do
   @spec id_records9(%{optional((...->atom())) => integer()}) :: map()
   def id_records9(x), do: x
 
-  @spec id_records10(%{any() => integer()}) :: integer()
+  @spec id_records10(%{none() => integer()}) :: integer()
   def id_records10(x) when is_map_key(x, {:a}), do: Map.get(x, {:a})
 
   # Whatever function return type is, it is taken as ...->any()
@@ -117,7 +117,7 @@ defmodule Ex1 do
 
     #def id_records8(), do: Ex1.id_records8(%{:a => 1})
     def id_records9(), do: Ex1.id_records9(%{fn x -> "a" end => :a})
-    def id_records10(), do: Ex1.id_records10(%{1 => 1})
+    def id_records10(), do: Ex1.id_records10(%{nil => 1})
 
     def id_fun(), do: Ex1.id_fun(fn x -> <<97>> end)
 
