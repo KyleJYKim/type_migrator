@@ -60,45 +60,45 @@ defmodule Parser.TypespecParser do
     [{name, meta, input}, output] = spec_tree
 
     walker = fn
-      {:term, _, _} -> {:any, [], []}
-      {:arity, _, _} -> {:.., [context: Elixir, imports: [{0, Kernel}, {2, Kernel}]], [0, 255]}
-      # {:as_boolean, [], [children]} -> children
-      {:binary, _, _} -> {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, 8]}]}]}
-      {:nonempty_binary, _, _} -> {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, 8]}, {:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, 8]}]}]}
-      {:bitstring, _, _} -> {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, 1]}]}]}
-      {:nonempty_bitstring, _, _} -> {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, 1]}, {:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, 1]}]}]}
-      {:boolean, _, _} -> {:|, [], [true, false]}
-      {:byte, _, _} -> {:.., [context: Elixir, imports: [{0, Kernel}, {2, Kernel}]], [0, 255]}
-      {:nonempty_list, _, [children]} -> {:nonempty_maybe_improper_list, [], [children, []]}
-      {:list, _, [children]} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:|, [], [children, []]}]}]}
-      {:nonempty_list, _, _} -> {:nonempty_maybe_improper_list, [], [{:|, [], [{:any, [], []}, []]}]}
-      # {:nonempty_improper_list, [], [children]} -> {:nonempty_maybe_improper_list, [], [children]}
-      {:maybe_improper_list, _, [children]} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:|, [], [children]}]}]}
-      {:maybe_improper_list, _, _} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:any, [], []}, {:any, [], []}]}]}
-      {:nonempty_maybe_improper_list, _, _} -> {:nonempty_maybe_improper_list, [], [{:any, [], []}, {:any, [], []}]}
-      {:char, _, _} -> {:.., [context: Elixir, imports: [{0, Kernel}, {2, Kernel}]], [0, 1114111]}
-      {:charlist, _, _} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:|, [], [{:.., [context: Elixir, imports: [{0, Kernel}, {2, Kernel}]], [0, 1114111]}, []]}]}]}
-      {:nonempty_charlist, _, _} -> {:nonempty_maybe_improper_list, [], [{:|, [], [{:.., [context: Elixir, imports: [{0, Kernel}, {2, Kernel}]], [0, 1114111]}, []]}]}
-      {:fun, _, _} -> [{:->, [], [[{:..., [], []}], {:any, [], []}]}]
-      {:function, _, _} -> [{:->, [], [[{:..., [], []}], {:any, [], []}]}]
-      {:identifier, _, _} -> {:|, [], [{:pid, [context: Elixir, imports: [{1, IEx.Helpers}, {3, IEx.Helpers}]], []}, {:|, [], [{:port, [context: Elixir, imports: [{1, IEx.Helpers}, {2, IEx.Helpers}]], []}, {:reference, [], []}]}]}
+      {:term, _, _}, _ -> {:any, [], []}
+      {:arity, _, _}, _ -> {:.., [context: Elixir, imports: [{0, Kernel}, {2, Kernel}]], [0, 255]}
+      # {:as_boolean, [], [children]}, _ -> children
+      {:binary, _, _}, _ -> {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, 8]}]}]}
+      {:nonempty_binary, _, _}, _ -> {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, 8]}, ]}
+      {:bitstring, _, _}, _ -> {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, 1]}]}]}
+      {:nonempty_bitstring, _, _}, _ -> {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, 1]}, {:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, 1]}]}]}
+      {:boolean, _, _}, _ -> {:|, [], [true, false]}
+      {:byte, _, _}, _ -> {:.., [context: Elixir, imports: [{0, Kernel}, {2, Kernel}]], [0, 255]}
+      {:nonempty_list, _, [children]}, _ -> {:nonempty_maybe_improper_list, [], [children, []]}
+      {:list, _, [children]}, walker_fun -> {:|, [], [[], walker_fun.({:nonempty_list, [], [children]}, walker_fun)]}
+      {:nonempty_list, _, _}, walker_fun -> walker_fun.({:nonempty_list, _, [{:any, [], []}]}, walker_fun)
+      # {:nonempty_improper_list, [], [children]}, _ -> {:nonempty_maybe_improper_list, [], [children]}
+      {:maybe_improper_list, _, [children]}, _ -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:|, [], [children]}]}]}
+      {:maybe_improper_list, _, _}, _ -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:any, [], []}, {:any, [], []}]}]}
+      {:nonempty_maybe_improper_list, _, _}, _ -> {:nonempty_maybe_improper_list, [], [{:any, [], []}, {:any, [], []}]}
+      {:char, _, _}, _ -> {:.., [context: Elixir, imports: [{0, Kernel}, {2, Kernel}]], [0, 1114111]}
+      {:charlist, _, _}, walker_fun -> walker_fun.({:list, _, [walker_fun.({:char, _, _}, walker_fun)]}, walker_fun)
+      {:nonempty_charlist, _, _}, walker_fun -> walker_fun.({:nonempty_list, _, [walker_fun.({:char, _, _}, walker_fun)]})
+      {:fun, _, _}, _ -> [{:->, [], [[{:..., [], []}], {:any, [], []}]}]
+      {:function, _, _}, _ -> [{:->, [], [[{:..., [], []}], {:any, [], []}]}]
+      {:identifier, _, _}, _ -> {:|, [], [{:pid, [context: Elixir, imports: [{1, IEx.Helpers}, {3, IEx.Helpers}]], []}, {:|, [], [{:port, [context: Elixir, imports: [{1, IEx.Helpers}, {2, IEx.Helpers}]], []}, {:reference, [], []}]}]}
 
 
       # probably need to make it recursive with lazy eval...
-      {:iodata, _, _} -> {:|, [], [{:|, [], [[], {:nonempty_maybe_improper_list, [], [{:|, [], [{:.., [context: Elixir, imports: [{0, Kernel}, {2, Kernel}]], [0, 255]}, {:|, [], [{:<<>>, [], [{:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, 8]}]}]}, {:iolist, [], []}]}]}, {:|, [], [{:<<>>, [], [{:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, 8]}]}]}, []]}]}]}, {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, 8]}]}]}]}
-      {:iolist, _, _} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:|, [], [{:.., [context: Elixir, imports: [{0, Kernel}, {2, Kernel}]], [0, 255]}, {:|, [], [{:<<>>, [], [{:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, 8]}]}]}, {:iolist, [], []}]}]}, {:|, [], [{:<<>>, [], [{:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, 8]}]}]}, []]}]}]}
-      # {:iodata, _, _} -> {:|, [], [{:|, [], [[], {:nonempty_maybe_improper_list, [], [{:|, [], [{:byte, [], []}, {:|, [], [{:binary, [], []}, {:iolist, [], []}]}]}, {:|, [], [{:binary, [], []}, []]}]}]}, {:binary, [], []}]}
-      # {:iolist, _, _} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:|, [], [{:byte, [], []}, {:|, [], [{:binary, [], []}, {:iolist, [], []}]}]}, {:|, [], [{:binary, [], []}, []]}]}]}
+      {:iodata, _, _}, _ -> {:|, [], [{:|, [], [[], {:nonempty_maybe_improper_list, [], [{:|, [], [{:.., [context: Elixir, imports: [{0, Kernel}, {2, Kernel}]], [0, 255]}, {:|, [], [{:<<>>, [], [{:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, 8]}]}]}, {:iolist, [], []}]}]}, {:|, [], [{:<<>>, [], [{:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, 8]}]}]}, []]}]}]}, {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, 8]}]}]}]}
+      {:iolist, _, _}, _ -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:|, [], [{:.., [context: Elixir, imports: [{0, Kernel}, {2, Kernel}]], [0, 255]}, {:|, [], [{:<<>>, [], [{:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, 8]}]}]}, {:iolist, [], []}]}]}, {:|, [], [{:<<>>, [], [{:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, 8]}]}]}, []]}]}]}
+      # {:iodata, _, _}, walker_fun -> {:|, [], [{:|, [], [[], {:nonempty_maybe_improper_list, [], [{:|, [], [{:byte, [], []}, {:|, [], [{:binary, [], []}, {:iolist, [], []}]}]}, {:|, [], [{:binary, [], []}, []]}]}]}, {:binary, [], []}]}
+      # {:iolist, _, _}, walker_fun -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:|, [], [{:byte, [], []}, {:|, [], [{:binary, [], []}, {:iolist, [], []}]}]}, {:|, [], [{:binary, [], []}, []]}]}]}
 
-      {:keyword, _, _} -> [{{:atom, [], []}, {:any, [], []}}]
-      {:keyword, _, [children]} -> [{{:atom, [], []}, children}]
-      {:mfa, _, _} -> {:{}, [], [{:atom, [], []}, {:atom, [], []}, {:.., [context: Elixir, imports: [{0, Kernel}, {2, Kernel}]], [0, 255]}]}
-      {:module, _, _} -> {:atom, _, _}
-      {:no_return, _, _} -> {:none, _, _}
-      {:node, _, _} -> {:atom, _, _}
-      {:number, _, _} -> {:|, [], [{:integer, _, _}, {:float, _, _}]}
-      {:struct, _, _} -> {:%{}, [], [{:__struct__, {:atom, [], []}}, {{:optional, [], [{:atom, [], []}]}, {:any, [], []}}]}
-      {:timeout, _, _} -> {:|, [], [:infinity, {:non_neg_integer, [], []}]}
+      {:keyword, _, _}, _ -> [{{:atom, [], []}, {:any, [], []}}]
+      {:keyword, _, [children]}, _ -> [{{:atom, [], []}, children}]
+      {:mfa, _, _}, walker_fun -> {:{}, [], [walker_fun.({:module, [], []}, walker_fun), {:atom, [], []}, walker_fun.({:arity, [], []}, walker_fun)]}
+      {:module, _, _}, _ -> {:atom, [], []}
+      {:no_return, _, _}, _ -> {:none, [], []}
+      {:node, _, _}, _ -> {:atom, [], []}
+      {:number, _, _}, _ -> {:|, [], [{:integer, [], []}, {:float, [], []}]}
+      {:struct, _, _}, _ -> {:%{}, [], [{:__struct__, {:atom, [], []}}, {{:optional, [], [{:atom, [], []}]}, {:any, [], []}}]}
+      {:timeout, _, _}, _ -> {:|, [], [:infinity, {:non_neg_integer, [], []}]}
 
       other -> other
     end
