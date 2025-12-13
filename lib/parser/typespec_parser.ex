@@ -59,7 +59,7 @@ defmodule Parser.TypespecParser do
 
     [{name, meta, input}, output] = spec_tree
 
-    walker = fn
+    builtin_walker = fn
       {:term, _, _}, _ -> {:any, [], []}
       {:arity, _, _}, _ -> {:.., [context: Elixir, imports: [{0, Kernel}, {2, Kernel}]], [0, 255]}
       # {:as_boolean, [], [children]}, _ -> children
@@ -71,18 +71,17 @@ defmodule Parser.TypespecParser do
       {:byte, _, _}, _ -> {:.., [context: Elixir, imports: [{0, Kernel}, {2, Kernel}]], [0, 255]}
       {:nonempty_list, _, [children]}, _ -> {:nonempty_maybe_improper_list, [], [children, []]}
       {:list, _, [children]}, walker_fun -> {:|, [], [[], walker_fun.({:nonempty_list, [], [children]}, walker_fun)]}
-      {:nonempty_list, _, _}, walker_fun -> walker_fun.({:nonempty_list, _, [{:any, [], []}]}, walker_fun)
+      {:nonempty_list, _, _}, walker_fun -> walker_fun.({:nonempty_list, [], [{:any, [], []}]}, walker_fun)
       # {:nonempty_improper_list, [], [children]}, _ -> {:nonempty_maybe_improper_list, [], [children]}
       {:maybe_improper_list, _, [children]}, _ -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:|, [], [children]}]}]}
       {:maybe_improper_list, _, _}, _ -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:any, [], []}, {:any, [], []}]}]}
       {:nonempty_maybe_improper_list, _, _}, _ -> {:nonempty_maybe_improper_list, [], [{:any, [], []}, {:any, [], []}]}
       {:char, _, _}, _ -> {:.., [context: Elixir, imports: [{0, Kernel}, {2, Kernel}]], [0, 1114111]}
-      {:charlist, _, _}, walker_fun -> walker_fun.({:list, _, [walker_fun.({:char, _, _}, walker_fun)]}, walker_fun)
-      {:nonempty_charlist, _, _}, walker_fun -> walker_fun.({:nonempty_list, _, [walker_fun.({:char, _, _}, walker_fun)]})
+      {:charlist, _, _}, walker_fun -> walker_fun.({:list, [], [walker_fun.({:char, [], []}, walker_fun)]}, walker_fun)
+      {:nonempty_charlist, _, _}, walker_fun -> walker_fun.({:nonempty_list, [], [walker_fun.({:char, [], []}, walker_fun)]}, walker_fun)
       {:fun, _, _}, _ -> [{:->, [], [[{:..., [], []}], {:any, [], []}]}]
       {:function, _, _}, _ -> [{:->, [], [[{:..., [], []}], {:any, [], []}]}]
       {:identifier, _, _}, _ -> {:|, [], [{:pid, [context: Elixir, imports: [{1, IEx.Helpers}, {3, IEx.Helpers}]], []}, {:|, [], [{:port, [context: Elixir, imports: [{1, IEx.Helpers}, {2, IEx.Helpers}]], []}, {:reference, [], []}]}]}
-
 
       # probably need to make it recursive with lazy eval...
       {:iodata, _, _}, _ -> {:|, [], [{:|, [], [[], {:nonempty_maybe_improper_list, [], [{:|, [], [{:.., [context: Elixir, imports: [{0, Kernel}, {2, Kernel}]], [0, 255]}, {:|, [], [{:<<>>, [], [{:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, 8]}]}]}, {:iolist, [], []}]}]}, {:|, [], [{:<<>>, [], [{:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, 8]}]}]}, []]}]}]}, {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, 8]}]}]}]}
@@ -100,11 +99,11 @@ defmodule Parser.TypespecParser do
       {:struct, _, _}, _ -> {:%{}, [], [{:__struct__, {:atom, [], []}}, {{:optional, [], [{:atom, [], []}]}, {:any, [], []}}]}
       {:timeout, _, _}, _ -> {:|, [], [:infinity, {:non_neg_integer, [], []}]}
 
-      other -> other
+      other, _ -> other
     end
 
-    input = input |> Macro.prewalk(walker)
-    ouput = output |> Macro.prewalk(walker)
+    input = input |> Macro.prewalk(builtin_walker.(builtin_walker))
+    output = output |> Macro.prewalk(builtin_walker.(builtin_walker))
 
     [{name, meta, input}, output]
   end
