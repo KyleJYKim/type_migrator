@@ -24,7 +24,10 @@ defmodule Parser.TypespecParser do
     |> File.read!               # => String
     |> Code.string_to_quoted!   # => AST
     |> extract_spec             # => TypeSpec info
-    |> analyze_spec             # => List of TypespecInfo struct
+    #|> parse_spec
+    |> translate_spec
+      # 1. Parse all TS to the form of basic, i.e., all built-in types to defined and syntactic sugar to expanded.
+      # 2. Translation: depth-first. (annotation is the last)
 
     #|> compile_expr()             # transform AST to another language
     #|> ok_or_error()
@@ -52,9 +55,63 @@ defmodule Parser.TypespecParser do
   end
 
 
-  def analyze_spec(spec) when spec != :not_spec do
+  def parse_spec(spec_tree) when spec_tree != :not_spec do
 
-    [{name, _, input}, output] = spec
+    [{name, meta, input}, output] = spec_tree
+
+    walker = fn
+      {:term, _, _} -> {:any, [], []}
+      {:arity, _, _} -> {:.., [context: Elixir, imports: [{0, Kernel}, {2, Kernel}]], [0, 255]}
+      # {:as_boolean, [], [children]} -> children
+      {:binary, _, _} -> {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, 8]}]}]}
+      {:nonempty_binary, _, _} -> {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, 8]}, {:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, 8]}]}]}
+      {:bitstring, _, _} -> {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, 1]}]}]}
+      {:nonempty_bitstring, _, _} -> {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, 1]}, {:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, 1]}]}]}
+      {:boolean, _, _} -> {:|, [], [true, false]}
+      {:byte, _, _} -> {:.., [context: Elixir, imports: [{0, Kernel}, {2, Kernel}]], [0, 255]}
+      {:nonempty_list, _, [children]} -> {:nonempty_maybe_improper_list, [], [children, []]}
+      {:list, _, [children]} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:|, [], [children, []]}]}]}
+      {:nonempty_list, _, _} -> {:nonempty_maybe_improper_list, [], [{:|, [], [{:any, [], []}, []]}]}
+      # {:nonempty_improper_list, [], [children]} -> {:nonempty_maybe_improper_list, [], [children]}
+      {:maybe_improper_list, _, [children]} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:|, [], [children]}]}]}
+      {:maybe_improper_list, _, _} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:any, [], []}, {:any, [], []}]}]}
+      {:nonempty_maybe_improper_list, _, _} -> {:nonempty_maybe_improper_list, [], [{:any, [], []}, {:any, [], []}]}
+      {:char, _, _} -> {:.., [context: Elixir, imports: [{0, Kernel}, {2, Kernel}]], [0, 1114111]}
+      {:charlist, _, _} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:|, [], [{:.., [context: Elixir, imports: [{0, Kernel}, {2, Kernel}]], [0, 1114111]}, []]}]}]}
+      {:nonempty_charlist, _, _} -> {:nonempty_maybe_improper_list, [], [{:|, [], [{:.., [context: Elixir, imports: [{0, Kernel}, {2, Kernel}]], [0, 1114111]}, []]}]}
+      {:fun, _, _} -> [{:->, [], [[{:..., [], []}], {:any, [], []}]}]
+      {:function, _, _} -> [{:->, [], [[{:..., [], []}], {:any, [], []}]}]
+      {:identifier, _, _} -> {:|, [], [{:pid, [context: Elixir, imports: [{1, IEx.Helpers}, {3, IEx.Helpers}]], []}, {:|, [], [{:port, [context: Elixir, imports: [{1, IEx.Helpers}, {2, IEx.Helpers}]], []}, {:reference, [], []}]}]}
+
+
+      # probably need to make it recursive with lazy eval...
+      {:iodata, _, _} -> {:|, [], [{:|, [], [[], {:nonempty_maybe_improper_list, [], [{:|, [], [{:.., [context: Elixir, imports: [{0, Kernel}, {2, Kernel}]], [0, 255]}, {:|, [], [{:<<>>, [], [{:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, 8]}]}]}, {:iolist, [], []}]}]}, {:|, [], [{:<<>>, [], [{:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, 8]}]}]}, []]}]}]}, {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, 8]}]}]}]}
+      {:iolist, _, _} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:|, [], [{:.., [context: Elixir, imports: [{0, Kernel}, {2, Kernel}]], [0, 255]}, {:|, [], [{:<<>>, [], [{:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, 8]}]}]}, {:iolist, [], []}]}]}, {:|, [], [{:<<>>, [], [{:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, 8]}]}]}, []]}]}]}
+      # {:iodata, _, _} -> {:|, [], [{:|, [], [[], {:nonempty_maybe_improper_list, [], [{:|, [], [{:byte, [], []}, {:|, [], [{:binary, [], []}, {:iolist, [], []}]}]}, {:|, [], [{:binary, [], []}, []]}]}]}, {:binary, [], []}]}
+      # {:iolist, _, _} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:|, [], [{:byte, [], []}, {:|, [], [{:binary, [], []}, {:iolist, [], []}]}]}, {:|, [], [{:binary, [], []}, []]}]}]}
+
+      {:keyword, _, _} -> [{{:atom, [], []}, {:any, [], []}}]
+      {:keyword, _, [children]} -> [{{:atom, [], []}, children}]
+      {:mfa, _, _} -> {:{}, [], [{:atom, [], []}, {:atom, [], []}, {:.., [context: Elixir, imports: [{0, Kernel}, {2, Kernel}]], [0, 255]}]}
+      {:module, _, _} -> {:atom, _, _}
+      {:no_return, _, _} -> {:none, _, _}
+      {:node, _, _} -> {:atom, _, _}
+      {:number, _, _} -> {:|, [], [{:integer, _, _}, {:float, _, _}]}
+      {:struct, _, _} -> {:%{}, [], [{:__struct__, {:atom, [], []}}, {{:optional, [], [{:atom, [], []}]}, {:any, [], []}}]}
+      {:timeout, _, _} -> {:|, [], [:infinity, {:non_neg_integer, [], []}]}
+
+      other -> other
+    end
+
+    input = input |> Macro.prewalk(walker)
+    ouput = output |> Macro.prewalk(walker)
+
+    [{name, meta, input}, output]
+  end
+
+  def translate_spec(parsed_spec_tree) when parsed_spec_tree != :not_spec do
+
+    [{name, _, input}, output] = parsed_spec_tree
 
     name = Atom.to_string(name)
 
@@ -96,7 +153,6 @@ defmodule Parser.TypespecParser do
         "(" <> left <> " -> " <> right <> ")"
       )
 
-      # RESHAPE IT TO PARSER AFTER TRANSLATOR!!!
 
       # Simple form of basic types (any(), none(), atom(), pid(), port(), reference(), float(), integer(), neg_integer(), non_neg_integer(), pos_integer(), tuple())
       {type, [], []}, _
@@ -123,7 +179,7 @@ defmodule Parser.TypespecParser do
 
     sample:
     alias Parser.TypespecParser, as: Ps
-    ast = quote do: @spec funny_fun(:a, ((... -> binary()) -> integer())) :: atom() | integer() | binary()
+    ast = quote do: @spec funny_fun(term()) :: atom()
     spec = ast |> Ps.extract_spec
     spec |> Ps.analyze_spec
 
