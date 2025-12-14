@@ -59,9 +59,10 @@ defmodule Parser.TypespecParser do
 
     [{name, meta, input}, output] = spec_tree
 
-    builtin_walker = fn node, walker_fun -> (
+    builtin_walker = fn type_node, walker_fun -> (
+      # walker_fun/2 is used when the first level node is needed to be parsed, i.e., defined as the basic types.
       walker_fun = &walker_fun.(&1, walker_fun)
-      case node do
+      case type_node do
         {:term, [], []} -> {:any, [], []}
         {:arity, [], []} -> {:.., [context: Elixir, imports: [{0, Kernel}, {2, Kernel}]], [0, 255]}
         # {:as_boolean, [], [children]} -> children
@@ -71,29 +72,30 @@ defmodule Parser.TypespecParser do
         {:nonempty_bitstring, [], []} -> {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, 1]}, {:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, 1]}]}]}
         {:boolean, [], []} -> {:|, [], [true, false]}
         {:byte, [], []} -> {:.., [context: Elixir, imports: [{0, Kernel}, {2, Kernel}]], [0, 255]}
-        {:nonempty_list, [], [children]} -> {:nonempty_maybe_improper_list, [], [children, []]}
-        {:list, [], [children]} -> {:|, [], [[], {:nonempty_list, [], [children]} |> walker_fun.()]}
+        {:nonempty_list, [], [type]} -> {:nonempty_maybe_improper_list, [], [type, []]}
+        {:list, [], [type]} -> {:|, [], [[], {:nonempty_list, [], [type]}]}
         {:nonempty_list, [], []} -> {:nonempty_list, [], [{:any, [], []}]} |> walker_fun.()
-        # {:nonempty_improper_list, [], [children]} -> {:nonempty_maybe_improper_list, [], [children]}
-        {:maybe_improper_list, _, [children]} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:|, [], [children]}]}]}
+        # {:nonempty_improper_list, [], [type1, type2]} -> {:nonempty_maybe_improper_list, [], [type1, type2]}
+        {:maybe_improper_list, [], [type1, type2]} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:|, [], [type1, type2]}]}]}
         {:maybe_improper_list, [], []} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:any, [], []}, {:any, [], []}]}]}
         {:nonempty_maybe_improper_list, [], []} -> {:nonempty_maybe_improper_list, [], [{:any, [], []}, {:any, [], []}]}
         {:char, [], []} -> {:.., [context: Elixir, imports: [{0, Kernel}, {2, Kernel}]], [0, 1114111]}
-        {:charlist, [], []} -> {:list, [], [{:char, [], []} |> walker_fun.()]} |> walker_fun.()
-        {:nonempty_charlist, [], []} -> {:nonempty_list, [], [{:char, [], []} |> walker_fun.()]} |> walker_fun.()
+        {:charlist, [], []} -> {:list, [], [{:char, [], []}]} |> walker_fun.()
+        {:nonempty_charlist, [], []} -> {:nonempty_list, [], [{:char, [], []}]} |> walker_fun.()
         {:fun, [], []} -> [{:->, [], [[{:..., [], []}], {:any, [], []}]}]
         {:function, [], []} -> [{:->, [], [[{:..., [], []}], {:any, [], []}]}]
         {:identifier, [], []} -> {:|, [], [{:pid, [context: Elixir, imports: [{1, IEx.Helpers}, {3, IEx.Helpers}]], []}, {:|, [], [{:port, [context: Elixir, imports: [{1, IEx.Helpers}, {2, IEx.Helpers}]], []}, {:reference, [], []}]}]}
 
-        # probably need to make it recursive with lazy eval...
-        {:iodata, [], []} -> {:|, [], [{:|, [], [[], {:nonempty_maybe_improper_list, [], [{:|, [], [{:.., [context: Elixir, imports: [{0, Kernel}, {2, Kernel}]], [0, 255]}, {:|, [], [{:<<>>, [], [{:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, 8]}]}]}, {:iolist, [], []}]}]}, {:|, [], [{:<<>>, [], [{:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, 8]}]}]}, []]}]}]}, {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, 8]}]}]}]}
-        {:iolist, [], []} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:|, [], [{:.., [context: Elixir, imports: [{0, Kernel}, {2, Kernel}]], [0, 255]}, {:|, [], [{:<<>>, [], [{:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, 8]}]}]}, {:iolist, [], []}]}]}, {:|, [], [{:<<>>, [], [{:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, 8]}]}]}, []]}]}]}
-        # {:iodata, [], []} -> {:|, [], [{:|, [], [[], {:nonempty_maybe_improper_list, [], [{:|, [], [{:byte, [], []}, {:|, [], [{:binary, [], []}, {:iolist, [], []}]}]}, {:|, [], [{:binary, [], []}, []]}]}]}, {:binary, [], []}]}
-        # {:iolist, [], []} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:|, [], [{:byte, [], []}, {:|, [], [{:binary, [], []}, {:iolist, [], []}]}]}, {:|, [], [{:binary, [], []}, []]}]}]}
+        # iolist will not expand more than once since translation is to only display..., or not even once is necessary.
+        {:iodata, [], []} -> {:|, [], [{:iolist, [], []} |> walker_fun.(), {:binary, [], []} |> walker_fun.()]}
+        {:iolist, [], []} -> {:maybe_improper_list, [], [{:|, [], [{:byte, [], []}, {:|, [], [{:binary, [], []}, {:last_iolist, [], []}]}]}, {:|, [], [{:binary, [], []}, []]}]} |> walker_fun.()
+
+        # only to mark the final recursive iolist type
+        {:last_iolist, [], []} -> {:iolist, [], []}
 
         {:keyword, [], []} -> [{{:atom, [], []}, {:any, [], []}}]
-        {:keyword, [], [children]} -> [{{:atom, [], []}, children}]
-        {:mfa, [], []} -> {:{}, [], [{:module, [], []} |> walker_fun.(), {:atom, [], []}, {:arity, [], []} |> walker_fun.()]}
+        {:keyword, [], [type]} -> [{{:atom, [], []}, type}]
+        {:mfa, [], []} -> {:{}, [], [{:module, [], []}, {:atom, [], []}, {:arity, [], []}]}
         {:module, [], []} -> {:atom, [], []}
         {:no_return, [], []} -> {:none, [], []}
         {:node, [], []} -> {:atom, [], []}
