@@ -33,6 +33,41 @@
 
 \input{fig-typespec-types.tex}
 
+It is noteworthy that the notation $\ov{E}$ denotes a possibly empty sequence of elements $E$ separated by commas apart from $\ov{\alpha\texttt{:}\,\TST}$, where it denotes a non-empty sequence.
+Furthermore, not only is $\TSAn$ non-empty sequential elements but also multi-line elements unlike the other comma-separated sequences. That is TypeSpec only allows one specification on one line.
+
+This specification addresses the most fundamental and atomic types based on the Typespecs reference on Elixir documentation.
+The addressed are, starting from the top type \texttt{any()} and the bottom type \texttt{none()}, controversially vague concept of field types of record types.
+While thus enables expressing every existing TypeSpec type, some might come up with questions on fundamentality with subtype relations or notion of expressions between basic types and literal types.
+In the following sections, these questions are addressed for clarity with listing the built-in types and the syntactic sugars in Table~\ref{app:typespec-builtin-types} and Table~\ref{app:typespec-syntactic-sugars}.
+
+\subsection{TypeSpec Basic Types and Literals}
+TypeSpec is rather expressive especially by providing the literal types that are also used in the code with the same form.
+However, this is classic that the higher expressiveness brings the higher complexity and TypeSpec is not exempt.
+The common trade-off must be discussed here due to the fact that our ultimate goal is to translate TypeSpec to Elixir Types.
+In the perspective of translation, while TypeSpec allows literals types such as \texttt{:$k$}, \texttt{[]}, \texttt{<<>>}, \texttt{(\fun{$\ov{\TST}$}{\TST})} and \texttt{$n$..$n'$},
+Elixir Types will not support \texttt{<<>>}, and the range type (i.e., \texttt{$n$..$\prm{n}$}) will not appear to users but will be only used internally.
+This difference is important since it will not allow direct translation and eventually approximate them in Elixir Types.
+
+%1. :k ≤ atom() ?
+The first question could arise is from the subtype relationship between \texttt{atom()} and \texttt{:$k$}.
+It is true that \texttt{:$k$} is a subtype of \texttt{atom()} since \texttt{:$k$} represents every single atom type and \texttt{atom()} represents a set of all atom types.
+Nonetheless, we have to contain \texttt{:$k$} in the syntax specification.
+That is because \texttt{:$k$} is a literal type that could be any single atom type, e.g., \texttt{:true} and \texttt{:false} are literals that are used as themselves in the code and also in type specification.
+Therefore, it is always sound for \texttt{atom()} to replace \texttt{:true} or \texttt{:false} but not vice versa.
+
+
+%2. neg_integer(), non_neg_integer(), pos_integer() and ".."
+It could be viewed that the range literal (i.e., \texttt{$n$..$\prm{n}$}) expresses \texttt{neg\_integer()}, \texttt{non\_neg\_integer()} and \texttt{pos\_integer()}.
+
+
+
+%3. bitstring() and binary() with <<>>
+%4. Field types
+
+ 
+
+
 \subsection{TypeSpec Built-in Types and Syntactic Sugar}
 
 \input{fig-typespec-sugar-builtin.tex}
