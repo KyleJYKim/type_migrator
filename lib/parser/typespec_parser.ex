@@ -87,7 +87,7 @@ defmodule Parser.TypespecParser do
         {:identifier, [], []} -> {:|, [], [{:pid, [context: Elixir, imports: [{1, IEx.Helpers}, {3, IEx.Helpers}]], []}, {:|, [], [{:port, [context: Elixir, imports: [{1, IEx.Helpers}, {2, IEx.Helpers}]], []}, {:reference, [], []}]}]}
 
         # iolist will not expand more than once since translation is to only display..., or not even once is necessary.
-        {:iodata, [], []} -> {:|, [], [{:iolist, [], []} |> walker_fun.(), {:binary, [], []} |> walker_fun.()]}
+        {:iodata, [], []} -> {:|, [], [{:iolist, [], []}, {:binary, [], []}]}
         {:iolist, [], []} -> {:maybe_improper_list, [], [{:|, [], [{:byte, [], []}, {:|, [], [{:binary, [], []}, {:last_iolist, [], []}]}]}, {:|, [], [{:binary, [], []}, []]}]} |> walker_fun.()
 
         # only to mark the final recursive iolist type
