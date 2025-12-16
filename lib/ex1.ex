@@ -56,7 +56,7 @@ defmodule Ex1 do
   @spec id_bin(bitstring())::binary()
   def id_bin(b), do: b
 
-  @spec id_tuple({integer(), binary()})::tuple()
+  @spec id_tuple({1, binary()})::tuple()
   def id_tuple(tpl) when is_tuple(tpl), do: tpl
 
   defmodule In do
@@ -117,7 +117,7 @@ defmodule Ex1 do
 
     #def id_records8(), do: Ex1.id_records8(%{:a => 1})
     def id_records9(), do: Ex1.id_records9(%{fn x -> "a" end => :a})
-    def id_records10(), do: Ex1.id_records10(%{nil => 1})
+    #def id_records10(), do: Ex1.id_records10(%{nil => 1})
 
     def id_fun(), do: Ex1.id_fun(fn x -> <<97>> end)
 
