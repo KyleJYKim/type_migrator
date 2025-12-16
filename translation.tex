@@ -59,10 +59,13 @@ Therefore, it is always sound for \texttt{atom()} to replace \texttt{:true} or \
 
 %2. neg_integer(), non_neg_integer(), pos_integer() and ".."
 It could be viewed that the range literal (i.e., \texttt{$n$..$\prm{n}$}) expresses \texttt{neg\_integer()}, \texttt{non\_neg\_integer()} and \texttt{pos\_integer()}.
-
-
+This idea could be backed by Types and Their Syntax in Erlang documentation that these are built-in types which can be thought defined by \texttt{..-1}, \texttt{0..} and \texttt{1..}, respectively.
+But Elixir documentation specifies them as basic types and the provided range syntax in Erlang documentation is not correct use.
+Provided, it is sufficient to say that these are not subtypes of \texttt{$n$..$\prm{n}$}, hence they are necessary to be in the syntax specification.
 
 %3. bitstring() and binary() with <<>>
+
+
 %4. Field types
 
  
