@@ -24,7 +24,7 @@ defmodule Parser.TypespecParser do
     |> File.read!               # => String
     |> Code.string_to_quoted!   # => AST
     |> extract_spec             # => TypeSpec info
-    #|> parse_spec
+    |> parse_spec               # => Basic types
     |> translate_spec
       # 1. Parse all TS to the form of basic, i.e., all built-in types to defined and syntactic sugar to expanded.
       # 2. Translation: depth-first. (annotation is the last)
@@ -59,7 +59,7 @@ defmodule Parser.TypespecParser do
 
     [{name, meta, input}, output] = spec_tree
 
-    builtin_walker = fn type_node, walker_fun -> (
+    parser_walker = fn type_node, walker_fun -> (
       # walker_fun/2 is used when the first level node is needed to be parsed, i.e., defined as the basic types.
       walker_fun = &walker_fun.(&1, walker_fun)
       case type_node do
@@ -107,6 +107,25 @@ defmodule Parser.TypespecParser do
       end)
     end
 
+    walker = &parser_walker.(&1, parser_walker)
+    input = input |> Macro.prewalk(walker)
+    output = output |> Macro.prewalk(walker)
+
+    [{name, meta, input}, output]
+  end
+
+  def translate_spec(spec_tree) when spec_tree != :not_spec do
+
+    [{name, meta, input}, output] = spec_tree
+
+    builtin_walker = fn type_node, walker_fun -> (
+      # walker_fun/2 is used when the first level node is needed to be parsed, i.e., defined as the basic types.
+      walker_fun = &walker_fun.(&1, walker_fun)
+      case type_node do
+        other -> other
+      end)
+    end
+
     walker = &builtin_walker.(&1, builtin_walker)
     input = input |> Macro.prewalk(walker)
     output = output |> Macro.prewalk(walker)
@@ -114,62 +133,74 @@ defmodule Parser.TypespecParser do
     [{name, meta, input}, output]
   end
 
-  def translate_spec(parsed_spec_tree) when parsed_spec_tree != :not_spec do
+  def translate_spec_(parsed_spec_tree) when parsed_spec_tree != :not_spec do
 
-    [{name, _, input}, output] = parsed_spec_tree
+    [{name, meta, input}, output] = parsed_spec_tree
 
     name = Atom.to_string(name)
 
-    # depth first
-    walker = fn
-      # Since Input types could be multiple, they come as lists.
-      # In the case (... -> T), it go through here.
-      [head | tail], walker_fun
-      -> (
-        if Enum.empty?(tail),
-          do: (head |> walker_fun.(walker_fun)),
-          else: (head |> walker_fun.(walker_fun)) <> ", " <> (tail |> walker_fun.(walker_fun))
-      )
+    translator_walker = fn type_node, walker_fun -> (
 
-      # Remote module type (e.g., String.t())
-      {{:., [], [{_, _, [module]}, type]}, [], []}, walker_fun
-      -> (
-        type = type |> walker_fun.(walker_fun)
-        Atom.to_string(module) <> "." <> type <> "()"
-      )
+      walker_fun = &walker_fun.(&1, walker_fun)
+      case type_node do
+        # Input types
+        [head | tail] -> (
+          case tail do
+            [] -> (head |> walker_fun.(walker_fun))
+            _ -> (head |> walker_fun.(walker_fun)) <> ", " <> (tail |> walker_fun.(walker_fun))
+          end
+        )
 
-      # T | T
-      {:|, [], [left, right]}, walker_fun
-      -> (
-        left = left |> walker_fun.(walker_fun)
-        right = right |> walker_fun.(walker_fun)
-        left <> " or " <> right
-      )
+        # Remote module type (e.g., String.t())
+        {{:., [], [{_, _, module_list}, type]}, [], []} -> (
+          type = type |> walker_fun.(walker_fun)
+          module = module_list |> Enum.reduce("", fn x, acc -> acc <> "." <> Atom.to_string(x) end)
+          Atom.to_string(module) <> "." <> type <> "()"
+        )
 
-      # (\overline{T} -> T) AND (... -> T)
-      {:->, [], [left, right]}, walker_fun
-      -> (
-        left = case left do
-          [{:..., [], []}] -> "..."
-          left -> left |> walker_fun.(walker_fun)
-        end
+        # T | T
+        {:|, [], [left, right]} -> (
+          left = left |> walker_fun.(walker_fun)
+          right = right |> walker_fun.(walker_fun)
+          left <> " or " <> right
+        )
 
-        right = right |> walker_fun.(walker_fun)
-        "(" <> left <> " -> " <> right <> ")"
-      )
+        # (\overline{T} -> T) AND (... -> T)
+        {:->, [], [left, right]} -> (
+          left = case left do
+            [{:..., [], []}] -> "..."
+            _ -> left |> walker_fun.(walker_fun)
+          end
+          right = right |> walker_fun.(walker_fun)
+          "(" <> left <> " -> " <> right <> ")"
+        )
+
+        # tuple
+        {:{}, [], tuple_list} -> (
+          tuple_list = tuple_list |> Enum.reduce("", fn x, acc -> acc <> "," <> Atom.to_string(x) end)
+          "{" <> tuple_list <> "}"
+        )
+
+        # record
+        # {:%{}, [], record_list} -> (
+        #   record_list = record_list |> Enum.reduce("", fn {k, v} -> k <>=> end)
+        # )
+
+        # list
 
 
-      # Simple form of basic types (any(), none(), atom(), pid(), port(), reference(), float(), integer(), neg_integer(), non_neg_integer(), pos_integer(), tuple())
-      {type, [], []}, _
-      -> Atom.to_string(type) <> "()"
 
-      # Singleton types (:k)
-      singleton, _ when is_atom(singleton)
-      -> ":" <> Atom.to_string(singleton)
+        # Simple form of basic types (any(), none(), atom(), pid(), port(), reference(), float(), integer(), neg_integer(), non_neg_integer(), pos_integer(), tuple())
+        {type, [], []} -> Atom.to_string(type) <> "()"
+
+        # Singleton types (:k)
+        singleton when is_atom(singleton) -> ":" <> Atom.to_string(singleton)
+      end)
     end
 
-    input = input |> walker.(walker)
-    output = output |> walker.(walker)
+    walker = &translator_walker.(&1, translator_walker)
+    input = input |> walker.()
+    output = output |> walker.()
 
     %TsInfo{name: name, input: input, output: output}
   end
