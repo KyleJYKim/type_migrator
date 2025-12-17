@@ -57,7 +57,7 @@ defmodule Parser.TypespecParser do
 
   def parse_spec(spec_tree) when spec_tree != :not_spec do
 
-    [{name, meta, input}, output] = spec_tree
+    [{name, meta, inputs}, output] = spec_tree
 
     parser_walker = fn type_node, walker_fun -> (
       # walker_fun/2 is used when the first level node is needed to be parsed, i.e., defined as the basic types.
@@ -108,15 +108,15 @@ defmodule Parser.TypespecParser do
     end
 
     walker = &parser_walker.(&1, parser_walker)
-    input = input |> Macro.prewalk(walker)
+    inputs = inputs |> Macro.prewalk(walker)
     output = output |> Macro.prewalk(walker)
 
-    [{name, meta, input}, output]
+    [{name, meta, inputs}, output]
   end
 
   def translate_spec(parsed_spec_tree) when parsed_spec_tree != :not_spec do
 
-    [{name, _, input}, output] = parsed_spec_tree
+    [{name, _, inputs}, output] = parsed_spec_tree
 
     name = Atom.to_string(name)
 
@@ -124,14 +124,6 @@ defmodule Parser.TypespecParser do
 
       walker_fun = &walker_fun.(&1, walker_fun)
       case type_node do
-        # Input types and List fall directly to here, and Record, Tuple come through their own branches.
-        [head | tail] -> (
-          case tail do
-            [] -> (head |> walker_fun.())
-            _ -> (head |> walker_fun.()) <> ", " <> (tail |> walker_fun.())
-          end
-        )
-
         # Remote module type (e.g., String.t())
         {{:., [], [{_, _, module_list}, type]}, [], []} -> (
           module = module_list |> Enum.reduce("", fn x, acc -> module = Atom.to_string(x)
@@ -151,7 +143,13 @@ defmodule Parser.TypespecParser do
 
         # {:{}, [], [1, 2, 3]}
         # Tuple
-        {:{}, [], tuple_list} -> "{" <> (tuple_list |> walker_fun.()) <> "}"
+        {:{}, [], tuple_list} -> (
+          tuple_list = tuple_list |> Enum.reduce("",
+          fn x, acc -> element = (x |> walker_fun.())
+            if acc == "", do: element, else: acc <> ", " <> element
+          end)
+          "{#{tuple_list}}"
+        )
 
         # Record
         #  [
@@ -160,13 +158,30 @@ defmodule Parser.TypespecParser do
         #    {{:required, [], [{:float, [], []}]}, {:integer, [], []}}
         #  ]
         {:%{}, [], record_list} -> (
-          record_list |> Enum.reduce("", fn {k, v}, acc -> field = (k |> walker_fun.()) <> " => " <> (v |> walker_fun.())
+          record_list = record_list |> Enum.reduce("",
+          fn {k, v}, acc -> field = (k |> walker_fun.()) <> " => " <> (v |> walker_fun.())
             if acc == "", do: field, else: acc <> ", " <> field
           end)
+          "%{#{record_list}}"
         )
         # apply translationnnnnnnnnnnnn
         {:required, [], [type]} -> (type |> walker_fun.())
         {:optional, [], [type]} -> (type |> walker_fun.())
+
+
+        # List
+        list when is_list(list) -> (
+          list = list |> Enum.reduce("",
+          fn x, acc -> element = (x |> walker_fun.())
+            if acc == "", do: element, else: acc <> ", " <> element
+          end)
+          "[#{list}]"
+        )
+
+
+        # NEXT UP: bitstring typesss
+
+
 
         # Simple form of basic types (any(), none(), atom(), pid(), port(), reference(), float(), integer(), neg_integer(), non_neg_integer(), pos_integer(), tuple())
         {type, [], []} -> (
@@ -176,23 +191,19 @@ defmodule Parser.TypespecParser do
           end
         )
 
-
-        # NEXT UP: bitstring typesss
-
-
-
-        # n
+        # Integer singleton types (n)
         type when is_integer(type) -> "#{type}--#{type}"
-        # Singleton types (:k)
+
+        # Atom singleton types (:k)
         type when is_atom(type) -> ":#{type}"
       end)
     end
 
     walker = &translator_walker.(&1, translator_walker)
-    input = input |> walker.()
+    inputs = inputs |> Enum.map(walker)
     output = output |> walker.()
 
-    %TsInfo{name: name, input: input, output: output}
+    %TsInfo{name: name, input: inputs, output: output}
   end
   """
   {:@, _, [{:spec, _, [{:"::", _, [{name, _, input}, output]}]}]} = quote do: @spec f(integer()) :: integer()
