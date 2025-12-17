@@ -54,7 +54,6 @@ defmodule Parser.TypespecParser do
     end
   end
 
-
   def parse_spec(spec_tree) when spec_tree != :not_spec do
 
     [{name, meta, inputs}, output] = spec_tree
@@ -89,7 +88,6 @@ defmodule Parser.TypespecParser do
         # iolist will not expand more than once since translation is to only display..., or not even once is necessary.
         {:iodata, [], []} -> {:|, [], [{:iolist, [], []}, {:binary, [], []}]}
         {:iolist, [], []} -> {:maybe_improper_list, [], [{:|, [], [{:byte, [], []}, {:|, [], [{:binary, [], []}, {:last_iolist, [], []}]}]}, {:|, [], [{:binary, [], []}, []]}]} |> walker_fun.()
-
         # only to mark the final recursive iolist type
         {:last_iolist, [], []} -> {:iolist, [], []}
 
@@ -103,13 +101,37 @@ defmodule Parser.TypespecParser do
         {:struct, [], []} -> {:%{}, [], [{:__struct__, {:atom, [], []}}, {{:optional, [], [{:atom, [], []}]}, {:any, [], []}}]}
         {:timeout, [], []} -> {:|, [], [:infinity, {:non_neg_integer, [], []}]}
 
+
+        # true -> :true
+        # false -> :false
+        # nil -> :nil
+        [type, {:..., [], []}] -> {:nonempty_list, [], [type |> walker_fun.()]} |> walker_fun.()
+        [type] -> {:list, [], [type |> walker_fun.()]} |> walker_fun.()
+        {:%{}, [], record_list} -> (
+          record_list = record_list |> Enum.map(
+            fn {k, v} -> case k do
+              {:required, _, _} -> {k, v}
+              {:optional, _, _} -> {k, v}
+              _ -> {{:required, [], [k]}, v}
+            end
+          end)
+          {:%{}, [], record_list}
+        )
+        {:%, [], [{_, _, module_list}, {:%{}, [], struct_list}]} -> (
+          module = module_list |> Enum.reduce("", fn x, acc -> module = Atom.to_string(x)
+            if acc == "", do: module, else: acc <> "." <> module end)
+          {:%{}, [], [__strucut__: String.to_atom(module)] ++ struct_list}
+        )
+
+
         other -> other
       end)
     end
 
     walker = &parser_walker.(&1, parser_walker)
-    inputs = inputs |> Macro.prewalk(walker)
-    output = output |> Macro.prewalk(walker)
+    macro_walker = &Macro.prewalk(&1, walker)
+    inputs = inputs |> Enum.map(macro_walker)
+    output = output |> macro_walker.()
 
     [{name, meta, inputs}, output]
   end
@@ -127,21 +149,37 @@ defmodule Parser.TypespecParser do
         # Remote module type (e.g., String.t())
         {{:., [], [{_, _, module_list}, type]}, [], []} -> (
           module = module_list |> Enum.reduce("", fn x, acc -> module = Atom.to_string(x)
-            if acc == "", do: module, else: acc <> "." <> Atom.to_string(x) end)
+            if acc == "", do: module, else: acc <> "." <> module end)
           module <> "." <> (type |> walker_fun.()) <> "()"
         )
+
+        # Simple form of basic types (any(), none(), atom(), pid(), port(), reference(), float(), integer(), neg_integer(), non_neg_integer(), pos_integer(), tuple())
+        {type, [], []} -> (
+          case type do
+            :... -> "..."
+            :any -> "term()"
+            :neg_integer -> "#{:infty}--#{-1}"
+            :non_neg_integer -> "#{0}--#{:infty}"
+            :pos_integer -> "#{1}--#{:infty}"
+            _ -> Atom.to_string(type) <> "()"
+          end
+        )
+
+        # :k (atom singleton types)
+        atom when is_atom(atom) -> ":#{atom}"
+
+        # n (integer singleton types)
+        digit when is_integer(digit) -> "#{digit}--#{digit}"
 
         # n..n'
         {:.., [_], [left, right]} -> left <> "--" <> right
 
-        # T | T
+        # Type | Type
         {:|, [], [left, right]} -> (left |> walker_fun.()) <> " or " <> (right |> walker_fun.())
 
-        # (\overline{T} -> T) AND (... -> T)
+        # (\overline{Type} -> Type) AND (... -> Type)
         {:->, [], [left, right]} -> "(" <> (left |> walker_fun.()) <> " -> " <> (right |> walker_fun.()) <> ")"
 
-
-        # {:{}, [], [1, 2, 3]}
         # Tuple
         {:{}, [], tuple_list} -> (
           tuple_list = tuple_list |> Enum.reduce("",
@@ -152,11 +190,6 @@ defmodule Parser.TypespecParser do
         )
 
         # Record
-        #  [
-        #    {{:optional, [], [{:integer, [], []}]}, {:binary, [], []}},
-        #    {:b, 2},
-        #    {{:required, [], [{:float, [], []}]}, {:integer, [], []}}
-        #  ]
         {:%{}, [], record_list} -> (
           record_list = record_list |> Enum.reduce("",
           fn {k, v}, acc -> field = (k |> walker_fun.()) <> " => " <> (v |> walker_fun.())
@@ -164,38 +197,19 @@ defmodule Parser.TypespecParser do
           end)
           "%{#{record_list}}"
         )
-        # apply translationnnnnnnnnnnnn
+        # APPLY translation and approximation
         {:required, [], [type]} -> (type |> walker_fun.())
         {:optional, [], [type]} -> (type |> walker_fun.())
 
-
-        # List
-        list when is_list(list) -> (
-          list = list |> Enum.reduce("",
-          fn x, acc -> element = (x |> walker_fun.())
-            if acc == "", do: element, else: acc <> ", " <> element
-          end)
-          "[#{list}]"
-        )
+        [] -> "empty_list()"
+        # [type] or [type, ...] (List)
+        {:nonempty_maybe_improper_list, [], [type, []]} -> "non_empty_list(#{type |> walker_fun.()}, empty_list())"
 
 
         # NEXT UP: bitstring typesss
 
 
 
-        # Simple form of basic types (any(), none(), atom(), pid(), port(), reference(), float(), integer(), neg_integer(), non_neg_integer(), pos_integer(), tuple())
-        {type, [], []} -> (
-          case type do
-            :... -> "..."
-            _ -> Atom.to_string(type) <> "()"
-          end
-        )
-
-        # Integer singleton types (n)
-        type when is_integer(type) -> "#{type}--#{type}"
-
-        # Atom singleton types (:k)
-        type when is_atom(type) -> ":#{type}"
       end)
     end
 

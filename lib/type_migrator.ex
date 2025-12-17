@@ -21,6 +21,8 @@ defmodule TypeMigrator do
       #CDuceRepl.close(pid)
 
       #handle_output(result, time)
+      IO.puts(time)
+      IO.puts(result)
     catch
       {:CompileError, msg} ->
         #CDuceRepl.close(pid)

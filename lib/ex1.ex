@@ -43,20 +43,20 @@ defmodule Ex1 do
   @spec id_records8(%{required(atom()) => integer(), required(:a) => binary()}) :: map()
   def id_records8(x), do: x
 
-  @spec id_records9(%{optional((...->atom())) => integer()}) :: map()
-  def id_records9(x), do: x
+  # @spec id_records9(%{optional((...->atom())) => integer()}) :: map()
+  # def id_records9(x), do: x
 
   @spec id_records10(%{none() => integer()}) :: integer()
   def id_records10(x) when is_map_key(x, {:a}), do: Map.get(x, {:a})
 
   # Whatever function return type is, it is taken as ...->any()
-  @spec id_fun((...->atom())) :: fun()
-  def id_fun(x), do: x
+  # @spec id_fun((...->atom())) :: fun()
+  # def id_fun(x), do: x
 
   @spec id_bin(bitstring())::binary()
   def id_bin(b), do: b
 
-  @spec id_tuple({1, binary()})::tuple()
+  @spec id_tuple({%Ex1.Some{a: integer()}, binary()}) :: :d
   def id_tuple(tpl) when is_tuple(tpl), do: tpl
 
   defmodule In do
@@ -139,8 +139,12 @@ defmodule Ex1 do
   # def inc({:a, tail}), do: (tail |> Map.get(:one)) + 1
 
   defmodule Some do
-    # @spec inc() :: integer()
-    # def inc(), do: Ex1.inc({:"#{<<97::1*8>>}", %{:one => 1, "two" => 2, 3 => 3, 4 => 4}})
+    defstruct [:a, :b]
+
+    @type t :: %Some{
+      a: integer(),
+      b: term()
+    }
 
   end
 end
