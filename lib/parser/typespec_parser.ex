@@ -153,34 +153,10 @@ defmodule Parser.TypespecParser do
           module <> "." <> (type |> walker_fun.()) <> "()"
         )
 
-        # Simple form of basic types (any(), none(), atom(), pid(), port(), reference(), float(), integer(), neg_integer(), non_neg_integer(), pos_integer(), tuple())
-        {type, [], []} -> (
-          case type do
-            :... -> "..."
-            :any -> "term()"
-            :neg_integer -> "#{:infty}--#{-1}"
-            :non_neg_integer -> "#{0}--#{:infty}"
-            :pos_integer -> "#{1}--#{:infty}"
-            _ -> Atom.to_string(type) <> "()"
-          end
-        )
-
-        # :k (atom singleton types)
-        atom when is_atom(atom) -> ":#{atom}"
-
-        # n (integer singleton types)
-        digit when is_integer(digit) -> "#{digit}--#{digit}"
-
-        # n..n'
-        {:.., [_], [left, right]} -> left <> "--" <> right
-
         # Type | Type
         {:|, [], [left, right]} -> (left |> walker_fun.()) <> " or " <> (right |> walker_fun.())
 
-        # (\overline{Type} -> Type) AND (... -> Type)
-        {:->, [], [left, right]} -> "(" <> (left |> walker_fun.()) <> " -> " <> (right |> walker_fun.()) <> ")"
-
-        # Tuple
+        # {Type} (Tuple)
         {:{}, [], tuple_list} -> (
           tuple_list = tuple_list |> Enum.reduce("",
           fn x, acc -> element = (x |> walker_fun.())
@@ -189,7 +165,7 @@ defmodule Parser.TypespecParser do
           "{#{tuple_list}}"
         )
 
-        # Record
+        # %{..., F_seq} (Record)
         {:%{}, [], record_list} -> (
           record_list = record_list |> Enum.reduce("",
           fn {k, v}, acc -> field = (k |> walker_fun.()) <> " => " <> (v |> walker_fun.())
@@ -201,14 +177,53 @@ defmodule Parser.TypespecParser do
         {:required, [], [type]} -> (type |> walker_fun.())
         {:optional, [], [type]} -> (type |> walker_fun.())
 
+        # [] (empty list)
         [] -> "empty_list()"
-        # [type] or [type, ...] (List)
+        # [type] or [type, ...] (non-empty list)
         {:nonempty_maybe_improper_list, [], [type, []]} -> "non_empty_list(#{type |> walker_fun.()}, empty_list())"
 
+        # <<>>
+        {:<<>>, [], []} -> "UNDEFINED"
+        # <<_::n>>
+        {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, digit]}]} -> (
+          if Integer.mod(digit, 8) == 0, do: "binary()", else: "UNDEFINED"
+        )
+        # <<_::_*n>>
+        {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, digit]}]}]} -> (
+          if Integer.mod(digit, 8) == 0, do: "binary()", else: "UNDEFINED"
+        )
+        # <<_::n, _::_*n>>
+        {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, digit1]}, {:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, digit2]}]}]} -> (
+          if Integer.mod(digit1, 8) == 0 and Integer.mod(digit2, 8) == 0, do: "binary()", else: "UNDEFINED"
+        )
 
-        # NEXT UP: bitstring typesss
+        # (... -> Type)
+        {:->, [], [:..., right]} -> (
+          right = right |> walker_fun.()
+          if right == "term()", do: "fun()", else: "UNDEFINED"
+        )
+        # (Type_seq} -> Type)
+        {:->, [], [left, right]} -> "(" <> (left |> walker_fun.()) <> " -> " <> (right |> walker_fun.()) <> ")"
 
+        # n..n'
+        {:.., [_], [left, right]} -> left <> "--" <> right
 
+        # n (integer singleton types)
+        digit when is_integer(digit) -> "#{digit}--#{digit}"
+
+        # :k (atom singleton types)
+        atom when is_atom(atom) -> ":#{atom}"
+
+        # Simple form of basic types (any(), none(), atom(), pid(), port(), reference(), float(), integer(), neg_integer(), non_neg_integer(), pos_integer(), tuple())
+        {type, [], []} -> (
+          case type do
+            :any -> "term()"
+            :neg_integer -> "#{:infty}--#{-1}"
+            :non_neg_integer -> "#{0}--#{:infty}"
+            :pos_integer -> "#{1}--#{:infty}"
+            _ -> Atom.to_string(type) <> "()"
+          end
+        )
 
       end)
     end
