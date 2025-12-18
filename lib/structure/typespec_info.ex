@@ -3,14 +3,15 @@ defmodule Structure.TypespecInfo do
 
   defstruct [
     name: "",
-    input: [],
-    output: ""
-
+    inputs: [""],
+    output: "",
+    guards: [""]
   ]
 
   @type t :: %TypespecInfo{
     name: binary(),
-    input: list(binary()),
-    output: binary()
+    inputs: list(binary()),
+    output: binary(),
+    guards: list(binary())
   }
 end

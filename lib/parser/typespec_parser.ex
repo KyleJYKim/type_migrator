@@ -46,17 +46,35 @@ defmodule Parser.TypespecParser do
         }]
       }]
     }
+
   """
+
+
+    {:@, [context: Elixir, imports: [{1, Kernel}]],
+      [{:spec, [context: Elixir],
+        [{:when, [],
+          [{:"::", [],
+            [
+              {:fun, [], [{:%{}, [], [{{:integer, [], []}, :a}]}]},
+              {:a, [], Elixir}
+            ]
+          }, [a: {:any, [], []}]]
+        }]
+      }]
+    }
+
+
   def extract_spec(ast) do
     case ast do
-      {:@, _, [{:spec, _, [{:"::", _, spec}]}]} -> spec
+      {:@, _, [{:spec, _, [{:"::", _, [{name, _, inputs}, output]}]}]} -> {name, inputs, output, nil}
+      {:@, _, [{:spec, _, [{:when, _, [{:"::", _, [{name, _, inputs}, output]}, guards]}]}]} -> {name, inputs, output, guards}
       _ -> :not_spec
     end
   end
 
   def parse_spec(spec_tree) when spec_tree != :not_spec do
 
-    [{name, meta, inputs}, output] = spec_tree
+    {name, inputs, output, guards} = spec_tree
 
     parser_walker = fn type_node, walker_fun -> (
       # walker_fun/2 is used when the first level node is needed to be parsed, i.e., defined as the basic types.
@@ -120,7 +138,7 @@ defmodule Parser.TypespecParser do
         {:%, [], [{_, _, module_list}, {:%{}, [], struct_list}]} -> (
           module = module_list |> Enum.reduce("", fn x, acc -> module = Atom.to_string(x)
             if acc == "", do: module, else: acc <> "." <> module end)
-          {:%{}, [], [__strucut__: String.to_atom(module)] ++ struct_list}
+          {:%{}, [], [__struct__: String.to_atom(module)] ++ struct_list}
         )
 
 
@@ -130,15 +148,17 @@ defmodule Parser.TypespecParser do
 
     walker = &parser_walker.(&1, parser_walker)
     macro_walker = &Macro.prewalk(&1, walker)
+
     inputs = inputs |> Enum.map(macro_walker)
     output = output |> macro_walker.()
+    guards = if guards == nil, do: nil, else: guards |> Enum.map(fn {k, v} -> {k, v |> macro_walker.()} end)
 
-    [{name, meta, inputs}, output]
+    {name, inputs, output, guards}
   end
 
   def translate_spec(parsed_spec_tree) when parsed_spec_tree != :not_spec do
 
-    [{name, _, inputs}, output] = parsed_spec_tree
+    {name, inputs, output, guards} = parsed_spec_tree
 
     name = Atom.to_string(name)
 
@@ -182,20 +202,20 @@ defmodule Parser.TypespecParser do
         # [type] or [type, ...] (non-empty list)
         {:nonempty_maybe_improper_list, [], [type, []]} -> "non_empty_list(#{type |> walker_fun.()}, empty_list())"
 
-        # <<>>
-        {:<<>>, [], []} -> "UNDEFINED"
-        # <<_::n>>
-        {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, digit]}]} -> (
-          if Integer.mod(digit, 8) == 0, do: "binary()", else: "UNDEFINED"
+        # <<_::n, _::_*n>>
+        {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, digit1]}, {:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, digit2]}]}]} -> (
+          if Integer.mod(digit1, 8) == 0 and Integer.mod(digit2, 8) == 0, do: "binary()", else: "UNDEFINED"
         )
         # <<_::_*n>>
         {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, digit]}]}]} -> (
           if Integer.mod(digit, 8) == 0, do: "binary()", else: "UNDEFINED"
         )
-        # <<_::n, _::_*n>>
-        {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, digit1]}, {:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, digit2]}]}]} -> (
-          if Integer.mod(digit1, 8) == 0 and Integer.mod(digit2, 8) == 0, do: "binary()", else: "UNDEFINED"
+        # <<_::n>>
+        {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, digit]}]} -> (
+          if Integer.mod(digit, 8) == 0, do: "binary()", else: "UNDEFINED"
         )
+        # <<>>
+        {:<<>>, [], []} -> "UNDEFINED"
 
         # (... -> Type)
         {:->, [], [:..., right]} -> (
@@ -214,6 +234,9 @@ defmodule Parser.TypespecParser do
         # :k (atom singleton types)
         atom when is_atom(atom) -> ":#{atom}"
 
+        # Type variable
+        {type, [], Elixir} -> Atom.to_string(type)
+
         # Simple form of basic types (any(), none(), atom(), pid(), port(), reference(), float(), integer(), neg_integer(), non_neg_integer(), pos_integer(), tuple())
         {type, [], []} -> (
           case type do
@@ -231,9 +254,14 @@ defmodule Parser.TypespecParser do
     walker = &translator_walker.(&1, translator_walker)
     inputs = inputs |> Enum.map(walker)
     output = output |> walker.()
+    guards = if guards == nil, do: nil, else: guards |> Enum.map(fn {k, v} -> Atom.to_string(k) <> ": " <> (v |> walker.()) end)
 
-    %TsInfo{name: name, input: inputs, output: output}
+    #%TsInfo{name: name, inputs: inputs, output: output, guards: guards}
+    {name, inputs, output, guards}
   end
+
+
+
   """
   {:@, _, [{:spec, _, [{:"::", _, [{name, _, input}, output]}]}]} = quote do: @spec f(integer()) :: integer()
   Simple types:

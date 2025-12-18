@@ -56,7 +56,7 @@ defmodule Ex1 do
   @spec id_bin(bitstring())::binary()
   def id_bin(b), do: b
 
-  @spec id_tuple({%Ex1.Some{a: integer()}, binary()}) :: :d
+  @spec id_tuple({%Ex1.Some{a: integer()}, binary()}) :: t when t: tuple()
   def id_tuple(tpl) when is_tuple(tpl), do: tpl
 
   defmodule In do
