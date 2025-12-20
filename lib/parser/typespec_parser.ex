@@ -252,34 +252,32 @@ defmodule Parser.TypespecParser do
     {line_num, name, inputs, output, guards}
   end
 
-  # Need to add module hierarchy later.
   def assemble_elixir_type(translated_spec_list) do
 
-    {prev_start_line_number, prev_name, prev_annotation, annotation} = {-1, "", "", ""}
-
-    for {line_num, name, inputs, output, guards} <- translated_spec_list do
-      # single-line spec or start of spec
-      if prev_name != name do
-        annotation = "$ " <> (inputs |> Enum.reduce("", fn x, acc -> acc <> if acc == "", do: x, else: acc <> ", #{x}" end)) <> " -> " <> output
-
-        if guards != nil do
-          annotation <> " when " <> (guards |> Enum.reduce("", fn x, acc -> acc <> if acc == "", do: x, else: acc <> ", #{x}" end))
-        end
-      # multi-line spec
-      else
-        if guards == nil do
-          annotation = prev_annotation <> inputs <> " -> " <> output
-        else
-          annotation = "$ " <> inputs <> " -> " <> output
-        end
+    type_grouping = fn type, acc ->
+      {_, name, _, _, _} = type
+      prev_name = case acc do
+        [] -> ""
+        [head | _] -> (
+          {_, name, _, _, _} = hd(head)
+          name
+        )
       end
 
-      {prev_start_line_number, prev_name, prev_annotation} = {line_num, name, annotation}
-      if prev_name != name, do: [{line_num, annotation}]
-
+      if prev_name == name do
+        [head | tail] = acc
+        [[type] ++ head] ++ tail
+      else
+        [[type]] ++ acc
+      end
     end
 
+    grouped_list = translated_spec_list |> Enum.reduce([], fn x, acc -> type_grouping.(x, acc) end)
 
+    type_assembler = fn  ->  end
+
+
+    grouped_list |> Enum.map()
   end
 
 
