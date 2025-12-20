@@ -9,115 +9,109 @@ defmodule Parser.TypespecParser do
   4. Repeat 2~3 until the end of the file.
   5. Return the list.
   """
-  alias Structure.TypespecInfo, as: TsInfo
+  # alias Structure.TypespecInfo, as: TsInfo
 
-  @doc """
-    # TypeSpec Info. Extraction
-    # - starting line number
-    # - occupying line count  (in case of multiple @spec)
-    # - a clause or clauses of typespec
-    # => [%Typspec_info{line_number: integer(), line_count: integer(), ast: binary()}]
-  """
-  #@spec process(binary()) :: TsInfo.t()
   def process(path) do
-    path                        # Let's put check function whether it is code or not, later.
-    |> File.read!               # => String
-    |> Code.string_to_quoted!   # => AST
-    |> extract_spec             # => TypeSpec info
-    |> parse_spec               # => Basic types
-    |> translate_spec
-      # 1. Parse all TS to the form of basic, i.e., all built-in types to defined and syntactic sugar to expanded.
-      # 2. Translation: depth-first. (annotation is the last)
+    ast = path
+      |> File.read!
+      |> Code.string_to_quoted!
 
-    #|> compile_expr()             # transform AST to another language
-    #|> ok_or_error()
-    #|> synthesis(env_with_stdlib(), CDuceRepl.spawn())
+    spec_list = ast
+      |> extract_spec()
+      |> Enum.map(&parse_spec/1)  # maybe.. take the mapping inside.
+      |> Enum.map(&translate_spec/1)
+
+    spec_list |> assemble_elixir_type
   end
 
-  @doc """
-  Hierarchy of TypeSpec AST:
-    {:@, _meta,
-      [{:spec, _meta,
-        [{:"::", _meta,
-          [
-            {:function_name, _meta, [{:input, _meta, _}]},
-            {:output, _meta, _}
-          ]
-        }]
-      }]
-    }
-
   """
-
-
-    {:@, [context: Elixir, imports: [{1, Kernel}]],
-      [{:spec, [context: Elixir],
-        [{:when, [],
-          [{:"::", [],
-            [
-              {:fun, [], [{:%{}, [], [{{:integer, [], []}, :a}]}]},
-              {:a, [], Elixir}
-            ]
-          }, [a: {:any, [], []}]]
-        }]
-      }]
-    }
-
+  {:defmodule, [line: 1],
+    [
+      {:__aliases__, [line: 1], [:Ex2]},
+      [
+        do: {:__block__, [],
+          [
+            {:@, [line: 3], [{:spec, [line: 3], [{:"::", [line: 3], [{:id1, [line: 3], [{:integer, [line: 3], []}]}, {:integer, [line: 3], []}]}]}]},
+            {:@, [line: 4], [{:spec, [line: 4], [{:"::", [line: 4], [{:id1, [line: 4], [{:float, [line: 4], []}]}, {:float, [line: 4], []}]}]}]},
+            {:def, [line: 5], [{:id1, [line: 5], [{:x, [line: 5], nil}]}, [do: {:x, [line: 5], nil}]]},
+            {:@, [line: 8], [{:spec, [line: 8], [{:"::", [line: 8], [{:id2, [line: 8], [{:atom, [line: 8], []}]}, {:atom, [line: 8], []}]}]}]},
+            {:def, [line: 9], [{:id2, [line: 9], [{:x, [line: 9], nil}]}, [do: {:x, [line: 9], nil}]]}
+          ]}
+      ]
+    ]}
+  """
 
   def extract_spec(ast) do
-    case ast do
-      {:@, _, [{:spec, _, [{:"::", _, [{name, _, inputs}, output]}]}]} -> {name, inputs, output, nil}
-      {:@, _, [{:spec, _, [{:when, _, [{:"::", _, [{name, _, inputs}, output]}, guards]}]}]} -> {name, inputs, output, guards}
-      _ -> :not_spec
+
+    spec_extractor = fn ast, name, acc, extractor ->
+      case ast do
+        {:defmodule, _, [{:__aliases__, _, [module_name]},[do: {:__block__, [], module_block}]]} -> (
+          name = if name == "", do: "#{module_name}", else: "#{name}.#{module_name}"
+          module_block |> Enum.reduce(acc, fn x, acc -> extractor.(x, name, acc, extractor) end)
+        )
+
+        # When received file
+        {:@, [line: line_num], [{:spec, _, [{:"::", _, [{fun_name, _, inputs}, output]}]}]} -> (
+          acc ++ [{line_num, "#{name}.#{fun_name}", inputs, output, nil}]
+        )
+        {:@, [line: line_num], [{:spec, _, [{:when, _, [{:"::", _, [{fun_name, _, inputs}, output]}, guards]}]}]} -> (
+          acc ++ [{line_num, "#{name}.#{fun_name}", inputs, output, guards}]
+        )
+
+        _ -> acc
+      end
     end
+
+    ast |> spec_extractor.("", [], spec_extractor)
+
   end
 
-  def parse_spec(spec_tree) when spec_tree != :not_spec do
+  def parse_spec(spec_tree) do
 
-    {name, inputs, output, guards} = spec_tree
+    {line_num, name, inputs, output, guards} = spec_tree
 
     parser_walker = fn type_node, walker_fun -> (
       # walker_fun/2 is used when the first level node is needed to be parsed, i.e., defined as the basic types.
       walker_fun = &walker_fun.(&1, walker_fun)
       case type_node do
-        {:term, [], []} -> {:any, [], []}
-        {:arity, [], []} -> {:.., [context: Elixir, imports: [{0, Kernel}, {2, Kernel}]], [0, 255]}
+        {:term, _, _} -> {:any, [], []}
+        {:arity, _, _} -> {:.., [context: Elixir, imports: [{0, Kernel}, {2, Kernel}]], [0, 255]}
         # {:as_boolean, [], [children]} -> children
-        {:binary, [], []} -> {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, 8]}]}]}
-        {:nonempty_binary, [], []} -> {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, 8]}, ]}
-        {:bitstring, [], []} -> {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, 1]}]}]}
-        {:nonempty_bitstring, [], []} -> {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, 1]}, {:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, 1]}]}]}
-        {:boolean, [], []} -> {:|, [], [true, false]}
-        {:byte, [], []} -> {:.., [context: Elixir, imports: [{0, Kernel}, {2, Kernel}]], [0, 255]}
+        {:binary, _, _} -> {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, 8]}]}]}
+        {:nonempty_binary, _, _} -> {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, 8]}, ]}
+        {:bitstring, _, _} -> {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, 1]}]}]}
+        {:nonempty_bitstring, _, _} -> {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, 1]}, {:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, 1]}]}]}
+        {:boolean, _, _} -> {:|, [], [true, false]}
+        {:byte, _, _} -> {:.., [context: Elixir, imports: [{0, Kernel}, {2, Kernel}]], [0, 255]}
         {:nonempty_list, [], [type]} -> {:nonempty_maybe_improper_list, [], [type, []]}
         {:list, [], [type]} -> {:|, [], [[], {:nonempty_list, [], [type]}]}
-        {:nonempty_list, [], []} -> {:nonempty_list, [], [{:any, [], []}]} |> walker_fun.()
+        {:nonempty_list, _, _} -> {:nonempty_list, [], [{:any, [], []}]} |> walker_fun.()
         # {:nonempty_improper_list, [], [type1, type2]} -> {:nonempty_maybe_improper_list, [], [type1, type2]}
         {:maybe_improper_list, [], [type1, type2]} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:|, [], [type1, type2]}]}]}
-        {:maybe_improper_list, [], []} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:any, [], []}, {:any, [], []}]}]}
-        {:nonempty_maybe_improper_list, [], []} -> {:nonempty_maybe_improper_list, [], [{:any, [], []}, {:any, [], []}]}
-        {:char, [], []} -> {:.., [context: Elixir, imports: [{0, Kernel}, {2, Kernel}]], [0, 1114111]}
-        {:charlist, [], []} -> {:list, [], [{:char, [], []}]} |> walker_fun.()
-        {:nonempty_charlist, [], []} -> {:nonempty_list, [], [{:char, [], []}]} |> walker_fun.()
-        {:fun, [], []} -> [{:->, [], [[{:..., [], []}], {:any, [], []}]}]
-        {:function, [], []} -> [{:->, [], [[{:..., [], []}], {:any, [], []}]}]
-        {:identifier, [], []} -> {:|, [], [{:pid, [context: Elixir, imports: [{1, IEx.Helpers}, {3, IEx.Helpers}]], []}, {:|, [], [{:port, [context: Elixir, imports: [{1, IEx.Helpers}, {2, IEx.Helpers}]], []}, {:reference, [], []}]}]}
+        {:maybe_improper_list, _, _} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:any, [], []}, {:any, [], []}]}]}
+        {:nonempty_maybe_improper_list, _, _} -> {:nonempty_maybe_improper_list, [], [{:any, [], []}, {:any, [], []}]}
+        {:char, _, _} -> {:.., [context: Elixir, imports: [{0, Kernel}, {2, Kernel}]], [0, 1114111]}
+        {:charlist, _, _} -> {:list, [], [{:char, [], []}]} |> walker_fun.()
+        {:nonempty_charlist, _, _} -> {:nonempty_list, [], [{:char, [], []}]} |> walker_fun.()
+        {:fun, _, _} -> [{:->, [], [[{:..., [], []}], {:any, [], []}]}]
+        {:function, _, _} -> [{:->, [], [[{:..., [], []}], {:any, [], []}]}]
+        {:identifier, _, _} -> {:|, [], [{:pid, [context: Elixir, imports: [{1, IEx.Helpers}, {3, IEx.Helpers}]], []}, {:|, [], [{:port, [context: Elixir, imports: [{1, IEx.Helpers}, {2, IEx.Helpers}]], []}, {:reference, [], []}]}]}
 
         # iolist will not expand more than once since translation is to only display..., or not even once is necessary.
-        {:iodata, [], []} -> {:|, [], [{:iolist, [], []}, {:binary, [], []}]}
-        {:iolist, [], []} -> {:maybe_improper_list, [], [{:|, [], [{:byte, [], []}, {:|, [], [{:binary, [], []}, {:last_iolist, [], []}]}]}, {:|, [], [{:binary, [], []}, []]}]} |> walker_fun.()
+        {:iodata, _, _} -> {:|, [], [{:iolist, [], []}, {:binary, [], []}]}
+        {:iolist, _, _} -> {:maybe_improper_list, [], [{:|, [], [{:byte, [], []}, {:|, [], [{:binary, [], []}, {:last_iolist, [], []}]}]}, {:|, [], [{:binary, [], []}, []]}]} |> walker_fun.()
         # only to mark the final recursive iolist type
-        {:last_iolist, [], []} -> {:iolist, [], []}
+        {:last_iolist, _, _} -> {:iolist, [], []}
 
-        {:keyword, [], []} -> [{{:atom, [], []}, {:any, [], []}}]
+        {:keyword, _, _} -> [{{:atom, [], []}, {:any, [], []}}]
         {:keyword, [], [type]} -> [{{:atom, [], []}, type}]
-        {:mfa, [], []} -> {:{}, [], [{:module, [], []}, {:atom, [], []}, {:arity, [], []}]}
-        {:module, [], []} -> {:atom, [], []}
-        {:no_return, [], []} -> {:none, [], []}
-        {:node, [], []} -> {:atom, [], []}
-        {:number, [], []} -> {:|, [], [{:integer, [], []}, {:float, [], []}]}
-        {:struct, [], []} -> {:%{}, [], [{:__struct__, {:atom, [], []}}, {{:optional, [], [{:atom, [], []}]}, {:any, [], []}}]}
-        {:timeout, [], []} -> {:|, [], [:infinity, {:non_neg_integer, [], []}]}
+        {:mfa, _, _} -> {:{}, [], [{:module, [], []}, {:atom, [], []}, {:arity, [], []}]}
+        {:module, _, _} -> {:atom, [], []}
+        {:no_return, _, _} -> {:none, [], []}
+        {:node, _, _} -> {:atom, [], []}
+        {:number, _, _} -> {:|, [], [{:integer, [], []}, {:float, [], []}]}
+        {:struct, _, _} -> {:%{}, [], [{:__struct__, {:atom, [], []}}, {{:optional, [], [{:atom, [], []}]}, {:any, [], []}}]}
+        {:timeout, _, _} -> {:|, [], [:infinity, {:non_neg_integer, [], []}]}
 
 
         # true -> :true
@@ -153,80 +147,78 @@ defmodule Parser.TypespecParser do
     output = output |> macro_walker.()
     guards = if guards == nil, do: nil, else: guards |> Enum.map(fn {k, v} -> {k, v |> macro_walker.()} end)
 
-    {name, inputs, output, guards}
+    {line_num, name, inputs, output, guards}
   end
 
-  def translate_spec(parsed_spec_tree) when parsed_spec_tree != :not_spec do
+  def translate_spec(parsed_spec_tree) do
 
-    {name, inputs, output, guards} = parsed_spec_tree
+    {line_num, name, inputs, output, guards} = parsed_spec_tree
 
-    name = Atom.to_string(name)
+    translator = fn type_node, translator_fun -> (
 
-    translator_walker = fn type_node, walker_fun -> (
-
-      walker_fun = &walker_fun.(&1, walker_fun)
+      translator_fun = &translator_fun.(&1, translator_fun)
       case type_node do
         # Remote module type (e.g., String.t())
-        {{:., [], [{_, _, module_list}, type]}, [], []} -> (
+        {{:., _, [{_, _, module_list}, type]}, _, _} -> (
           module = module_list |> Enum.reduce("", fn x, acc -> module = Atom.to_string(x)
             if acc == "", do: module, else: acc <> "." <> module end)
-          module <> "." <> (type |> walker_fun.()) <> "()"
+          module <> "." <> (type |> translator_fun.()) <> "()"
         )
 
         # Type | Type
-        {:|, [], [left, right]} -> (left |> walker_fun.()) <> " or " <> (right |> walker_fun.())
+        {:|, _, [left, right]} -> (left |> translator_fun.()) <> " or " <> (right |> translator_fun.())
 
         # {Type} (Tuple)
-        {:{}, [], tuple_list} -> (
+        {:{}, _, tuple_list} -> (
           tuple_list = tuple_list |> Enum.reduce("",
-          fn x, acc -> element = (x |> walker_fun.())
+          fn x, acc -> element = (x |> translator_fun.())
             if acc == "", do: element, else: acc <> ", " <> element
           end)
           "{#{tuple_list}}"
         )
 
         # %{..., F_seq} (Record)
-        {:%{}, [], record_list} -> (
+        {:%{}, _, record_list} -> (
           record_list = record_list |> Enum.reduce("",
-          fn {k, v}, acc -> field = (k |> walker_fun.()) <> " => " <> (v |> walker_fun.())
+          fn {k, v}, acc -> field = (k |> translator_fun.()) <> " => " <> (v |> translator_fun.())
             if acc == "", do: field, else: acc <> ", " <> field
           end)
           "%{#{record_list}}"
         )
         # APPLY translation and approximation
-        {:required, [], [type]} -> (type |> walker_fun.())
-        {:optional, [], [type]} -> (type |> walker_fun.())
+        {:required, _, [type]} -> (type |> translator_fun.())
+        {:optional, _, [type]} -> (type |> translator_fun.())
 
         # [] (empty list)
         [] -> "empty_list()"
         # [type] or [type, ...] (non-empty list)
-        {:nonempty_maybe_improper_list, [], [type, []]} -> "non_empty_list(#{type |> walker_fun.()}, empty_list())"
+        {:nonempty_maybe_improper_list, _, [type, []]} -> "non_empty_list(#{type |> translator_fun.()}, empty_list())"
 
         # <<_::n, _::_*n>>
-        {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, digit1]}, {:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, digit2]}]}]} -> (
+        {:<<>>, _, [{:"::", _, [_, digit1]}, {:"::", _, [_, {:*, _, [_, digit2]}]}]} -> (
           if Integer.mod(digit1, 8) == 0 and Integer.mod(digit2, 8) == 0, do: "binary()", else: "UNDEFINED"
         )
         # <<_::_*n>>
-        {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, digit]}]}]} -> (
+        {:<<>>, _, [{:"::", _, [_, {:*, _, [_, digit]}]}]} -> (
           if Integer.mod(digit, 8) == 0, do: "binary()", else: "UNDEFINED"
         )
         # <<_::n>>
-        {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, digit]}]} -> (
+        {:<<>>, _, [{:"::", _, [_, digit]}]} -> (
           if Integer.mod(digit, 8) == 0, do: "binary()", else: "UNDEFINED"
         )
         # <<>>
-        {:<<>>, [], []} -> "UNDEFINED"
+        {:<<>>, _, _} -> "UNDEFINED"
 
         # (... -> Type)
-        {:->, [], [:..., right]} -> (
-          right = right |> walker_fun.()
+        {:->, _, [:..., right]} -> (
+          right = right |> translator_fun.()
           if right == "term()", do: "fun()", else: "UNDEFINED"
         )
         # (Type_seq} -> Type)
-        {:->, [], [left, right]} -> "(" <> (left |> walker_fun.()) <> " -> " <> (right |> walker_fun.()) <> ")"
+        {:->, _, [left, right]} -> "(" <> (left |> translator_fun.()) <> " -> " <> (right |> translator_fun.()) <> ")"
 
         # n..n'
-        {:.., [_], [left, right]} -> left <> "--" <> right
+        {:.., _, [left, right]} -> left <> "--" <> right
 
         # n (integer singleton types)
         digit when is_integer(digit) -> "#{digit}--#{digit}"
@@ -234,11 +226,8 @@ defmodule Parser.TypespecParser do
         # :k (atom singleton types)
         atom when is_atom(atom) -> ":#{atom}"
 
-        # Type variable
-        {type, [], Elixir} -> Atom.to_string(type)
-
         # Simple form of basic types (any(), none(), atom(), pid(), port(), reference(), float(), integer(), neg_integer(), non_neg_integer(), pos_integer(), tuple())
-        {type, [], []} -> (
+        {type, _, []} -> (
           case type do
             :any -> "term()"
             :neg_integer -> "#{:infty}--#{-1}"
@@ -248,18 +237,50 @@ defmodule Parser.TypespecParser do
           end
         )
 
+        # Type variable
+        {type, _, _} -> Atom.to_string(type)
+
       end)
     end
 
-    walker = &translator_walker.(&1, translator_walker)
-    inputs = inputs |> Enum.map(walker)
-    output = output |> walker.()
-    guards = if guards == nil, do: nil, else: guards |> Enum.map(fn {k, v} -> Atom.to_string(k) <> ": " <> (v |> walker.()) end)
+    translation = &translator.(&1, translator)
+    inputs = inputs |> Enum.map(translation)
+    output = output |> translation.()
+    guards = if guards == nil, do: nil, else: guards |> Enum.map(fn {k, v} -> Atom.to_string(k) <> ": " <> (v |> translation.()) end)
 
     #%TsInfo{name: name, inputs: inputs, output: output, guards: guards}
-    {name, inputs, output, guards}
+    {line_num, name, inputs, output, guards}
   end
 
+  # Need to add module hierarchy later.
+  def assemble_elixir_type(translated_spec_list) do
+
+    {prev_start_line_number, prev_name, prev_annotation, annotation} = {-1, "", "", ""}
+
+    for {line_num, name, inputs, output, guards} <- translated_spec_list do
+      # single-line spec or start of spec
+      if prev_name != name do
+        annotation = "$ " <> (inputs |> Enum.reduce("", fn x, acc -> acc <> if acc == "", do: x, else: acc <> ", #{x}" end)) <> " -> " <> output
+
+        if guards != nil do
+          annotation <> " when " <> (guards |> Enum.reduce("", fn x, acc -> acc <> if acc == "", do: x, else: acc <> ", #{x}" end))
+        end
+      # multi-line spec
+      else
+        if guards == nil do
+          annotation = prev_annotation <> inputs <> " -> " <> output
+        else
+          annotation = "$ " <> inputs <> " -> " <> output
+        end
+      end
+
+      {prev_start_line_number, prev_name, prev_annotation} = {line_num, name, annotation}
+      if prev_name != name, do: [{line_num, annotation}]
+
+    end
+
+
+  end
 
 
   """
