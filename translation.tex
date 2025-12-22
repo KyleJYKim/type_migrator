@@ -257,7 +257,7 @@ In the perspective of memory space, it is only costly to define and have all the
 
 \begin{figure} [H]
    \[\begin{array}{rcll}
-         \texttt{\fun{\dots}{any()}} \equiv \texttt{\fun{$none$}{any()}\,\,$|$\,\,\dots\,\,$|$\,\,\fun{(none()$_1$, \dots, none()$_{255}$)}{any()}}
+         \texttt{\fun{\dots}{any()}} \equiv \texttt{\fun{none()}{any()}\,\,$|$\,\,\dots\,\,$|$\,\,\fun{($\underbrace{\texttt{none(), \dots, none()}}_{255\text{  times}}$)}{any()}}
    \end{array}\]
    \caption{Top Function Type}
    \label{app:top-function-type}
