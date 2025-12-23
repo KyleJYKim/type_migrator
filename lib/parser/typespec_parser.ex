@@ -12,6 +12,7 @@ defmodule Parser.TypespecParser do
   # alias Structure.TypespecInfo, as: TsInfo
 
   def process(path) do
+
     ast = path
       |> File.read!
       |> Code.string_to_quoted!
@@ -24,22 +25,6 @@ defmodule Parser.TypespecParser do
     spec_list |> assemble_elixir_type
   end
 
-  """
-  {:defmodule, [line: 1],
-    [
-      {:__aliases__, [line: 1], [:Ex2]},
-      [
-        do: {:__block__, [],
-          [
-            {:@, [line: 3], [{:spec, [line: 3], [{:"::", [line: 3], [{:id1, [line: 3], [{:integer, [line: 3], []}]}, {:integer, [line: 3], []}]}]}]},
-            {:@, [line: 4], [{:spec, [line: 4], [{:"::", [line: 4], [{:id1, [line: 4], [{:float, [line: 4], []}]}, {:float, [line: 4], []}]}]}]},
-            {:def, [line: 5], [{:id1, [line: 5], [{:x, [line: 5], nil}]}, [do: {:x, [line: 5], nil}]]},
-            {:@, [line: 8], [{:spec, [line: 8], [{:"::", [line: 8], [{:id2, [line: 8], [{:atom, [line: 8], []}]}, {:atom, [line: 8], []}]}]}]},
-            {:def, [line: 9], [{:id2, [line: 9], [{:x, [line: 9], nil}]}, [do: {:x, [line: 9], nil}]]}
-          ]}
-      ]
-    ]}
-  """
 
   def extract_spec(ast) do
 
@@ -63,7 +48,6 @@ defmodule Parser.TypespecParser do
     end
 
     ast |> spec_extractor.("", [], spec_extractor)
-
   end
 
   def parse_spec(spec_tree) do
@@ -266,56 +250,70 @@ defmodule Parser.TypespecParser do
 
       if prev_name == name do
         [head | tail] = acc
-        [[type] ++ head] ++ tail
+        [head ++ [type]] ++ tail
       else
         [[type]] ++ acc
       end
     end
 
-    grouped_list = translated_spec_list |> Enum.reduce([], fn x, acc -> type_grouping.(x, acc) end)
+    grouped_list = translated_spec_list |> Enum.reduce([], type_grouping) |> Enum.reverse()
 
-    type_assembler = fn  ->  end
+    type_renaming = fn type_info, {prev_list, renamed} ->
+      # {[...], %{}}, {} -> {{[...], %{}}, {}}
+      case {type_info, prev_list, renamed} do
+        {type_info, [], %{}} -> {[type_info], %{}}
+        {{line_num, name, inputs, output, guards}, prev_list, renamed} -> (
+          if guards == nil do
+            {prev_list ++ [type_info], renamed}
+          else
+            {new_inputs, new_output, new_guards, new_renamed} = prev_list |> IO.inspect(label: "prev_list") |> Enum.reduce({inputs, output, guards, renamed}, fn {_, _, _, _, prev_guards}, {inputs, output, guards, renamed} ->
+              if guards == nil do
+                {prev_list ++ [type_info], renamed} |> IO.inspect(label: "after guards1")
+              else
+                {new_guards, {new_inputs, new_output, new_renamed}} = guards |> Enum.map_reduce({inputs, output, renamed}, fn guard, {inputs, output, renamed} ->
+                  prev_guards |> Enum.reduce({guard, {inputs, output, renamed}}, fn prev_guard, {guard, {inputs, output, renamed}} ->
+                    renamed |> IO.inspect()
+                    guard_list = guard|> String.split(":")
+                    prev_guard_list = prev_guard |> String.split(":")
+                    if hd(guard_list) == hd(prev_guard_list) do
+                      {num, renamed} = renamed |> Map.get_and_update(hd(guard_list), fn v -> if v == nil, do: {2, 2}, else: {v+1, v+1} end)
+                      new_inputs = inputs |> Enum.map(fn input -> input |> String.replace(hd(guard_list), "#{hd(guard_list)}_#{num}") end)
+                      new_output = output |> String.replace(hd(guard_list), "#{hd(guard_list)}_#{num}")
+                      {"#{hd(guard_list)}_#{num}:#{tl(guard_list)}", {new_inputs, new_output, renamed}} |> IO.inspect(label: "new")
+                    else
+                      {guard, {inputs, output, renamed}} |> IO.inspect(label: "old")
+                    end
+                  end)
+                end)
+                {new_inputs, new_output, new_guards, new_renamed} |> IO.inspect(label: "after guards2")
+              end
+            end)
+            {prev_list ++ [{line_num, name, new_inputs, new_output, new_guards}], new_renamed} |> IO.inspect(label: "final")
+          end
+        )
+      end
+    end
+                  # [[{},{}, ...], [{}, ...], ...] |> Enum.map([{}, ...] |> Enum.map_reduce({[...], %{}}, {} -> {{[...], %{}}, {}}))
+    renamer = fn list -> elem(list |> Enum.reduce({[], %{}}, type_renaming), 0) end
+    renamed_list = grouped_list |> IO.inspect |> Enum.map(renamer)
 
 
-    grouped_list |> Enum.map()
+    # type_assembler = fn group, acc, assembler ->
+    #   case group do
+    #     [] -> []
+    #     [head | tail] -> (
+    #       {line_num, name, inputs, output, guards} = head
+    #       case guards do
+    #         nil -> "#{Enum.reduce([], inputs, fn x, acc -> if acc == [], do: x, else: "#{acc}, #{x}" end)}"
+    #         _ ->
+    #       end
+    #     )
+    #   end
+    # end
+
+
+    # grouped_list |> Enum.reduce(type_assembler)
   end
-
-
-  """
-  {:@, _, [{:spec, _, [{:"::", _, [{name, _, input}, output]}]}]} = quote do: @spec f(integer()) :: integer()
-  Simple types:
-    any(), term(), dynamic(), none()
-    atom(), float(), integer(),
-    neg_integer(), non_neg_integer(), pos_integer()
-    pid(), port(), reference()
-
-
-    sample:
-    alias Parser.TypespecParser, as: Ps
-    ast = quote do: @spec funny_fun(term()) :: atom()
-    spec = ast |> Ps.extract_spec
-    spec |> Ps.analyze_spec
-
-  """
-
-"""
-defmodule SpecFinder do
-  def find_specs(ast) do
-    Macro.prewalk(ast, [], fn
-      {:@, _, [{:spec, _, [spec]}]} = node, acc ->
-        {node, [spec | acc]}
-
-      node, acc ->
-        {node, acc}
-    end)
-    |> elem(1)
-    |> Enum.reverse()
-  end
-end
-
-{:ok, ast} = Code.string_to_quoted(File.read!("descr.ex"))
-IO.inspect(SpecFinder.find_specs(ast))
-"""
 
 
 end
