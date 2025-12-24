@@ -18,9 +18,9 @@ defmodule Parser.TypespecParser do
       |> Code.string_to_quoted!
 
     spec_list = ast
-      |> extract_spec()
-      |> Enum.map(&parse_spec/1)  # maybe.. take the mapping inside.
-      |> Enum.map(&translate_spec/1)
+      |> extract_spec() |> IO.inspect(label: "extract_spec()")
+      |> Enum.map(&parse_spec/1)  |> IO.inspect(label: "parse_spec()")     # maybe.. take the mapping inside.
+      |> Enum.map(&translate_spec/1)  |> IO.inspect(label: "translate_spec()")
 
     spec_list |> assemble_elixir_type
   end
@@ -208,7 +208,7 @@ defmodule Parser.TypespecParser do
         digit when is_integer(digit) -> "#{digit}--#{digit}"
 
         # :k (atom singleton types)
-        atom when is_atom(atom) -> ":#{atom}"
+        atom when is_atom(atom) -> ":" <> Atom.to_string(atom) |> IO.inspect(label: "ATOM")
 
         # Simple form of basic types (any(), none(), atom(), pid(), port(), reference(), float(), integer(), neg_integer(), non_neg_integer(), pos_integer(), tuple())
         {type, _, []} -> (
@@ -272,13 +272,13 @@ defmodule Parser.TypespecParser do
               else
                 {new_guards, {new_inputs, new_output, new_renamed}} = guards |> Enum.map_reduce({inputs, output, renamed}, fn guard, {inputs, output, renamed} ->
                   prev_guards |> Enum.reduce({guard, {inputs, output, renamed}}, fn prev_guard, {guard, {inputs, output, renamed}} ->
-                    guard_list = guard|> String.split(":")
-                    prev_guard_list = prev_guard |> String.split(":")
+                    guard_list = guard|> String.split(": ")
+                    prev_guard_list = prev_guard |> String.split(": ")
                     if hd(guard_list) == hd(prev_guard_list) do
                       {num, renamed} = renamed |> Map.get_and_update(hd(guard_list), fn v -> if v == nil, do: {2, 2}, else: {v+1, v+1} end)
                       new_inputs = inputs |> Enum.map(fn input -> input |> String.replace(hd(guard_list), "#{hd(guard_list)}_#{num}") end)
                       new_output = output |> String.replace(hd(guard_list), "#{hd(guard_list)}_#{num}")
-                      {"#{hd(guard_list)}_#{num}:#{tl(guard_list)}", {new_inputs, new_output, renamed}}
+                      {"#{hd(guard_list)}_#{num}: #{tl(guard_list)}", {new_inputs, new_output, renamed}}
                     else
                       {guard, {inputs, output, renamed}}
                     end
@@ -308,14 +308,13 @@ defmodule Parser.TypespecParser do
           new_body = "(#{inputs |> Enum.reduce("", fn x, acc -> if acc == "", do: "#{x}", else: "#{acc}, #{x}" end)} -> #{output})"
           new_guard = if guards == nil, do: "", else: "#{guards |> Enum.reduce("", fn x, acc -> if acc == "", do: "#{x}", else: "#{acc}, #{x}" end)}"
 
-          [line_num]  |> IO.inspect
           tail |> assembler.({[line_num], name, new_body, new_guard})
         )
         {[{line_num, name, inputs, output, guards} | tail], {acc_line_num, name, acc_body, acc_guard}} -> (
           new_body = "(#{inputs |> Enum.reduce("", fn x, acc -> if acc == "", do: "#{x}", else: "#{acc}, #{x}" end)} -> #{output})"
           new_guard = if guards == nil, do: "", else: "#{guards |> Enum.reduce("", fn x, acc -> if acc == "", do: "#{x}", else: "#{acc}, #{x}" end)}"
 
-          new_acc_line_num = acc_line_num ++ [line_num] |> IO.inspect
+          new_acc_line_num = acc_line_num ++ [line_num]
           new_acc_body = acc_body <> " and " <> new_body
           new_acc_guard = if guards == nil, do: acc_guard, else: (if acc_guard == "", do: new_guard, else: acc_guard <> ", " <> new_guard)
 

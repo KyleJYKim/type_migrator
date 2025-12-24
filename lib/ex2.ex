@@ -1,5 +1,11 @@
 defmodule Ex2 do
 
+  @spec zero_arity() :: nil
+  def zero_arity(), do: nil
+
+  @spec return_true() :: true
+  def return_true(), do: true
+
   @spec id1(integer()) :: integer()
   @spec id1(float()) :: float()
   def id1(x), do: x
@@ -25,4 +31,10 @@ defmodule Ex2 do
     def fun_t(x) when is_binary(x), do: x
     def fun_t(x) when is_integer(x), do: Integer.to_string(x)
     def fun_t(x) when is_float(x), do: Float.to_string(x)
+
+    @spec triple_arity_guarded(a, b, c) :: atom() | tuple() when a: integer(), b: float(), c: binary()
+    def triple_arity_guarded(x, y, z), do: (if x < 0, do: :fail, else: {x, y, z})
+
+    @spec triple_arity(integer(), number(), :ok | :fail) :: atom() | tuple()
+    def triple_arity(x, y, z), do: (if z == :fail, do: :fail, else: {x, y, z})
 end
