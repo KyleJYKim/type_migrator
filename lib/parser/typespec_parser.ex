@@ -266,53 +266,67 @@ defmodule Parser.TypespecParser do
           if guards == nil do
             {prev_list ++ [type_info], renamed}
           else
-            {new_inputs, new_output, new_guards, new_renamed} = prev_list |> IO.inspect(label: "prev_list") |> Enum.reduce({inputs, output, guards, renamed}, fn {_, _, _, _, prev_guards}, {inputs, output, guards, renamed} ->
+            {new_inputs, new_output, new_guards, new_renamed} = prev_list |> Enum.reduce({inputs, output, guards, renamed}, fn {_, _, _, _, prev_guards}, {inputs, output, guards, renamed} ->
               if guards == nil do
-                {prev_list ++ [type_info], renamed} |> IO.inspect(label: "after guards1")
+                {prev_list ++ [type_info], renamed}
               else
                 {new_guards, {new_inputs, new_output, new_renamed}} = guards |> Enum.map_reduce({inputs, output, renamed}, fn guard, {inputs, output, renamed} ->
                   prev_guards |> Enum.reduce({guard, {inputs, output, renamed}}, fn prev_guard, {guard, {inputs, output, renamed}} ->
-                    renamed |> IO.inspect()
                     guard_list = guard|> String.split(":")
                     prev_guard_list = prev_guard |> String.split(":")
                     if hd(guard_list) == hd(prev_guard_list) do
                       {num, renamed} = renamed |> Map.get_and_update(hd(guard_list), fn v -> if v == nil, do: {2, 2}, else: {v+1, v+1} end)
                       new_inputs = inputs |> Enum.map(fn input -> input |> String.replace(hd(guard_list), "#{hd(guard_list)}_#{num}") end)
                       new_output = output |> String.replace(hd(guard_list), "#{hd(guard_list)}_#{num}")
-                      {"#{hd(guard_list)}_#{num}:#{tl(guard_list)}", {new_inputs, new_output, renamed}} |> IO.inspect(label: "new")
+                      {"#{hd(guard_list)}_#{num}:#{tl(guard_list)}", {new_inputs, new_output, renamed}}
                     else
-                      {guard, {inputs, output, renamed}} |> IO.inspect(label: "old")
+                      {guard, {inputs, output, renamed}}
                     end
                   end)
                 end)
-                {new_inputs, new_output, new_guards, new_renamed} |> IO.inspect(label: "after guards2")
+                {new_inputs, new_output, new_guards, new_renamed}
               end
             end)
-            {prev_list ++ [{line_num, name, new_inputs, new_output, new_guards}], new_renamed} |> IO.inspect(label: "final")
+            {prev_list ++ [{line_num, name, new_inputs, new_output, new_guards}], new_renamed}
           end
         )
       end
     end
-                  # [[{},{}, ...], [{}, ...], ...] |> Enum.map([{}, ...] |> Enum.map_reduce({[...], %{}}, {} -> {{[...], %{}}, {}}))
+    # [[{},{}, ...], [{}, ...], ...] |> Enum.map([{}, ...] |> Enum.reduce({[...], %{}}, {} -> {{[...], %{}}, {}}))
     renamer = fn list -> elem(list |> Enum.reduce({[], %{}}, type_renaming), 0) end
-    renamed_list = grouped_list |> IO.inspect |> Enum.map(renamer)
+    renamed_list = grouped_list |> Enum.map(renamer)
 
 
-    # type_assembler = fn group, acc, assembler ->
-    #   case group do
-    #     [] -> []
-    #     [head | tail] -> (
-    #       {line_num, name, inputs, output, guards} = head
-    #       case guards do
-    #         nil -> "#{Enum.reduce([], inputs, fn x, acc -> if acc == [], do: x, else: "#{acc}, #{x}" end)}"
-    #         _ ->
-    #       end
-    #     )
-    #   end
-    # end
+    type_assembler = fn group, acc, assembler ->
+      assembler = &assembler.(&1, &2, assembler)
+      case {group, acc} do
+        {[], {acc_line_num, name, acc_body, acc_guard}} -> (
+          full_body = if acc_guard == "", do: acc_body, else: acc_body <> " when " <> acc_guard
+          {acc_line_num, name, full_body}
+        )
+        {[{line_num, name, inputs, output, guards} | tail], {}} -> (
+          new_body = "(#{inputs |> Enum.reduce("", fn x, acc -> if acc == "", do: "#{x}", else: "#{acc}, #{x}" end)} -> #{output})"
+          new_guard = if guards == nil, do: "", else: "#{guards |> Enum.reduce("", fn x, acc -> if acc == "", do: "#{x}", else: "#{acc}, #{x}" end)}"
 
+          [line_num]  |> IO.inspect
+          tail |> assembler.({[line_num], name, new_body, new_guard})
+        )
+        {[{line_num, name, inputs, output, guards} | tail], {acc_line_num, name, acc_body, acc_guard}} -> (
+          new_body = "(#{inputs |> Enum.reduce("", fn x, acc -> if acc == "", do: "#{x}", else: "#{acc}, #{x}" end)} -> #{output})"
+          new_guard = if guards == nil, do: "", else: "#{guards |> Enum.reduce("", fn x, acc -> if acc == "", do: "#{x}", else: "#{acc}, #{x}" end)}"
 
-    # grouped_list |> Enum.reduce(type_assembler)
+          new_acc_line_num = acc_line_num ++ [line_num] |> IO.inspect
+          new_acc_body = acc_body <> " and " <> new_body
+          new_acc_guard = if guards == nil, do: acc_guard, else: (if acc_guard == "", do: new_guard, else: acc_guard <> ", " <> new_guard)
+
+          tail |> assembler.({new_acc_line_num, name, new_acc_body, new_acc_guard})
+        )
+      end
+    end
+
+    # [[{}, ...], ...] -> [{}, ...]
+    assembler = &type_assembler.(&1, {}, type_assembler)
+    renamed_list |> IO.inspect |> Enum.map(assembler)
   end
 
 
