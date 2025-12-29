@@ -187,32 +187,37 @@ More precisely, the previous translation is undefined in the following cases:
 \begin{itemize}
    \item Bitstrings with size specifications that are not a multiple of 8 bits (e.g., \texttt{<<\_::3>>}).
    \item The type \texttt{\fun{\dots}{\TST}} when the translation of $\TST$ is not equivalent to \texttt{any()} (explain why this type is not interesting).
-   \item .... (n..n)
    \item $\dsb{\texttt{required(\TST) => $\prm{\TST}$}}$ and $\dsb{\texttt{optional(\TST) => $\prm{\TST}$}}$ are undefined when $\dsb{\TST}$ is not equivalent to a disjunction of pairwise distinct key types.
 \end{itemize}
 In the rest of this section we give a conservative extension of the translation defined so far that is total, i.e., it is defined for every TypeSpec type. The extension consists in defining approximations for the cases where the previous translation is undefined.
 
 \subsection{Approximation of Bitstring Types}
 
-Elixir Types has no plan to support bitstring types that is finer types than \texttt{binary()}, hence, it is not possible to directly translate any bitstring types 
+Elixir Types has no plan to support bitstring types which are finer than \texttt{binary()}. 
 However, most of the bitstring representatives could be trivially translated to \texttt{binary()}.
 According to the Erlang documentation, bitstrings are a later generalization of binaries, so many texts and much information about binaries apply just as well for bitstrings.
 %https://www.erlang.org/doc/system/expressions#bit-syntax-expressions
-In other words, the purpose of bitstrings is to construct binaries in more precise manner.
-Elixir Types provides type segments as Figure~\ref{app:bitstring-segment-types} that specify the $unit*size$ instead of direct notation with digits.
-Interestingly, all the default segments are divisible by 8, that leads bitstring values to be accepted as binary types.
+In other words, the purpose of using bitstrings with texttt{<<>>} is to construct none other than binaries in more precise manner.
+This strongly indicates that bitstring types are eventually treated as binary types,
+Therefore we can also take the bitstring types with $unit*size$ indivisible by 8 as a type of binaries.
+For example, Figure~\ref{app:bitstring-example} is to be applied to a bitstring with two elements that are 8 bits and 7 bits, respectively.
+Strictly, 7bits is not binary, however, if the function is applied to \texttt{<<97::8, 98::7>>}, then the function successfully returns \texttt{"ab"}.
+That is because 98 (0110 0010), which is \texttt{"b"} by the code points, does not exceed 7 bits and preserves the necessary information when pattern-matched.
+Of course, the function could be applied to a parameter that requires more bits, but the point is that the parameter is taken as a binary type when the value exists in code points, which is the supposed with bitstring types.
 
-\begin{figure} [H]
-   \[\begin{array}{rcll}
-         Segment\,\,Type = \texttt{integer $|$ float $|$ binary $|$ bytes $|$ bitstring $|$ bits $|$ utf8 $|$ utf16 $|$ utf32}
-   \end{array}\]
-   \caption{Bitstring Segment Types}
-   \label{app:bitstring-segment-types}
+\begin{figure}[hbtp]
+    \begin{codefig}
+      \texttt{@spec id\_bin(<<\_::15>>)::binary()} \\
+      \texttt{def id\_bin(<<a::8, b::7>>), do: <<a, b>>}
+    \end{codefig}
+   \caption{Bitstring Example}
+   \label{app:bitstring-example}
 \end{figure}
 
-Despite the rare use cases, bitstring types are still designed to be recognize $unit$ and $size$ other than digits divisible by 8 and these are not strictly accepted as \texttt{binary()}.
-These types can be addressed as \texttt{binary() and dynamic()}.
-Since bitstrings exist to generalize binaries as mentioned above, the specification should describe a binary type and otherwise realized at compile time.
+On top of that, it is a rare use specifying types with bitstring notations when users want to specify binary types.
+It is explicitly guided by the Elixir design; when tried with \texttt{<<"a"::7>>}, this will not compile because a literal string in a bitstring is not allowed with a size specifier.
+Which forces users to have 8-multiple bits except when specified with integer values like Figure~\ref{app:bitstring-example}.
+AS a result, we address these rare cases as \texttt{binary() and dynamic()} for them to be subtypes of binary types.
 
 \begin{figure} [H]
    \begin{translationfig}

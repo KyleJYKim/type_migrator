@@ -53,8 +53,8 @@ defmodule Ex1 do
   # @spec id_fun((...->atom())) :: fun()
   # def id_fun(x), do: x
 
-  @spec id_bin(bitstring())::binary()
-  def id_bin(b), do: b
+  @spec id_bin(<<_::15>>)::binary()
+  def id_bin(<<a::8, b::7>>), do: <<a, b>>
 
   @spec id_tuple({%Ex1.Some{a: integer()}, binary()}) :: t when t: tuple()
   def id_tuple(tpl) when is_tuple(tpl), do: tpl
@@ -116,16 +116,16 @@ defmodule Ex1 do
     #def id_records7(), do: Ex1.id_records7(%{:a => 1})
 
     #def id_records8(), do: Ex1.id_records8(%{:a => 1})
-    def id_records9(), do: Ex1.id_records9(%{fn x -> "a" end => :a})
+    #def id_records9(), do: Ex1.id_records9(%{fn x -> "a" end => :a})
     #def id_records10(), do: Ex1.id_records10(%{nil => 1})
 
-    def id_fun(), do: Ex1.id_fun(fn x -> <<97>> end)
+    #def id_fun(), do: Ex1.id_fun(fn x -> <<97>> end)
 
     @spec fun(1) :: 2
     def fun(x) when x == 1, do: x+1
-    def id_bin(), do: Ex1.id_bin(<<1::3>>)
+    def id_bin(), do: Ex1.id_bin(<<97::size(8), 98::size(7)>>)
 
-    def id_tuple(), do: Ex1.id_tuple({1,"d"})
+    #def id_tuple(), do: Ex1.id_tuple({1,"d"})
 
   end
 
