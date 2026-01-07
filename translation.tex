@@ -185,74 +185,74 @@ The translation defined so far is partial since some TypeSpec types do not have 
 
 More precisely, the previous translation is undefined in the following cases:
 \begin{itemize}
-   \item Bitstrings with size specifications that are not a multiple of 8 bits (e.g., \texttt{<<\_::3>>}).
+   % \item Bitstrings with size specifications that are not a multiple of 8 bits (e.g., \texttt{<<\_::3>>}).
    \item The type \texttt{\fun{\dots}{\TST}} when the translation of $\TST$ is not equivalent to \texttt{any()} (explain why this type is not interesting).
    \item $\dsb{\texttt{required(\TST) => $\prm{\TST}$}}$ and $\dsb{\texttt{optional(\TST) => $\prm{\TST}$}}$ are undefined when $\dsb{\TST}$ is not equivalent to a disjunction of pairwise distinct key types.
 \end{itemize}
 In the rest of this section we give a conservative extension of the translation defined so far that is total, i.e., it is defined for every TypeSpec type. The extension consists in defining approximations for the cases where the previous translation is undefined.
 
-\subsection{Approximation of Bitstring Types}
+% \subsection{Approximation of Bitstring Types} \label{approximation-of-bitstring-types}
 
-Elixir Types has no plan to support bitstring types which are finer than \texttt{binary()}. 
-However, most of the bitstring representatives could be trivially translated to \texttt{binary()}.
-According to the Erlang documentation, bitstrings are a later generalization of binaries, so many texts and much information about binaries apply just as well for bitstrings.
-%https://www.erlang.org/doc/system/expressions#bit-syntax-expressions
-In other words, the purpose of using bitstrings with texttt{<<>>} is to construct none other than binaries in more precise manner.
-This strongly indicates that bitstring types are eventually treated as binary types,
-Therefore we can also take the bitstring types with $unit*size$ indivisible by 8 as a type of binaries.
-For example, Figure~\ref{app:bitstring-example} is to be applied to a bitstring with two elements that are 8 bits and 7 bits, respectively.
-Strictly, 7bits is not binary, however, if the function is applied to \texttt{<<97::8, 98::7>>}, then the function successfully returns \texttt{"ab"}.
-That is because 98 (0110 0010), which is \texttt{"b"} by the code points, does not exceed 7 bits and preserves the necessary information when pattern-matched.
-Of course, the function could be applied to a parameter that requires more bits, but the point is that the parameter is taken as a binary type when the value exists in code points, which is the supposed with bitstring types.
+% Elixir Types has no plan to support bitstring types which are finer than \texttt{binary()}. 
+% However, most of the bitstring representatives could be trivially translated to \texttt{binary()}.
+% According to the Erlang documentation, bitstrings are a later generalization of binaries, so many texts and much information about binaries apply just as well for bitstrings.
+% %https://www.erlang.org/doc/system/expressions#bit-syntax-expressions
+% In other words, the purpose of using bitstrings with texttt{<<>>} is to construct none other than binaries in more precise manner.
+% This strongly indicates that bitstring types are eventually treated as binary types,
+% Therefore we can also take the bitstring types with $unit*size$ indivisible by 8 as a type of binaries.
+% For example, Figure~\ref{app:bitstring-example} is to be applied to a bitstring with two elements that are 8 bits and 7 bits, respectively.
+% Strictly, 7 bits is not binary, however, if the function is applied to \texttt{<<97::8, 98::7>>}, then the function successfully returns \texttt{"ab"}.
+% That is because 98 (0110 0010), which is \texttt{"b"} by the code points, does not exceed 7 bits and preserves the necessary information when pattern-matched.
+% Of course, the function could be applied to a parameter that requires more bits, but the point is that the parameter is taken as a binary type when the value exists in code points, which is the supposed with bitstring types.
 
-\begin{figure}[hbtp]
-    \begin{codefig}
-      \texttt{@spec id\_bin(<<\_::15>>)::binary()} \\
-      \texttt{def id\_bin(<<a::8, b::7>>), do: <<a, b>>}
-    \end{codefig}
-   \caption{Bitstring Example}
-   \label{app:bitstring-example}
-\end{figure}
+% \begin{figure}[hbtp]
+%     \begin{codefig}
+%       \texttt{@spec id\_bin(<<\_::15>>)::binary()} \\
+%       \texttt{def id\_bin(<<a::8, b::7>>), do: <<a, b>>}
+%     \end{codefig}
+%    \caption{Bitstring Example}
+%    \label{app:bitstring-example}
+% \end{figure}
 
-On top of that, it is a rare use specifying types with bitstring notations when users want to specify binary types.
-It is explicitly guided by the Elixir design; when tried with \texttt{<<"a"::7>>}, this will not compile because a literal string in a bitstring is not allowed with a size specifier.
-Which forces users to have 8-multiple bits except when specified with integer values like Figure~\ref{app:bitstring-example}.
-AS a result, we address these rare cases as \texttt{binary() and dynamic()} for them to be subtypes of binary types.
+% On top of that, it is a rare use specifying types with bitstring notations when users want to specify binary types.
+% It is explicitly guided by the Elixir design; when tried with \texttt{<<"a"::7>>}, this will not compile because a literal string in a bitstring is not allowed with a size specifier.
+% Which forces users to have 8-multiple bits except when specified with integer values like Figure~\ref{app:bitstring-example}.
+% AS a result, we address these rare cases as \texttt{binary() and dynamic()} for them to be subtypes of binary types.
 
-\begin{figure} [H]
-   \begin{translationfig}
-      \dsb{\texttt{<<>>}} \approx \texttt{binary() and dynamic()}
-      \nl 
-      \dsb{\texttt{<<\_::$n$>>}} \approx 
-      \left\{
-         \begin{array}{ll}
-            \texttt{binary()} & \textsl{if}\,\,\,\,n \bmod 8 = 0
-            \nl
-            \texttt{binary() and dynamic()} & \textsl{otherwise}
-         \end{array}
-      \right.
-      \nl 
-      \dsb{\texttt{<<\_::\_*$n$>>}} \approx 
-      \left\{
-         \begin{array}{ll}
-            \texttt{binary()} & \textsl{if}\,\,\,\,n \bmod 8 = 0
-            \nl
-            \texttt{binary() and dynamic()} & \textsl{otherwise}
-         \end{array}
-      \right.
-      \nl
-      \dsb{\texttt{<<\_::$n$,\,\,\_::\_*$n$>>}} \approx 
-      \left\{
-         \begin{array}{ll}
-            \texttt{binary()} & \textsl{if}\,\,\,\,n \bmod 8 = 0
-            \nl
-            \texttt{binary() and dynamic()} & \textsl{otherwise}
-         \end{array}
-      \right.
-   \end{translationfig}
-   \caption{Approximation of bitstring Types}
-   \label{app:approximation-of-bitstring-types}
-\end{figure}
+% \begin{figure} [H]
+%    \begin{translationfig}
+%       \dsb{\texttt{<<>>}} \approx \texttt{binary() and dynamic()}
+%       \nl 
+%       \dsb{\texttt{<<\_::$n$>>}} \approx 
+%       \left\{
+%          \begin{array}{ll}
+%             \texttt{binary()} & \textsl{if}\,\,\,\,n \bmod 8 = 0
+%             \nl
+%             \texttt{binary() and dynamic()} & \textsl{otherwise}
+%          \end{array}
+%       \right.
+%       \nl 
+%       \dsb{\texttt{<<\_::\_*$n$>>}} \approx 
+%       \left\{
+%          \begin{array}{ll}
+%             \texttt{binary()} & \textsl{if}\,\,\,\,n \bmod 8 = 0
+%             \nl
+%             \texttt{binary() and dynamic()} & \textsl{otherwise}
+%          \end{array}
+%       \right.
+%       \nl
+%       \dsb{\texttt{<<\_::$n$,\,\,\_::\_*$n$>>}} \approx 
+%       \left\{
+%          \begin{array}{ll}
+%             \texttt{binary()} & \textsl{if}\,\,\,\,n \bmod 8 = 0
+%             \nl
+%             \texttt{binary() and dynamic()} & \textsl{otherwise}
+%          \end{array}
+%       \right.
+%    \end{translationfig}
+%    \caption{Approximation of bitstring Types}
+%    \label{app:approximation-of-bitstring-types}
+% \end{figure}
 
 \subsection{Approximation of Top Function Types}
 
@@ -311,137 +311,143 @@ These finally lead approximation of the any top function types into \texttt{fun(
 
 \subsection{Approximation of Field Types}
 
-Approximating field types is more delicate than the others hence care must be taken.
-That is TypeSpecs allows all the types to be specified as key types of field types.
-Whereas, Elixir Types' syntax has separate key types so that the type system does not deal with infinite set of types when it comes to field typing.
-There comes four cases when the filed types are not key types:
-
-\begin{itemize}
-   \item Type variables.
-   \item Subtypes of key types.
-   \item Supertypes of key types.
-   \item Neither subtypes nor supertypes of key types.
-\end{itemize}
-
-The first case is simple since they are eventually types belong to the syntax.
-All it requires is to recursively evaluate it.
-
-As most of the types are evaluated as subtypes of key types, 
-it is sound to under-approximate them to their supertypes in key types.
-For example, Figure~\ref{app:record-value-access-function} shows a simple identity function that takes a record. 
-
-\begin{figure} [H]
-   \[\begin{array}{l}
-      \texttt{@spec record\_val(\%\{\{atom()\}\,\,=>\,\,integer()\})\,\,::\,\,integer()}
-      \\
-      \texttt{def record\_val(x) when is\_map\_key(x,\,\,\{:ok\}),\,\,do:\,\,Map.get(x,\,\,\{:ok\})}
-   \end{array}\]
-   \nl 
-   \[\begin{array}{c}
-      \dsb{\texttt{@spec id\_record(\%\{\{atom()\} => integer()\}) :: integer()}}
-      \nl\rotatebox[origin=c]{90}{$\approx$}\nl
-      \dsb{\texttt{@spec id\_record(\%\{tuple() => integer()\}) :: integer()}}
-      \nl\rotatebox[origin=c]{90}{$\approx$}\nl
-      \texttt{\$ \%\{tuple() => integer()\} -> integer()}
-   \end{array}\]
-   \caption{Record Value Access Function}
-   \label{app:record-value-access-function}
-\end{figure}
-
-The key type is specified to accept tuple with a singe atom type,
-but Dialyzer will pass when the example function is applied to records with any type of tuples as key types.
-That is complemented by conservative approximations of Elixir Types in pattern/guard analysis:
-it states that a type cannot express the exact domain of a function
-and henceforth under-approximation is used with the guards/pattern that can filter out unintended types of values, which is called potentially accepted type.
-
-\begin{figure} [H]
-   \[\begin{array}{rcl}
-      \dsb{\texttt{[]}} &\lessapprox& \texttt{list()}
-      \nl 
-      \dsb{\tuple{\ov{\TST}}} &\lessapprox& \texttt{tuple()}
-      \nl 
-      \dsb{\texttt{(\fun{$\ov{\TST}}{\TST}$)}} &\lessapprox& \texttt{fun()}
-   \end{array}\]
-   \caption{Subtypes of Keytypes}
-   \label{app:subtypes-of-keytypes}
-\end{figure}
-
-\texttt{list()} in key types is semantically a set of all the list types and \texttt{nonempty\_maybe\_improper\_list()} in TypeSpecs is a basic type to describe all kind of lists including the empty list and improper lists.
-What hinders us from direct translation is that \texttt{list()} does not include improper lists hence to be a subtype of \texttt{nonempty\_maybe\_improper\_list()}.
-Notwithstanding, this is not a interesting part for the improper lists not meant to be used as the name suggests.
-The over-approximation of \texttt{nonempty\_maybe\_improper\_list()}, therefore, is sound to be \texttt{list()}.
-% Furthermore, Elixir Types is not aware of improper lists types since it is not even a kind of type often used and recognized by users.
-% Which ensures safeness of this over-approximation for the future works in Elixir Types.
-
-\begin{figure} [H]
-   \[\begin{array}{rcl}
-      \dsb{\texttt{nonempty\_maybe\_improper\_list(\TST$_1$, \TST$_2$)}} &\gtrapprox& \texttt{list()}
-   \end{array}\]
-   \caption{Supertypes of Keytypes}
-   \label{app:supertypes-of-keytypes}
-\end{figure}
-
-Even though the last cases in TypeSpecs are not in the key types in Elixir Types, they can be semantically translated.
-Firstly, since \texttt{|} is not a type but a type operator, it can simply be approximated per se.
-Following Figure~\ref{app:semantical-comprehension-of-operator} displays different syntaxes with the same semantics.
-
-\begin{figure} [H]
-   \[\begin{array}{c}
-      \dsb{\texttt{@spec fun(\%\{atom() | binary() => integer()\}) :: integer()}}
-      \nl\rotatebox[origin=c]{90}{$\approx$}\nl
-      \texttt{\$ \%\{atom() or binary() => integer()\} -> integer()}
-      \nl\rotatebox[origin=c]{90}{$\approx$}\nl
-      \texttt{\$ \%\{atom() => integer() or binary() => integer()\} -> integer()}
-      \nl\rotatebox[origin=c]{90}{$\approx$}\nl
-      \texttt{\$ \%\{atom() => integer()\} or \%\{binary() => integer()\} -> integer()}
-   \end{array}\]
-   \caption{Semantical Comprehension of Or Operator}
-   \label{app:semantical-comprehension-of-operator}
-\end{figure}
-
-
-With a little autopsy on \texttt{any()} and \texttt{none()} as key types, comprehending it does not require a lot of effort; what they do in field types.
-\texttt{any()} as a key type expands to unions of all the types mapping to a value type.
-On the contrary, \texttt{none()} eradicates the field in the record type, for there is no field type without a key type. 
-Imagine a type system only with a set of types, i.e., \texttt{\{any(), none(), integer(), float(), binary()\}}.
-Then, the translation of \texttt{\%\{any()\,\,=>\,\,integer()\}} expands it to \texttt{\%\{(none() or integer() or float() or binary())\,\,=>\,\,integer()\}}
-Whereas, \texttt{\%\{none()\,\,=>\,\,any()\}} is collapsed into \texttt{\%\{\}} which is an empty record type.
-It all seems easy and sound, except one nuisance that risen by the need of listing all the types to translate \texttt{any()} in key types.
+A field type Approximation is required when two or more than two disjunctive literal types are positioned in left-hand side of field types.
 
 
 
-\begin{figure} [H]
-   \begin{translationfig}
-      \dsb{\texttt{required(\TST) => $\prm{\TST}$}} \approx
-      \left\{
-         \begin{array}{ll}
-            \texttt{[\,:$k$\,\,=>\,\,$\dsb{\prm{\TST}}$\,]}
-            & \textsl{if}\,\,\,\,\dsb{\TST}\,\,\approx\,\,\texttt{:}k
-            \nl
-            \texttt{[\,}\bigvee_{i \in I}\ETK_i\fto\ifset{\dsb{\prm{\TST}}}\texttt{\,]}
-            & \textsl{if}\,\,\,\,\dsb{\TST}\,\,\approx\,\,\bigvee_{i \in I}\ETK_i\textsl{\,\,and\,\,}\dsb{\TST}\,\not\approx\,\texttt{:}k %(\ETK_i\text{'s are pairwise distinct}) 
-            \nl
+
+
+% Approximating field types is more delicate than the others hence care must be taken.
+% That is TypeSpecs allows all the types to be specified as key types of field types.
+% Whereas, Elixir Types' syntax has separate key types so that the type system does not deal with infinite set of types when it comes to field typing.
+% There comes four cases when the filed types are not key types:
+
+% \begin{itemize}
+%    \item Type variables.
+%    \item Subtypes of key types.
+%    \item Supertypes of key types.
+%    \item Neither subtypes nor supertypes of key types.
+% \end{itemize}
+
+% The first case is simple since they are eventually types belong to the syntax.
+% All it requires is to recursively evaluate it.
+
+% As most of the types are evaluated as subtypes of key types, 
+% it is sound to under-approximate them to their supertypes in key types.
+% For example, Figure~\ref{app:record-value-access-function} shows a simple identity function that takes a record. 
+
+% \begin{figure} [H]
+%    \[\begin{array}{l}
+%       \texttt{@spec record\_val(\%\{\{atom()\}\,\,=>\,\,integer()\})\,\,::\,\,integer()}
+%       \\
+%       \texttt{def record\_val(x) when is\_map\_key(x,\,\,\{:ok\}),\,\,do:\,\,Map.get(x,\,\,\{:ok\})}
+%    \end{array}\]
+%    \nl 
+%    \[\begin{array}{c}
+%       \dsb{\texttt{@spec id\_record(\%\{\{atom()\} => integer()\}) :: integer()}}
+%       \nl\rotatebox[origin=c]{90}{$\approx$}\nl
+%       \dsb{\texttt{@spec id\_record(\%\{tuple() => integer()\}) :: integer()}}
+%       \nl\rotatebox[origin=c]{90}{$\approx$}\nl
+%       \texttt{\$ \%\{tuple() => integer()\} -> integer()}
+%    \end{array}\]
+%    \caption{Record Value Access Function}
+%    \label{app:record-value-access-function}
+% \end{figure}
+
+% The key type is specified to accept tuple with a singe atom type,
+% but Dialyzer will pass when the example function is applied to records with any type of tuples as key types.
+% That is complemented by conservative approximations of Elixir Types in pattern/guard analysis:
+% it states that a type cannot express the exact domain of a function
+% and henceforth under-approximation is used with the guards/pattern that can filter out unintended types of values, which is called potentially accepted type.
+
+% \begin{figure} [H]
+%    \[\begin{array}{rcl}
+%       \dsb{\texttt{[]}} &\lessapprox& \texttt{list()}
+%       \nl 
+%       \dsb{\tuple{\ov{\TST}}} &\lessapprox& \texttt{tuple()}
+%       \nl 
+%       \dsb{\texttt{(\fun{$\ov{\TST}}{\TST}$)}} &\lessapprox& \texttt{fun()}
+%    \end{array}\]
+%    \caption{Subtypes of Keytypes}
+%    \label{app:subtypes-of-keytypes}
+% \end{figure}
+
+% \texttt{list()} in key types is semantically a set of all the list types and \texttt{nonempty\_maybe\_improper\_list()} in TypeSpecs is a basic type to describe all kind of lists including the empty list and improper lists.
+% What hinders us from direct translation is that \texttt{list()} does not include improper lists hence to be a subtype of \texttt{nonempty\_maybe\_improper\_list()}.
+% Notwithstanding, this is not a interesting part for the improper lists not meant to be used as the name suggests.
+% The over-approximation of \texttt{nonempty\_maybe\_improper\_list()}, therefore, is sound to be \texttt{list()}.
+% % Furthermore, Elixir Types is not aware of improper lists types since it is not even a kind of type often used and recognized by users.
+% % Which ensures safeness of this over-approximation for the future works in Elixir Types.
+
+% \begin{figure} [H]
+%    \[\begin{array}{rcl}
+%       \dsb{\texttt{nonempty\_maybe\_improper\_list(\TST$_1$, \TST$_2$)}} &\gtrapprox& \texttt{list()}
+%    \end{array}\]
+%    \caption{Supertypes of Keytypes}
+%    \label{app:supertypes-of-keytypes}
+% \end{figure}
+
+% Even though the last cases in TypeSpecs are not in the key types in Elixir Types, they can be semantically translated.
+% Firstly, since \texttt{|} is not a type but a type operator, it can simply be approximated per se.
+% Following Figure~\ref{app:semantical-comprehension-of-operator} displays different syntaxes with the same semantics.
+
+% \begin{figure} [H]
+%    \[\begin{array}{c}
+%       \dsb{\texttt{@spec fun(\%\{atom() | binary() => integer()\}) :: integer()}}
+%       \nl\rotatebox[origin=c]{90}{$\approx$}\nl
+%       \texttt{\$ \%\{atom() or binary() => integer()\} -> integer()}
+%       \nl\rotatebox[origin=c]{90}{$\approx$}\nl
+%       \texttt{\$ \%\{atom() => integer() or binary() => integer()\} -> integer()}
+%       \nl\rotatebox[origin=c]{90}{$\approx$}\nl
+%       \texttt{\$ \%\{atom() => integer()\} or \%\{binary() => integer()\} -> integer()}
+%    \end{array}\]
+%    \caption{Semantical Comprehension of Or Operator}
+%    \label{app:semantical-comprehension-of-operator}
+% \end{figure}
+
+
+% With a little autopsy on \texttt{any()} and \texttt{none()} as key types, comprehending it does not require a lot of effort; what they do in field types.
+% \texttt{any()} as a key type expands to unions of all the types mapping to a value type.
+% On the contrary, \texttt{none()} eradicates the field in the record type, for there is no field type without a key type. 
+% Imagine a type system only with a set of types, i.e., \texttt{\{any(), none(), integer(), float(), binary()\}}.
+% Then, the translation of \texttt{\%\{any()\,\,=>\,\,integer()\}} expands it to \texttt{\%\{(none() or integer() or float() or binary())\,\,=>\,\,integer()\}}
+% Whereas, \texttt{\%\{none()\,\,=>\,\,any()\}} is collapsed into \texttt{\%\{\}} which is an empty record type.
+% It all seems easy and sound, except one nuisance that risen by the need of listing all the types to translate \texttt{any()} in key types.
+
+
+
+% \begin{figure} [H]
+%    \begin{translationfig}
+%       \dsb{\texttt{required(\TST) => $\prm{\TST}$}} \approx
+%       \left\{
+%          \begin{array}{ll}
+%             \texttt{[\,:$k$\,\,=>\,\,$\dsb{\prm{\TST}}$\,]}
+%             & \textsl{if}\,\,\,\,\dsb{\TST}\,\,\approx\,\,\texttt{:}k
+%             \nl
+%             \texttt{[\,}\bigvee_{i \in I}\ETK_i\fto\ifset{\dsb{\prm{\TST}}}\texttt{\,]}
+%             & \textsl{if}\,\,\,\,\dsb{\TST}\,\,\approx\,\,\bigvee_{i \in I}\ETK_i\textsl{\,\,and\,\,}\dsb{\TST}\,\not\approx\,\texttt{:}k %(\ETK_i\text{'s are pairwise distinct}) 
+%             \nl
             
-            & \textsl{if}\,\,\,\,\dsb{\TST}\,\,\lnapprox\,\,\bigvee_{i \in I}\ETK_i
-            \nl
+%             & \textsl{if}\,\,\,\,\dsb{\TST}\,\,\lnapprox\,\,\bigvee_{i \in I}\ETK_i
+%             \nl
 
-            & \textsl{if}\,\,\,\,\dsb{\TST}\,\,\not\le\,\,\bigvee_{i \in I}\ETK_i\textsl{\,\,and\,\,}\dsb{\TST}\,\,\approx\,\,\ETT\setminus\bigvee_{i \in I}\ETK_i
-         \end{array}
-      \right.
-      \nl \nl
-      \dsb{\texttt{optional(\TST) => $\prm{\TST}$}} \approx
-      \left\{
-         \begin{array}{ll}
-            \texttt{[\,}\bigvee_{i \in I}\ETK_i\fto\ifset{\dsb{\prm{\TST}}}\texttt{\,]}
-            & \textsl{if}\,\,\,\,\dsb{\TST}\,\,\approx\,\,\bigvee_{i \in I}\ETK_i
-            \nl
-            \textsl{undefined} & \textsl{otherwise}
-         \end{array}
-      \right.
-   \end{translationfig}
-   \caption{Approximation of Field Types}
-   \label{app:approximation-of-field-types}
-\end{figure}
+%             & \textsl{if}\,\,\,\,\dsb{\TST}\,\,\not\le\,\,\bigvee_{i \in I}\ETK_i\textsl{\,\,and\,\,}\dsb{\TST}\,\,\approx\,\,\ETT\setminus\bigvee_{i \in I}\ETK_i
+%          \end{array}
+%       \right.
+%       \nl \nl
+%       \dsb{\texttt{optional(\TST) => $\prm{\TST}$}} \approx
+%       \left\{
+%          \begin{array}{ll}
+%             \texttt{[\,}\bigvee_{i \in I}\ETK_i\fto\ifset{\dsb{\prm{\TST}}}\texttt{\,]}
+%             & \textsl{if}\,\,\,\,\dsb{\TST}\,\,\approx\,\,\bigvee_{i \in I}\ETK_i
+%             \nl
+%             \textsl{undefined} & \textsl{otherwise}
+%          \end{array}
+%       \right.
+%    \end{translationfig}
+%    \caption{Approximation of Field Types}
+%    \label{app:approximation-of-field-types}
+% \end{figure}
 
 
 \end{document}

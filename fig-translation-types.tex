@@ -38,14 +38,14 @@
       \nl 
       \dsb{\texttt{nonempty\_maybe\_improper\_list(\TST$_1$, \TST$_2$)}} = \texttt{non\_empty\_list($\dsb{\TST_1}$, $\dsb{\TST_2}$)}
       \nl 
-      \dsb{\texttt{<<>>}} = \textsl{undefined}
+      \dsb{\texttt{<<>>}} = \textsl{bitstring()}
       \nl 
       \dsb{\texttt{<<\_::$n$>>}} =
       \left\{
          \begin{array}{ll}
             \texttt{binary()} & \textsl{if}\,\,\,\,n \bmod 8 = 0
             \nl
-            \texttt{undefined} & \textsl{otherwise}
+            \texttt{bitstring()} & \textsl{otherwise}
          \end{array}
       \right.
       \nl 
@@ -54,7 +54,7 @@
          \begin{array}{ll}
             \texttt{binary()} & \textsl{if}\,\,\,\,n \bmod 8 = 0
             \nl
-            \texttt{undefined} & \textsl{otherwise}
+            \texttt{bitstring()} & \textsl{otherwise}
          \end{array}
       \right.
       \nl
@@ -63,7 +63,7 @@
          \begin{array}{ll}
             \texttt{binary()} & \textsl{if}\,\,\,\,n \bmod 8 = 0
             \nl
-            \texttt{undefined} & \textsl{otherwise}
+            \texttt{bitstring()} & \textsl{otherwise}
          \end{array}
       \right.
       \nl 
