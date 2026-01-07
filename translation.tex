@@ -47,7 +47,7 @@ However, this is classic that the higher expressiveness brings the higher comple
 The common trade-off must be discussed here due to the fact that our ultimate goal is to translate TypeSpec to Elixir Types.
 In the perspective of translation, while TypeSpec allows literals types such as \texttt{:$k$}, \texttt{[]}, \texttt{<<>>}, \texttt{(\fun{$\ov{\TST}$}{\TST})} and \texttt{$n$..$n'$},
 Elixir Types will not support \texttt{<<>>}, and the range type (i.e., \texttt{$n$..$\prm{n}$}) will not appear to users but will be only used internally.
-This difference is important since it will not allow direct translation and eventually approximate them in Elixir Types.
+This difference will not allow direct translations for all the types and eventually necessitate approximations of them in Elixir Types.
 
 %1. :k ≤ atom() ?
 The first question could arise is from the subtype relationship between \texttt{atom()} and \texttt{:$k$}.
@@ -312,7 +312,7 @@ These finally lead approximation of the any top function types into \texttt{fun(
 \subsection{Approximation of Field Types}
 
 Approximating field types is more delicate than the others hence care must be taken.
-That is TypeSpec allows all the types to be specified as key types of field types.
+That is TypeSpecs allows all the types to be specified as key types of field types.
 Whereas, Elixir Types' syntax has separate key types so that the type system does not deal with infinite set of types when it comes to field typing.
 There comes four cases when the filed types are not key types:
 
@@ -366,7 +366,7 @@ and henceforth under-approximation is used with the guards/pattern that can filt
    \label{app:subtypes-of-keytypes}
 \end{figure}
 
-\texttt{list()} in key types is semantically a set of all the list types and \texttt{nonempty\_maybe\_improper\_list()} in TypeSpec is a basic type to describe all kind of lists including the empty list and improper lists.
+\texttt{list()} in key types is semantically a set of all the list types and \texttt{nonempty\_maybe\_improper\_list()} in TypeSpecs is a basic type to describe all kind of lists including the empty list and improper lists.
 What hinders us from direct translation is that \texttt{list()} does not include improper lists hence to be a subtype of \texttt{nonempty\_maybe\_improper\_list()}.
 Notwithstanding, this is not a interesting part for the improper lists not meant to be used as the name suggests.
 The over-approximation of \texttt{nonempty\_maybe\_improper\_list()}, therefore, is sound to be \texttt{list()}.
@@ -381,7 +381,7 @@ The over-approximation of \texttt{nonempty\_maybe\_improper\_list()}, therefore,
    \label{app:supertypes-of-keytypes}
 \end{figure}
 
-Even though the last cases in TypeSpec are not in the key types in Elixir Types, they can be semantically translated.
+Even though the last cases in TypeSpecs are not in the key types in Elixir Types, they can be semantically translated.
 Firstly, since \texttt{|} is not a type but a type operator, it can simply be approximated per se.
 Following Figure~\ref{app:semantical-comprehension-of-operator} displays different syntaxes with the same semantics.
 
