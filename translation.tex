@@ -29,23 +29,23 @@
 
 \begin{document}
 
-\section{TypeSpec Syntax Specification}
+\section{TypeSpecs Syntax Specification}
 
-\input{fig-typespec-types.tex}
+\input{fig-typespecs-types.tex}
 
 It is noteworthy that the notation $\ov{E}$ denotes a possibly empty sequence of elements $E$ separated by commas apart from $\ov{\alpha\texttt{:}\,\TST}$, where it denotes a non-empty sequence.
-Furthermore, not only is $\TSAn$ non-empty sequential elements but also multi-line elements unlike the other comma-separated sequences. That is TypeSpec only allows one specification on one line.
+Furthermore, not only is $\TSAn$ non-empty sequential elements but also multi-line elements unlike the other comma-separated sequences. That is TypeSpecs only allows one specification on one line.
 
-This specification addresses the most fundamental and atomic types based on the Typespecs reference on Elixir documentation.
+This specification addresses the most fundamental and atomic types based on the TypeSpecs reference on Elixir documentation.
 The addressed are, starting from the top type \texttt{any()} and the bottom type \texttt{none()}, controversially vague concept of field types of record types.
-While thus enables expressing every existing TypeSpec type, some might come up with questions on fundamentality with subtype relations or notion of expressions between basic types and literal types.
-In the following sections, these questions are addressed for clarity with listing the built-in types and the syntactic sugars in Table~\ref{app:typespec-builtin-types} and Table~\ref{app:typespec-syntactic-sugars}.
+While thus enables expressing every existing TypeSpecs type, some might come up with questions on fundamentality with subtype relations or notion of expressions between basic types and literal types.
+In the following sections, these questions are addressed for clarity with listing the built-in types and the syntactic sugars in Table~\ref{app:typespecs-builtin-types} and Table~\ref{app:typespecs-syntactic-sugars}.
 
-\subsection{TypeSpec Basic Types and Literals}
-TypeSpec is rather expressive especially by providing the literal types that are also used in the code with the same form.
-However, this is classic that the higher expressiveness brings the higher complexity and TypeSpec is not exempt.
-The common trade-off must be discussed here due to the fact that our ultimate goal is to translate TypeSpec to Elixir Types.
-In the perspective of translation, while TypeSpec allows literals types such as \texttt{:$k$}, \texttt{[]}, \texttt{<<>>}, \texttt{(\fun{$\ov{\TST}$}{\TST})} and \texttt{$n$..$n'$},
+\subsection{TypeSpecs Basic Types and Literals}
+TypeSpecs is rather expressive especially by providing the literal types that are also used in the code with the same form.
+However, this is classic that the higher expressiveness brings the higher complexity and TypeSpecs is not exempt.
+The common trade-off must be discussed here due to the fact that our ultimate goal is to translate TypeSpecs to Elixir Types.
+In the perspective of translation, while TypeSpecs allows literals types such as \texttt{:$k$}, \texttt{[]}, \texttt{<<>>}, \texttt{(\fun{$\ov{\TST}$}{\TST})} and \texttt{$n$..$n'$},
 Elixir Types will not support \texttt{<<>>}, and the range type (i.e., \texttt{$n$..$\prm{n}$}) will not appear to users but will be only used internally.
 This difference will not allow direct translations for all the types and eventually necessitate approximations of them in Elixir Types.
 
@@ -71,9 +71,9 @@ Provided, it is sufficient to say that these are not subtypes of \texttt{$n$..$\
  
 
 
-\subsection{TypeSpec Built-in Types and Syntactic Sugar}
+\subsection{TypeSpecs Built-in Types and Syntactic Sugar}
 
-\input{fig-typespec-sugar-builtin.tex}
+\input{fig-typespecs-sugar-builtin.tex}
 
 
 
@@ -87,47 +87,47 @@ Provided, it is sufficient to say that these are not subtypes of \texttt{$n$..$\
 
 \input{fig-elixir-sugar-builtin.tex}
 
-\section{Translation from TypeSpec to Elixir Types}
+\section{Translation from TypeSpecs to Elixir Types}
 
 \begin{figure} [H]
    \begin{grammarfig}
-      \dsb{\,\,} \texttt{: TypeSpec $\rightarrow$ Elixir type}
+      \dsb{\,\,} \texttt{: TypeSpecs $\rightarrow$ Elixir type}
    \end{grammarfig}
    \caption{Semantic of Translation}
    \label{app:semantic-of-translation}
 \end{figure}
 
 
-\subsection{Translation of TypeSpec Specification into Elixir Annotations}
+\subsection{Translation of TypeSpecs Specification into Elixir Annotations}
 
 \input{fig-translation-annotations.tex}
 
 
-% TypeSpec and Elixir type are structurally different while they share semantic similarities
+% TypeSpecs and Elixir type are structurally different while they share semantic similarities
 
-% A function annotation in TypeSpec mainly consists of "@spec", input type, and output type. 
+% A function annotation in TypeSpecs mainly consists of "@spec", input type, and output type. 
 % Starting with "@spec" that announces the existence of an annotation, 
 % the following expression is divided into input and output types by "::".
 % Where input type has a function's name prepending that it specifies and places in between a pair of parentheses.
-% In addition, TypeSpec allows to use type parameters by entailing a "when" clause which taken as a type in the whole clause.
+% In addition, TypeSpecs allows to use type parameters by entailing a "when" clause which taken as a type in the whole clause.
 
 % Elixir type features the semantical similarities described above 
 % that are "@spec" is replaced by "\$" sign, and input and output types are only distinquished by "->".
 
-% Notwithstanding the similarities, the main difference comes from TypeSpec's support in multi-clause annotations.
+% Notwithstanding the similarities, the main difference comes from TypeSpecs's support in multi-clause annotations.
 % It 
 
 % It can consist of one or more clauses to express the polymorphic nature of Elixir functions.
 % (Does order matter in Dialyzer??? Let's check!!!)
 
 % while that in Elixir Type takes a single clause.
-% In the case of TypeSpec's multi-clause, it can be represented with `and` between clauses in Elixir Type within a single clause.
+% In the case of TypeSpecs's multi-clause, it can be represented with `and` between clauses in Elixir Type within a single clause.
 % That is because multi-clauses indicates the existence of the matching function.
 % Some may argue that the `or` can be an alternative. 
 % However, it is not regarded since the former provides higher precision necessitating the presence of functions matching the annotations
 
 
-\subsection{Translation of TypeSpec into Elixir Types}
+\subsection{Translation of TypeSpecs into Elixir Types}
 
 \input{fig-translation-types.tex}
 
@@ -179,9 +179,9 @@ All it remains to do is to define the translation of field types. If $\ETK_1,...
    \label{app:translation-in-field-types}
 \end{figure}
 
-\section{Total Approximating Translation of TypeSpec into Elixir Types}
+\section{Total Approximating Translation of TypeSpecs into Elixir Types}
 
-The translation defined so far is partial since some TypeSpec types do not have a corresponding Elixir type. This is not a weakness of the Elixir type system, but rather a consequence of the design choices made for Elixir types, to keep them as simple as possible while still being useful. However, it is possible to define a total translation from TypeSpec types to Elixir types that approximates the original TypeSpec type. This total translation can be useful in some contexts, for example when we want to ensure that every TypeSpec type can be represented in Elixir types, even if approximately.
+The translation defined so far is partial since some TypeSpecs types do not have a corresponding Elixir type. This is not a weakness of the Elixir type system, but rather a consequence of the design choices made for Elixir types, to keep them as simple as possible while still being useful. However, it is possible to define a total translation from TypeSpecs types to Elixir types that approximates the original TypeSpecs type. This total translation can be useful in some contexts, for example when we want to ensure that every TypeSpecs type can be represented in Elixir types, even if approximately.
 
 More precisely, the previous translation is undefined in the following cases:
 \begin{itemize}
@@ -189,7 +189,7 @@ More precisely, the previous translation is undefined in the following cases:
    \item The type \texttt{\fun{\dots}{\TST}} when the translation of $\TST$ is not equivalent to \texttt{any()} (explain why this type is not interesting).
    \item $\dsb{\texttt{required(\TST) => $\prm{\TST}$}}$ and $\dsb{\texttt{optional(\TST) => $\prm{\TST}$}}$ are undefined when $\dsb{\TST}$ is not equivalent to a disjunction of pairwise distinct key types.
 \end{itemize}
-In the rest of this section we give a conservative extension of the translation defined so far that is total, i.e., it is defined for every TypeSpec type. The extension consists in defining approximations for the cases where the previous translation is undefined.
+In the rest of this section we give a conservative extension of the translation defined so far that is total, i.e., it is defined for every TypeSpecs type. The extension consists in defining approximations for the cases where the previous translation is undefined.
 
 % \subsection{Approximation of Bitstring Types} \label{approximation-of-bitstring-types}
 
@@ -270,7 +270,7 @@ In the perspective of memory space, it is only costly to define and have all the
 
 However, Elixir Types will not directly define \texttt{fun()} as Figure~\ref{app:top-function-type}, due to the triviality of defining the list of function with all the possible arity.
 While Elixir Types restricts the top type to be only \texttt{fun()}, keeping the semantic approach to the top function, 
-TypeSpec has allowed to specify the return type of the top type which have to be taken into account when translating it.
+TypeSpecs has allowed to specify the return type of the top type which have to be taken into account when translating it.
 Nevertheless, this leniency in expressiveness means nothing in practice, given that the Dialyzer does not differentiate the return type but only perceive any form of the top types as \texttt{...->any()}.
 These finally lead approximation of the any top function types into \texttt{fun() and dynamic()}.
 
@@ -312,7 +312,9 @@ These finally lead approximation of the any top function types into \texttt{fun(
 \subsection{Approximation of Field Types}
 
 A field type Approximation is required when two or more than two disjunctive literal types are positioned in left-hand side of field types.
+That is when 
 
+Since fields translation requires merging between each field, it
 
 
 
