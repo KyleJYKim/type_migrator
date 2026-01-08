@@ -40,7 +40,7 @@ defmodule Ex1 do
   def id_records7(x), do: x
 
   #@spec id_records8(%{required(:a) => binary(), optional(atom()) => integer()}) :: map()
-  @spec id_records8(%{required(atom()) => integer(), required(:a) => binary()}) :: map()
+  @spec id_records8(%{optional(atom()) => integer(), required(:a) => binary()}) :: map()
   def id_records8(x), do: x
 
   # @spec id_records9(%{optional((...->atom())) => integer()}) :: map()
@@ -48,6 +48,9 @@ defmodule Ex1 do
 
   @spec id_records10(%{none() => integer()}) :: integer()
   def id_records10(x) when is_map_key(x, {:a}), do: Map.get(x, {:a})
+
+  @spec id_records11(%{5..7 => float(), 3..5 => binary(), integer() => integer()}) :: map()
+  def id_records11(x) when is_map(x), do: x
 
   # Whatever function return type is, it is taken as ...->any()
   # @spec id_fun((...->atom())) :: fun()
@@ -115,9 +118,11 @@ defmodule Ex1 do
     #def id_records6(), do: Ex1.id_records6(%{:c => "d", :b => "d"})
     #def id_records7(), do: Ex1.id_records7(%{:a => 1})
 
-    #def id_records8(), do: Ex1.id_records8(%{:a => 1})
+    def id_records8(), do: Ex1.id_records8(%{:a => 1})
     #def id_records9(), do: Ex1.id_records9(%{fn x -> "a" end => :a})
     #def id_records10(), do: Ex1.id_records10(%{nil => 1})
+
+    #def id_records11(), do: Ex1.id_records11(%{2 => 1, 6 => 1.0, 5 => "s"})
 
     #def id_fun(), do: Ex1.id_fun(fn x -> <<97>> end)
 

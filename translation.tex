@@ -133,22 +133,10 @@ Provided, it is sufficient to say that these are not subtypes of \texttt{$n$..$\
 
 \subsection{Translation of Fields}
 
-Let $\tau$ range over the right-hand side type of field types, that is, $\tau$ is either $\TST$ or $\ifset\TST$. We consider lists whose elements are of the form \texttt{\ETK\,\,=>\,\,$\tau$}. Given such a list $L$ we write $\ETK\in L$ is there exist $\tau$ such that the element \texttt{\ETK\,\,=>\,\,$\tau$} belongs to $L$. We denote by \textsf{Empty} the lists that maps all the non-singleton keytypes to \texttt{not\_set()}.  
+Let $\tau$ range over the right-hand side type of field types, that is, $\tau$ is either $\TST$ or $\ifset\TST$. We consider lists whose elements are of the form \texttt{\ETK\,\,=>\,\,$\tau$}. Given such a list $L$ we write $\ETK\in L$ is there exist $\tau$ such that the element \texttt{\ETK\,\,=>\,\,$\tau$} belongs to $L$. We denote by \textsf{Empty} the lists that maps all the non-singleton key types to \texttt{not\_set()}.  
 
-Given two field lists $L_1$ and $L_2$, we write $L_1 \oplus L_2$ the list obtained by adding to $L_1$ all the fields elements $\ETK\fto\tau$ of $L_2$ such that $\ETK\not\in L_1$. Formally:
-\begin{figure} [H]
-   \[\begin{array}{rcll}
-      L_1 \oplus \texttt{[\,]} &= & L_1 \\
-      L_1 \oplus \texttt{[}\,\ETK\fto\tau, L_2\texttt{]} &=& L_1 \oplus L_2 & \textsl{if }\ \ETK\in L_1 \\
-      L_1 \oplus \texttt{[}\,\ETK\fto\tau, L_2 \texttt{]} &=& \texttt{[}\,\ETK\fto\tau, L_1\texttt{]}\oplus L_2  & \textsl{if }\ \ETK\not\in L_1 \\
-   \end{array}\]
-   \caption{Merge in Field Types}
-   \label{app:merge-in-field-types}
-\end{figure}
-We then define \textsf{map($L$)} as the map type whose field list is $L$. Then we have 
-$\dsb{\map{\texttt{\TSF$_1$,\,...,\,\TSF$_n$}}} =\textsf{\textsl{map}($\bigoplus_{i=1}^{n}\dsb{\TSF_i}$)}$. If we want a saturated map type (i.e., a map type that specifies all the possible keytypes), then we have $\dsb{\map{\texttt{\TSF$_1$,\,...,\,\TSF$_n$}}} =\textsf{\textsl{map}($\bigoplus_{i=1}^{n}\dsb{\TSF_i}\oplus\texttt{Empty}$)}$.
+First we define the translation of single field types. If $\ETK_1,...,\ETK_n$ are pairwise distinct key types, we write \texttt{[$\bigvee_{i=1}^n \ETK_i\fto\tau$]} for the list \texttt{[$\ETK_1\fto\tau,\cdots,\ETK_n\fto\tau$]}. Then the translation of single field types is defined in Figure~\ref{app:translation-in-field-types}:
 
-All it remains to do is to define the translation of field types. If $\ETK_1,...,\ETK_n$ are pairwise distinct key types, we write \texttt{[$\bigvee_{i=1}^n \ETK_i\fto\tau$]} for the list \texttt{[$\ETK_1\fto\tau,\cdots,\ETK_n\fto\tau$]}. Then the translation of single field types is defined in Figure~\ref{app:translation-in-field-types}.:
 \begin{figure} [H]
    \begin{translationfig}
       \dsb{\texttt{required(\TST) => $\prm{\TST}$}} = 
@@ -179,17 +167,41 @@ All it remains to do is to define the translation of field types. If $\ETK_1,...
    \label{app:translation-in-field-types}
 \end{figure}
 
+After obtaining types in Elixir Types we can define merge function. Given two field lists $L_1$ and $L_2$, we write $L_1 \oplus L_2$ the list obtained by adding to $L_1$ all the fields elements $\ETK\fto\tau$ of $L_2$ such that $\ETK\not\in L_1$ and $\ETK\neq\texttt{:}k$. Formally:
+\begin{figure} [H]
+   \[\begin{array}{rcll}
+      L_1 \oplus \texttt{[\,]} &= & L_1 \\
+      L_1 \oplus \texttt{[}\,\ETK\fto\tau, L_2\texttt{]} &=& L_1 \oplus L_2 & \textsl{if }\ \ETK\in L_1 \\
+      L_1 \oplus \texttt{[}\,\ETK\fto\tau, L_2 \texttt{]} &=& \texttt{[}\,\ETK\fto\tau, L_1\texttt{]}\oplus L_2  & \textsl{if }\ \ETK\not\in L_1 \\
+      \end{array}\]
+   \caption{Merge in Field Types}
+   \label{app:merge-in-field-types}
+\end{figure}
+
+Notice that merging naturally reverses the order of field types that is because field types in TypeSpecs are left-associative whereas those in Elixir Types are right-associative.
+
+We then finally define \textsf{map($L$)} as the map type whose field list is $L$. Then we have $\dsb{\map{\texttt{\TSF$_1$,\,...,\,\TSF$_n$}}} =\textsf{\textsl{map}($\bigoplus_{i=1}^{n}\dsb{\TSF_i}$)}$. If we want a saturated map type (i.e., a map type that specifies all the possible keytypes), then we have $\dsb{\map{\texttt{\TSF$_1$,\,...,\,\TSF$_n$}}} =\textsf{\textsl{map}($\bigoplus_{i=1}^{n}\dsb{\TSF_i}\oplus\texttt{Empty}$)}$.
+
+In spite of the whole process we have completed, there are two missing parts to be complemented: merging of field types with their left-hand side undefined and that being a singleton atom type.
+These cases have to be addressed in the later sections, which process may involve re-merging with approximation.
+
 \section{Total Approximating Translation of TypeSpecs into Elixir Types}
 
-The translation defined so far is partial since some TypeSpecs types do not have a corresponding Elixir type. This is not a weakness of the Elixir type system, but rather a consequence of the design choices made for Elixir types, to keep them as simple as possible while still being useful. However, it is possible to define a total translation from TypeSpecs types to Elixir types that approximates the original TypeSpecs type. This total translation can be useful in some contexts, for example when we want to ensure that every TypeSpecs type can be represented in Elixir types, even if approximately.
+The translation defined so far is partial since some TypeSpecs types do not have a corresponding type in Elixir Types. 
+This is not a weakness of the Elixir Types system, but rather a consequence of the design choices made for Elixir Types, to keep them as simple as possible while still being useful. 
+However, it is possible to define a total translation from types in TypeSpecs to ones in Elixir Types hence approximating the original types in TypeSpecs. 
+This total translation can be useful in some contexts, for example, when we want to ensure that every type in TypeSpecs can be represented in Elixir Types even approximately.
 
-More precisely, the previous translation is undefined in the following cases:
+More precisely, the previous translations are undefined in the following cases:
 \begin{itemize}
    % \item Bitstrings with size specifications that are not a multiple of 8 bits (e.g., \texttt{<<\_::3>>}).
-   \item The type \texttt{\fun{\dots}{\TST}} when the translation of $\TST$ is not equivalent to \texttt{any()} (explain why this type is not interesting).
-   \item $\dsb{\texttt{required(\TST) => $\prm{\TST}$}}$ and $\dsb{\texttt{optional(\TST) => $\prm{\TST}$}}$ are undefined when $\dsb{\TST}$ is not equivalent to a disjunction of pairwise distinct key types.
+   \item $\dsb{\texttt{(\fun{\dots}{\TST})}}$: 
+   the top function type when $\dsb{\TST}$ is not equivalent to \texttt{any()}.
+   \item $\dsb{\texttt{required(\TST) => $\prm{\TST}$}}$ and $\dsb{\texttt{optional(\TST) => $\prm{\TST}$}}$: 
+   the field types when $\dsb{\TST}$ is not equivalent to a disjunction of pairwise distinct key types.
 \end{itemize}
-In the rest of this section we give a conservative extension of the translation defined so far that is total, i.e., it is defined for every TypeSpecs type. The extension consists in defining approximations for the cases where the previous translation is undefined.
+In the rest of this section we give a conservative extension of the translation defined so far that is total, i.e., it is defined for every type in TypeSpecs. 
+The extension consists in defining approximations for the cases where the previous translation is undefined.
 
 % \subsection{Approximation of Bitstring Types} \label{approximation-of-bitstring-types}
 
