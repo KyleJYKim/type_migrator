@@ -171,8 +171,8 @@ After obtaining types in Elixir Types we can define merge function. Given two fi
 \begin{figure} [H]
    \[\begin{array}{rcll}
       L_1 \oplus \texttt{[\,]} &= & L_1 \\
-      L_1 \oplus \texttt{[}\,\ETK\fto\tau, L_2\texttt{]} &=& L_1 \oplus L_2 & \textsl{if }\ \ETK\in L_1 \\
-      L_1 \oplus \texttt{[}\,\ETK\fto\tau, L_2 \texttt{]} &=& \texttt{[}\,\ETK\fto\tau, L_1\texttt{]}\oplus L_2  & \textsl{if }\ \ETK\not\in L_1 \\
+      L_1 \oplus \texttt{[}\,\ETK\fto\tau,\,\,L_2\texttt{]} &=& L_1 \oplus L_2 & \textsl{if }\ \ETK\in L_1 \\
+      L_1 \oplus \texttt{[}\,\ETK\fto\tau,\,\,L_2 \texttt{]} &=& \texttt{[}\,\ETK\fto\tau,\,\,L_1\texttt{]}\oplus L_2  & \textsl{if }\ \ETK\not\in L_1 \\
       \end{array}\]
    \caption{Merge in Field Types}
    \label{app:merge-in-field-types}
@@ -183,7 +183,7 @@ Notice that merging naturally reverses the order of field types that is because 
 We then finally define \textsf{map($L$)} as the map type whose field list is $L$. Then we have $\dsb{\map{\texttt{\TSF$_1$,\,...,\,\TSF$_n$}}} =\textsf{\textsl{map}($\bigoplus_{i=1}^{n}\dsb{\TSF_i}$)}$. If we want a saturated map type (i.e., a map type that specifies all the possible keytypes), then we have $\dsb{\map{\texttt{\TSF$_1$,\,...,\,\TSF$_n$}}} =\textsf{\textsl{map}($\bigoplus_{i=1}^{n}\dsb{\TSF_i}\oplus\texttt{Empty}$)}$.
 
 In spite of the whole process we have completed, there are two missing parts to be complemented: merging of field types with their left-hand side undefined and that being a singleton atom type.
-These cases have to be addressed in the later sections, which process may involve re-merging with approximation.
+These cases have to be addressed in the later sections with merging approximation.
 
 \section{Total Approximating Translation of TypeSpecs into Elixir Types}
 
@@ -303,22 +303,23 @@ These finally lead approximation of the any top function types into \texttt{fun(
 
 \subsection{Approximation of Field Types}
 
-Let us deal with the merging case when the left-hand side of a field type is a \texttt{:$k$}.
-Merging approximation comes into play when attempted merging a \texttt{:$k$} with an \texttt{atom()} and vice versa.
-Since a singleton atom type is a subtype of unions of all the atom types, if a field type with \texttt{:$k$} comes before the next field type with \texttt{atom()} at their left-hand sides, the former field does not fully take precedence over the latter field but only the single type that is itself.
-On the other hand, if a field type with \texttt{atom()} comes before a \texttt{:$k$}, the former takes full-priority over the latter. 
-In extension of the merge function in Figure~\ref{app:merge-in-field-types}:
+Let us deal with the merging case when left-hand sides of two field types are not disjoint.
+This also involves the case when a required key type in TypeSpecs is translated into \texttt{:$k$} since it is one of the literal types that are subtypes of key types of Elixir Types.
+To define the approximation, let $s$ ranges over all the singleton types and let $S_{\ETK}$ to be $\bigcup_{i\in \ETK}s_i$ which represents any set of key types.
+In extension to the merge function in Figure~\ref{app:merge-in-field-types}:
 
 \begin{figure} [H]
    \[\begin{array}{rcll}
-      L_1 \oplus \texttt{[}\,\texttt{:$k$}\fto\tau, L_2\texttt{]} &=& L_1 \oplus L_2 & \textsl{if }\ \texttt{atom()} \in L_1 \\
-      L_1 \oplus \texttt{[}\,\texttt{atom()}\fto\tau, L_2 \texttt{]} &=& \texttt{[}\,\texttt{atom()$\smallsetminus$:$k$}\fto\tau, L_1\texttt{]}\oplus L_2  & \textsl{if }\ \texttt{:$k$} \in L_1 \\
+      L_1 \oplus \texttt{[}\,s\fto\tau,\,\,L_2\texttt{]} &=& L_1 \oplus L_2 & \textsl{if }\ S_K \in L_1 \\
+      L_1 \oplus \texttt{[}\,S_{\ETK}\fto\tau,\,\,L_2 \texttt{]} &=& \texttt{[}\,S_{\ETK}\texttt{ and not\,\,$s$}\fto\tau,\,\,L_1\texttt{]}\oplus L_2  & \textsl{if }\ \texttt{$s$} \in L_1 \\
       \end{array}\]
    \caption{Approximated Merge in Field Types}
    \label{app:approximated-merge-in-field-types}
 \end{figure}
 
-
+For instance, when attempted merging a \texttt{:$k$} with an \texttt{atom()} and vice versa.
+Since a singleton atom type is a subtype of unions of all the atom types, if a field type with \texttt{:$k$} comes before the next field type with \texttt{atom()} at their left-hand sides, the former field does not fully take precedence over the latter field but only the single type that is itself.
+On the other hand, if a field type with \texttt{atom()} comes before a \texttt{:$k$}, the former takes full-priority over the latter. 
 
 
 % Approximating field types is more delicate than the others hence care must be taken.

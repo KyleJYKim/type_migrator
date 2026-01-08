@@ -29,7 +29,7 @@ defmodule Ex1 do
   @spec id_records3(%{optional(:a) => integer(), optional(:b) => integer()}) :: map()
   def id_records3(x), do: x
 
-  # left-most is ALWAYS predominant to the following fields with subtype keys and thus the value types are ignored!
+  # left-most is ALWAYS predominant to the following fields
   @spec id_records4(%{required(:a) => binary(), required(atom()) => integer()}) :: map()
   def id_records4(x), do: x
   @spec id_records5(%{required(atom()) => integer(), optional(atom()) => binary()}) :: map()
@@ -39,8 +39,8 @@ defmodule Ex1 do
   @spec id_records7(%{optional(:a) => binary(), optional(atom()) => integer()}) :: map()
   def id_records7(x), do: x
 
-  #@spec id_records8(%{required(:a) => binary(), optional(atom()) => integer()}) :: map()
-  @spec id_records8(%{optional(atom()) => integer(), required(:a) => binary()}) :: map()
+  @spec id_records8(%{required(:a | :b) => integer(), optional(atom()) => binary()}) :: map()
+  #@spec id_records8(%{optional(atom()) => integer(), required(:a) => binary()}) :: map()
   def id_records8(x), do: x
 
   # @spec id_records9(%{optional((...->atom())) => integer()}) :: map()
@@ -49,7 +49,7 @@ defmodule Ex1 do
   @spec id_records10(%{none() => integer()}) :: integer()
   def id_records10(x) when is_map_key(x, {:a}), do: Map.get(x, {:a})
 
-  @spec id_records11(%{5..7 => float(), 3..5 => binary(), integer() => integer()}) :: map()
+  @spec id_records11(%{required(:a | :b) => float(), integer() => integer()}) :: map()
   def id_records11(x) when is_map(x), do: x
 
   # Whatever function return type is, it is taken as ...->any()
@@ -118,7 +118,7 @@ defmodule Ex1 do
     #def id_records6(), do: Ex1.id_records6(%{:c => "d", :b => "d"})
     #def id_records7(), do: Ex1.id_records7(%{:a => 1})
 
-    def id_records8(), do: Ex1.id_records8(%{:a => 1})
+    def id_records8(), do: Ex1.id_records8(%{:c => "a"})
     #def id_records9(), do: Ex1.id_records9(%{fn x -> "a" end => :a})
     #def id_records10(), do: Ex1.id_records10(%{nil => 1})
 
