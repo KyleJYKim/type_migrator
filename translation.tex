@@ -198,7 +198,7 @@ More precisely, the previous translations are undefined in the following cases:
    \item $\dsb{\texttt{(\fun{\dots}{\TST})}}$: 
    the top function type when $\dsb{\TST}$ is not equivalent to \texttt{any()}.
    \item $\dsb{\texttt{required(\TST) => $\prm{\TST}$}}$ and $\dsb{\texttt{optional(\TST) => $\prm{\TST}$}}$: 
-   the field types when $\dsb{\TST}$ is not equivalent to a disjunction of pairwise distinct key types.
+   the field types when $\dsb{\TST}$ is equivalent to a singleton atom type or is not equivalent to a disjunction of pairwise distinct key types.
 \end{itemize}
 In the rest of this section we give a conservative extension of the translation defined so far that is total, i.e., it is defined for every type in TypeSpecs. 
 The extension consists in defining approximations for the cases where the previous translation is undefined.
@@ -301,32 +301,22 @@ These finally lead approximation of the any top function types into \texttt{fun(
    \label{app:approximation-of-top-function-type}
 \end{figure}
 
-\subsection{Approximation of Range Types}
-
-\begin{figure} [H]
-   \[\begin{array}{l}
-      \dsb{\texttt{neg\_integer}} = \texttt{infty..-1}
-      \nl 
-      \dsb{\texttt{non\_neg\_integer}} = \texttt{0..infty}
-      \nl 
-      \dsb{\texttt{pos\_integer}} = \texttt{1..infty}
-      \nl 
-      \dsb{n} = n\texttt{..}n
-      \nl 
-      \dsb{n\texttt{..}n'} = n\texttt{..}n'
-      \nl
-   \end{array}\]
-   \caption{Range Types}
-   \label{app:range-types}
-\end{figure}
-
-
 \subsection{Approximation of Field Types}
 
-A field type Approximation is required when two or more than two disjunctive literal types are positioned in left-hand side of field types.
-That is when 
+Let us deal with the merging case when the left-hand side of a field type is a \texttt{:$k$}.
+Merging approximation comes into play when attempted merging a \texttt{:$k$} with an \texttt{atom()} and vice versa.
+Since a singleton atom type is a subtype of unions of all the atom types, if a field type with \texttt{:$k$} comes before the next field type with \texttt{atom()} at their left-hand sides, the former field does not fully take precedence over the latter field but only the single type that is itself.
+On the other hand, if a field type with \texttt{atom()} comes before a \texttt{:$k$}, the former takes full-priority over the latter. 
+In extension of the merge function in Figure~\ref{app:merge-in-field-types}:
 
-Since fields translation requires merging between each field, it
+\begin{figure} [H]
+   \[\begin{array}{rcll}
+      L_1 \oplus \texttt{[}\,\texttt{:$k$}\fto\tau, L_2\texttt{]} &=& L_1 \oplus L_2 & \textsl{if }\ \texttt{atom()} \in L_1 \\
+      L_1 \oplus \texttt{[}\,\texttt{atom()}\fto\tau, L_2 \texttt{]} &=& \texttt{[}\,\texttt{atom()$\smallsetminus$:$k$}\fto\tau, L_1\texttt{]}\oplus L_2  & \textsl{if }\ \texttt{:$k$} \in L_1 \\
+      \end{array}\]
+   \caption{Approximated Merge in Field Types}
+   \label{app:approximated-merge-in-field-types}
+\end{figure}
 
 
 
