@@ -18,9 +18,9 @@ defmodule Parser.TypespecParser do
       |> Code.string_to_quoted!
 
     spec_list = ast
-      |> extract_spec() |> IO.inspect(label: "extract_spec()")
-      |> Enum.map(&parse_spec/1)  |> IO.inspect(label: "parse_spec()")     # maybe.. take the mapping inside.
-      |> Enum.map(&translate_spec/1)  |> IO.inspect(label: "translate_spec()")
+      |> extract_spec()   |> IO.inspect(label: "extract_spec()")
+      |> parse_spec()     |> IO.inspect(label: "parse_spec()")
+      |> translate_spec   |> IO.inspect(label: "translate_spec()")
 
     spec_list |> assemble_elixir_type
   end
@@ -51,8 +51,6 @@ defmodule Parser.TypespecParser do
   end
 
   def parse_spec(spec_tree) do
-
-    {line_num, name, inputs, output, guards} = spec_tree
 
     parser_walker = fn type_node, walker_fun -> (
       # walker_fun/2 is used when the first level node is needed to be parsed, i.e., defined as the basic types.
@@ -103,7 +101,7 @@ defmodule Parser.TypespecParser do
         # nil -> :nil
         [type, {:..., [], []}] -> {:nonempty_list, [], [type |> walker_fun.()]} |> walker_fun.()
         [type] -> {:list, [], [type |> walker_fun.()]} |> walker_fun.()
-        {:%{}, [], record_list} -> (
+        {:%{}, _, record_list} -> (
           record_list = record_list |> Enum.map(
             fn {k, v} -> case k do
               {:required, _, _} -> {k, v}
@@ -113,30 +111,33 @@ defmodule Parser.TypespecParser do
           end)
           {:%{}, [], record_list}
         )
-        {:%, [], [{_, _, module_list}, {:%{}, [], struct_list}]} -> (
+        {:%, _, [{_, _, module_list}, {:%{}, _, struct_list}]} -> (
           module = module_list |> Enum.reduce("", fn x, acc -> module = Atom.to_string(x)
             if acc == "", do: module, else: acc <> "." <> module end)
           {:%{}, [], [__struct__: String.to_atom(module)] ++ struct_list}
-        )
+        ) |> IO.inspect(label: "STRUCT: ")
 
 
-        other -> other
+        other -> other |> IO.inspect(label: "OTHER: ")
       end)
     end
 
-    walker = &parser_walker.(&1, parser_walker)
-    macro_walker = &Macro.prewalk(&1, walker)
+    total_parser = fn {line_num, name, inputs, output, guards} -> (
 
-    inputs = inputs |> Enum.map(macro_walker)
-    output = output |> macro_walker.()
-    guards = if guards == nil, do: nil, else: guards |> Enum.map(fn {k, v} -> {k, v |> macro_walker.()} end)
+      walker = &parser_walker.(&1, parser_walker)
+      macro_walker = &Macro.prewalk(&1, walker)
 
-    {line_num, name, inputs, output, guards}
+      inputs = inputs |> Enum.map(macro_walker)
+      output = output |> macro_walker.()
+      guards = if guards == nil, do: nil, else: guards |> Enum.map(fn {k, v} -> {k, v |> macro_walker.()} end)
+
+      {line_num, name, inputs, output, guards}
+    )end
+
+    spec_tree |> Enum.map(total_parser)
   end
 
   def translate_spec(parsed_spec_tree) do
-
-    {line_num, name, inputs, output, guards} = parsed_spec_tree
 
     translator = fn type_node, translator_fun -> (
 
@@ -160,14 +161,31 @@ defmodule Parser.TypespecParser do
           end)
           "{#{tuple_list}}"
         )
+        # {Tuple-with-two-elements}
+        {elem1, elem2} -> (
+          tuple_list = [elem1, elem2] |> Enum.reduce("",
+          fn x, acc -> element = (x |> translator_fun.())
+            if acc == "", do: element, else: acc <> ", " <> element
+          end)
+          "{#{tuple_list}}"
+        )
 
         # %{..., F_seq} (Record)
         {:%{}, _, record_list} -> (
-          record_list = record_list |> Enum.reduce("",
-          fn {k, v}, acc -> field = (k |> translator_fun.()) <> " => " <> (v |> translator_fun.())
-            if acc == "", do: field, else: acc <> ", " <> field
-          end)
-          "%{#{record_list}}"
+          case record_list do
+            [{:__struct__, name} | struct_list] ->
+              struct_list = struct_list |> Enum.reduce("",
+              fn {k, v}, acc -> field = (k |> translator_fun.()) <> " => " <> (v |> translator_fun.())
+                if acc == "", do: field, else: acc <> ", " <> field
+              end)
+              "%#{name}{#{struct_list}}"
+            _ ->
+              record_list = record_list |> Enum.reduce("",
+              fn {k, v}, acc -> field = (k |> translator_fun.()) <> " => " <> (v |> translator_fun.())
+                if acc == "", do: field, else: acc <> ", " <> field
+              end)
+              "%{#{record_list}}"
+          end
         )
         # APPLY translation and approximation
         {:required, _, [type]} -> (type |> translator_fun.())
@@ -227,13 +245,18 @@ defmodule Parser.TypespecParser do
       end)
     end
 
-    translation = &translator.(&1, translator)
-    inputs = inputs |> Enum.map(translation)
-    output = output |> translation.()
-    guards = if guards == nil, do: nil, else: guards |> Enum.map(fn {k, v} -> Atom.to_string(k) <> ": " <> (v |> translation.()) end)
+    total_translator = fn {line_num, name, inputs, output, guards} -> (
 
-    #%TsInfo{name: name, inputs: inputs, output: output, guards: guards}
-    {line_num, name, inputs, output, guards}
+      translation = &translator.(&1, translator)
+      inputs = inputs |> Enum.map(translation)
+      output = output |> translation.()
+      guards = if guards == nil, do: nil, else: guards |> Enum.map(fn {k, v} -> Atom.to_string(k) <> ": " <> (v |> translation.()) end)
+
+      #%TsInfo{name: name, inputs: inputs, output: output, guards: guards}
+      {line_num, name, inputs, output, guards}
+    )end
+
+    parsed_spec_tree |> Enum.map(total_translator)
   end
 
   def assemble_elixir_type(translated_spec_list) do
