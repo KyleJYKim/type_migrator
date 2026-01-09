@@ -27,7 +27,7 @@ defmodule Migrator.Translator do
 
 
   defp extract_spec(ast) do
-  # Note: Patterns are matched only when tried with actual elixir codes (not from prompt).
+  # Note: Patterns are matched only when tried with elixir codes written on files (not from prompt).
     spec_extractor = fn ast, name, acc, extractor ->
       case ast do
         {:defmodule, _, [{:__aliases__, _, [module_name]},[do: {:__block__, [], module_block}]]} -> (
@@ -195,18 +195,18 @@ defmodule Migrator.Translator do
 
         # <<_::n, _::_*n>>
         {:<<>>, _, [{:"::", _, [_, digit1]}, {:"::", _, [_, {:*, _, [_, digit2]}]}]} -> (
-          if Integer.mod(digit1, 8) == 0 and Integer.mod(digit2, 8) == 0, do: "binary()", else: "UNDEFINED"
+          if Integer.mod(digit1, 8) == 0 and Integer.mod(digit2, 8) == 0, do: "binary()", else: "bitstring()"
         )
         # <<_::_*n>>
         {:<<>>, _, [{:"::", _, [_, {:*, _, [_, digit]}]}]} -> (
-          if Integer.mod(digit, 8) == 0, do: "binary()", else: "UNDEFINED"
+          if Integer.mod(digit, 8) == 0, do: "binary()", else: "bitstring()"
         )
         # <<_::n>>
         {:<<>>, _, [{:"::", _, [_, digit]}]} -> (
-          if Integer.mod(digit, 8) == 0, do: "binary()", else: "UNDEFINED"
+          if Integer.mod(digit, 8) == 0, do: "binary()", else: "bitstring()"
         )
         # <<>>
-        {:<<>>, _, _} -> "UNDEFINED"
+        {:<<>>, _, _} -> "bitstring()"
 
         # (... -> Type)
         {:->, _, [:..., right]} -> (
@@ -223,7 +223,7 @@ defmodule Migrator.Translator do
         digit when is_integer(digit) -> "#{digit}--#{digit}"
 
         # :k (atom singleton types)
-        atom when is_atom(atom) -> ":" <> Atom.to_string(atom) |> IO.inspect(label: "ATOM")
+        atom when is_atom(atom) -> ":" <> Atom.to_string(atom) #|> IO.inspect(label: "ATOM")
 
         # Simple form of basic types (any(), none(), atom(), pid(), port(), reference(), float(), integer(), neg_integer(), non_neg_integer(), pos_integer(), tuple())
         {type, _, []} -> (
