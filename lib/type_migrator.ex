@@ -4,7 +4,7 @@ defmodule TypeMigrator do
     2. Translate the AST to Elixir Type.
     3. Rewrite the input file and produce a new file with Elixir Type.
   """
-  alias Parser.TypespecParser, as: Parser
+  alias Migrator.Translator, as: Translator
 
   def main(args) do
     args
@@ -16,7 +16,7 @@ defmodule TypeMigrator do
     #pid = CDuceRepl.spawn()  # ...what's it for?
 
     try do
-      {time, result} = :timer.tc(&Parser.process/1, [path])
+      {time, result} = :timer.tc(&Translator.process/1, [path])
 
       #CDuceRepl.close(pid)
 

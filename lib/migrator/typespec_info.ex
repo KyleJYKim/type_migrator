@@ -1,5 +1,5 @@
-defmodule Structure.TypespecInfo do
-  alias Structure.TypespecInfo
+defmodule Migrator.TypespecInfo do
+  alias Migrator.TypespecInfo
 
   defstruct [
     name: "",

@@ -1,14 +1,15 @@
-defmodule Parser.TypespecParser do
+defmodule Migrator.Translator do
   @moduledoc """
-  Input: an elixir file with TypeSpec
-  Output: a list of Ts_info structure.
+  Input: a file path of elixir code with TypeSpecs
+  Output: a list of Elixir Types (in strings, to be decided)
 
-  1. Open the target file.
-  2. Detect a TypeSpec and take the information.
-  3. Append the info. in the list.
-  4. Repeat 2~3 until the end of the file.
-  5. Return the list.
+  1. Read a file and get AST
+  2. Extract TypeSpecs
+  3. Parse TypeSpecs
+  4. Translate TypeSpecs to Elixir Types
+  5. Assemble Elixir Types
   """
+
   # alias Structure.TypespecInfo, as: TsInfo
 
   def process(path) do
@@ -17,17 +18,16 @@ defmodule Parser.TypespecParser do
       |> File.read!
       |> Code.string_to_quoted!
 
-    spec_list = ast
-      |> extract_spec()   |> IO.inspect(label: "extract_spec()")
-      |> parse_spec()     |> IO.inspect(label: "parse_spec()")
-      |> translate_spec   |> IO.inspect(label: "translate_spec()")
-
-    spec_list |> assemble_elixir_type
+    ast
+      |> extract_spec()         |> IO.inspect(label: "EXTRACT SPEC FUNCTION RESULT: \n")
+      |> parse_spec()           |> IO.inspect(label: "PARSE SPEC FUNCTION RESULT: \n")
+      |> translate_spec()       |> IO.inspect(label: "TRANSLATE SPEC FUNCTION RESULT: \n")
+      |> assemble_elixir_type()
   end
 
 
-  def extract_spec(ast) do
-
+  defp extract_spec(ast) do
+  # Note: Patterns are matched only when tried with actual elixir codes (not from prompt).
     spec_extractor = fn ast, name, acc, extractor ->
       case ast do
         {:defmodule, _, [{:__aliases__, _, [module_name]},[do: {:__block__, [], module_block}]]} -> (
@@ -35,7 +35,6 @@ defmodule Parser.TypespecParser do
           module_block |> Enum.reduce(acc, fn x, acc -> extractor.(x, name, acc, extractor) end)
         )
 
-        # When received file
         {:@, [line: line_num], [{:spec, _, [{:"::", _, [{fun_name, _, inputs}, output]}]}]} -> (
           acc ++ [{line_num, "#{name}.#{fun_name}", inputs, output, nil}]
         )
@@ -50,7 +49,7 @@ defmodule Parser.TypespecParser do
     ast |> spec_extractor.("", [], spec_extractor)
   end
 
-  def parse_spec(spec_tree) do
+  defp parse_spec(spec_tree) do
 
     parser_walker = fn type_node, walker_fun -> (
       # walker_fun/2 is used when the first level node is needed to be parsed, i.e., defined as the basic types.
@@ -95,7 +94,6 @@ defmodule Parser.TypespecParser do
         {:struct, _, _} -> {:%{}, [], [{:__struct__, {:atom, [], []}}, {{:optional, [], [{:atom, [], []}]}, {:any, [], []}}]}
         {:timeout, _, _} -> {:|, [], [:infinity, {:non_neg_integer, [], []}]}
 
-
         # true -> :true
         # false -> :false
         # nil -> :nil
@@ -115,10 +113,9 @@ defmodule Parser.TypespecParser do
           module = module_list |> Enum.reduce("", fn x, acc -> module = Atom.to_string(x)
             if acc == "", do: module, else: acc <> "." <> module end)
           {:%{}, [], [__struct__: String.to_atom(module)] ++ struct_list}
-        ) |> IO.inspect(label: "STRUCT: ")
+        )
 
-
-        other -> other |> IO.inspect(label: "OTHER: ")
+        other -> other |> IO.inspect(label: "OTHER IN PARSE FUNCTION: \n")
       end)
     end
 
@@ -137,7 +134,7 @@ defmodule Parser.TypespecParser do
     spec_tree |> Enum.map(total_parser)
   end
 
-  def translate_spec(parsed_spec_tree) do
+  defp translate_spec(parsed_spec_tree) do
 
     translator = fn type_node, translator_fun -> (
 
@@ -259,7 +256,7 @@ defmodule Parser.TypespecParser do
     parsed_spec_tree |> Enum.map(total_translator)
   end
 
-  def assemble_elixir_type(translated_spec_list) do
+  defp assemble_elixir_type(translated_spec_list) do
 
     type_grouping = fn type, acc ->
       {_, name, _, _, _} = type
@@ -319,7 +316,6 @@ defmodule Parser.TypespecParser do
     renamer = fn list -> elem(list |> Enum.reduce({[], %{}}, type_renaming), 0) end
     renamed_list = grouped_list |> Enum.map(renamer)
 
-
     type_assembler = fn group, acc, assembler ->
       assembler = &assembler.(&1, &2, assembler)
       case {group, acc} do
@@ -350,6 +346,4 @@ defmodule Parser.TypespecParser do
     assembler = &type_assembler.(&1, {}, type_assembler)
     renamed_list |> IO.inspect |> Enum.map(assembler)
   end
-
-
 end
