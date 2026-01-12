@@ -268,9 +268,7 @@ The extension consists in defining approximations for the cases where the previo
 
 \subsection{Approximation of Top Function Types}
 
-The top function type is union of all the functions with every arity to the top type as defined in Figure~\ref{app:top-function-type}.
-Since the top function type already takes over all the other function types, it becomes not worthy to have all the other function types that the return type is a subtype of the top type.
-In the perspective of memory space, it is only costly to define and have all the function types because the maximum arity is 255.
+The top function type is a set of all the possible functions, that is, unions of functions returning the top type with every arity available as defined in Figure~\ref{app:top-function-type}.
 
 \begin{figure} [H]
    \[\begin{array}{rcll}
@@ -280,11 +278,15 @@ In the perspective of memory space, it is only costly to define and have all the
    \label{app:top-function-type}
 \end{figure}
 
-However, Elixir Types will not directly define \texttt{fun()} as Figure~\ref{app:top-function-type}, due to the triviality of defining the list of function with all the possible arity.
-While Elixir Types restricts the top type to be only \texttt{fun()}, keeping the semantic approach to the top function, 
-TypeSpecs has allowed to specify the return type of the top type which have to be taken into account when translating it.
-Nevertheless, this leniency in expressiveness means nothing in practice, given that the Dialyzer does not differentiate the return type but only perceive any form of the top types as \texttt{...->any()}.
-These finally lead approximation of the any top function types into \texttt{fun() and dynamic()}.
+Elixir Types provides the semantically same type, \texttt{fun()}, which enables the direct translation for \texttt{\fun{\dots}{any()}},
+although, Elixir Types does not directly define \texttt{fun()} as Figure~\ref{app:top-function-type}, due to the triviality of defining the list of function with all the possible arity, and the cost of defining and having all the function types which expand to maximum arity of 255.
+Nonetheless, the fundamental difference in allowance from TypeSpecs, i.e., letting to specify the codomain of a function type, brings subtypes of the top function type on approximation.
+
+The approximation is rather simple because the leniency in expressiveness is proven to be trivial in practice for several reasons.
+Most of all, Dialyzer does not differentiate the return type and perceive any form of the top types as \texttt{\fun{\dots}{any()}}.
+Which means, in TypeSpecs with Dialyzer, \texttt{\fun{\dots}{any()}} can replace any other top type functions with a codomain different than \texttt{any()} and the same applies to the other way around.
+Secondly, one of the concerns with moving forward with Elixir Types is to fail typecheck, but typecheck will trivially succeed even alone with \texttt{fun()} when approximated since the top function type already takes over all the other function types.
+One small problem is that this approximation will blunt the specification, hence we can write \texttt{fun() and dynamic()}, which is a subtype of \texttt{fun()}, to semantically display that the approximation is a subtype of the top function type.
 
 \begin{figure} [H]
    \begin{translationfig}

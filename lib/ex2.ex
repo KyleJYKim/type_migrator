@@ -25,16 +25,27 @@ defmodule Ex2 do
 
   end
 
-    @spec fun_t(a) :: b when a: binary(), b: binary()
-    @spec fun_t(a) :: b when a: integer(), b: binary()
-    @spec fun_t(a) :: b when a: float(), b: binary()
-    def fun_t(x) when is_binary(x), do: x
-    def fun_t(x) when is_integer(x), do: Integer.to_string(x)
-    def fun_t(x) when is_float(x), do: Float.to_string(x)
+  @spec fun_t(a) :: b when a: binary(), b: binary()
+  @spec fun_t(a) :: b when a: integer(), b: binary()
+  @spec fun_t(a) :: b when a: float(), b: binary()
+  def fun_t(x) when is_binary(x), do: x
+  def fun_t(x) when is_integer(x), do: Integer.to_string(x)
+  def fun_t(x) when is_float(x), do: Float.to_string(x)
 
-    @spec triple_arity_guarded(a, b, c) :: atom() | tuple() when a: integer(), b: float(), c: binary()
-    def triple_arity_guarded(x, y, z), do: (if x < 0, do: :fail, else: {x, y, z})
+  @spec triple_arity_guarded(a, b, c) :: atom() | tuple() when a: integer(), b: float(), c: binary()
+  def triple_arity_guarded(x, y, z), do: (if x < 0, do: :fail, else: {x, y, z})
 
-    @spec triple_arity(integer(), number(), :ok | :fail) :: atom() | tuple()
-    def triple_arity(x, y, z), do: (if z == :fail, do: :fail, else: {x, y, z})
+  @spec triple_arity(integer(), number(), :ok | :fail) :: atom() | tuple()
+  def triple_arity(x, y, z), do: (if z == :fail, do: :fail, else: {x, y, z})
+
+
+  @spec top_fun_id((... -> integer())) :: (... -> integer())
+  def top_fun_id(f) when is_function(f), do: f
+
+  defmodule Undefined do
+    @spec fun(binary()) :: binary()
+    def fun(x) when is_binary(x), do: "#{x}"
+    @spec top_fun_id() :: (... -> integer())
+    def top_fun_id(), do: Ex2.top_fun_id(&fun/1)
+  end
 end
