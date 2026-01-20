@@ -52,6 +52,12 @@ defmodule Ex1 do
   @spec id_records11(%{required(:a | :b) => float(), integer() => integer()}) :: map()
   def id_records11(x) when is_map(x), do: x
 
+  @spec id_records12(%{1..3 => integer(), 4..5 => float(), integer() => binary()}) :: map()
+  def id_records12(x) when is_map(x), do: x
+
+  @spec id_records13(%{integer() => integer | float()}) :: map()
+  def id_records13(x) when is_map(x), do: x
+
   # Whatever function return type is, it is taken as ...->any()
   # @spec id_fun((...->atom())) :: fun()
   # def id_fun(x), do: x
@@ -123,6 +129,8 @@ defmodule Ex1 do
     #def id_records10(), do: Ex1.id_records10(%{nil => 1})
 
     #def id_records11(), do: Ex1.id_records11(%{2 => 1, 6 => 1.0, 5 => "s"})
+    def id_records12(), do: Ex1.id_records12(%{2 => 2, 4 => 3.8})
+    def id_records13(), do: Ex1.id_records13(%{2 => 2, 4 => 3.8})
 
     #def id_fun(), do: Ex1.id_fun(fn x -> <<97>> end)
 
