@@ -343,10 +343,6 @@ Which is invalid in Elixir Types. Therefore in addition to Figure~\ref{app:appro
 In the all cases, the best we can do is to over-approximate the singleton key types to their super types existing in key types, and then unify their value types with the proceeding field's value types instead of overwriting them.
 Although this will lose the precision that singleton types provide, the advantage of this approximation is while achieving simplicity of the type system, it can also maintain its overall meaning and soundness.
 
-To deal with the last case where no merge is required but the approximation is, that is when the translation of each field yields undefined and no merge occurred.
-The best option here is still to over-approximate it to a key type of which the type is a subtype.
-On top of that, we can intersect \texttt{dynamic()} to the over-approximated key type to semantically display its subtype nature.
-
 Finally, we can write the total merge function with the approximation:
 
 \begin{figure} [H]
@@ -357,12 +353,22 @@ Finally, we can write the total merge function with the approximation:
       L_1 \oplus \texttt{[}\,s\fto\tau,\,\,L_2\texttt{]} &=& L_1 \oplus L_2 & \textsl{if }\ S \in L_1 \\
       L_1 \oplus \texttt{[}\,\ETK\fto\tau,\,\,L_2 \texttt{]} &=& \texttt{[}\,\ETK\texttt{ and not\,\,:$k$}\fto\tau,\,\,L_1\texttt{]}\oplus L_2  & \textsl{if }\ \texttt{:$k$} \in L_1 \textsl{ and } \ETK = \texttt{atom()} \\
       L_1 \oplus \texttt{[}\,S\fto\tau,\,\,L_2 \texttt{]} &=& \texttt{[}\,S\fto\tau \texttt{ or }\tau^s,\,\,L_1\texttt{]}\oplus L_2  & \textsl{if }\ s \in L_1 \textsl{ and } s \neq \texttt{:$k$} \\
-      \texttt{[}\, L_1,\,\,s\fto\tau,\,\,L_2\texttt{]} &=& \texttt{[}\, L_1,\,\,\ETK^s\texttt{ and dynamic()}\fto\tau,\,\,L_2\texttt{]} & \textsl{otherwise} \\
       \end{array}\]
    \caption{Total Merge in Field Types}
    \label{app:total-merge-in-field-types}
 \end{figure}
 
+After finished with the total merge, there could remain field types where the translation of each field yielded undefined and no merge occurred.
+The best option here is to over-approximate them to key types of which the types are subtypes.
+On top of that, we can intersect \texttt{dynamic()} to the approximated key types to semantically display their subtype nature.
+
+\begin{figure} [H]
+   \[\begin{array}{rcl}
+      \texttt{[}\, L_1,\,\,s\fto\tau,\,\,L_2\texttt{]} &=& \texttt{[}\, L_1,\,\,\ETK^s\texttt{ and dynamic()}\fto\tau,\,\,L_2\texttt{]}\\
+      \end{array}\]
+   \caption{Over-approximation in Field Types}
+   \label{app:over-approximation-in-field-types}
+\end{figure}
 
 
 %%% APPROXIMATION EXAMPLES %%%
