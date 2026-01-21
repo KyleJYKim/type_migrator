@@ -343,8 +343,7 @@ Which is invalid in Elixir Types. Therefore in addition to Figure~\ref{app:appro
 In the all cases, the best we can do is to over-approximate the singleton key types to their super types existing in key types, and then unify their value types with the proceeding field's value types instead of overwriting them.
 Although this will lose the precision that singleton types provide, the advantage of this approximation is while achieving simplicity of the type system, it can also maintain its overall meaning and soundness.
 
-Finally, let us consider the case no merge is required but the approximation is.
-That is when the translation of each field yields undefined.
+To deal with the last case where no merge is required but the approximation is, that is when the translation of each field yields undefined and no merge occurred.
 The best option here is still to over-approximate it to a key type of which the type is a subtype.
 On top of that, we can intersect \texttt{dynamic()} to the over-approximated key type to semantically display its subtype nature.
 
