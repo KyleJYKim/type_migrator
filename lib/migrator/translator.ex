@@ -167,9 +167,11 @@ defmodule Migrator.Translator do
           "{#{tuple_list}}"
         )
 
-        # %{..., F_seq} (Record)
-        {:%{}, _, record_list} -> (
-          case record_list do
+        # %{..., F_seq} (Map)
+        {:%{}, _, map_list} -> (
+          key_types = {"atom()", "pid()", "port()", "reference()", "float()", "integer()", "bitstring()", "binary()", "tuple()", "open_map()", "fun()", "list()"}
+
+          case map_list do
             [{:__struct__, name} | struct_list] ->
               struct_list = struct_list |> Enum.reduce("",
               fn {k, v}, acc -> field = (k |> translator_fun.()) <> " => " <> (v |> translator_fun.())
@@ -177,11 +179,18 @@ defmodule Migrator.Translator do
               end)
               "%#{name}{#{struct_list}}"
             _ ->
-              record_list = record_list |> Enum.reduce("",
-              fn {k, v}, acc -> field = (k |> translator_fun.()) <> " => " <> (v |> translator_fun.())
-                if acc == "", do: field, else: acc <> ", " <> field
+              map_list = map_list |> Enum.map(
+              fn {k, v} ->
+                key_type = k |> translator_fun.()
+                val_type = v |> translator_fun.()
+                if key_type in key_types do
+                  {:defined, key_type, value_type}
+                else
+                  {:undefined, key_type, value_type}
+                end
               end)
-              "%{#{record_list}}"
+              map_list = approximate_spec({:field, map_list})
+              "%{#{map_list}}"
           end
         )
         # APPLY translation and approximation
@@ -256,12 +265,15 @@ defmodule Migrator.Translator do
     parsed_spec_tree |> Enum.map(total_translator)
   end
 
-  defp approximate_spec(type) do
-    case type do
-      :top_function -> "dynamic(fun())"
-
-      :field -> "undefined"
-    end
+  defp approximate_spec(:top_function), do: "dynamic(fun())"
+  defp approximate_spec(:field, map_list) do
+    map_list |> Enum.reduce([],
+    fn {status, k, v}, acc ->
+      case status do
+        :defined -> # TO BE CODED!!
+        :undefined ->
+      end
+    end)
   end
 
   defp assemble_elixir_type(translated_spec_list) do
