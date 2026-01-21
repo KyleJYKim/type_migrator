@@ -211,7 +211,7 @@ defmodule Migrator.Translator do
         # (... -> Type)
         {:->, _, [:..., right]} -> (
           right = right |> translator_fun.()
-          if right == "term()", do: "fun()", else: "UNDEFINED"
+          if right == "term()", do: "fun()", else: approximate_spec(:top_function)
         )
         # (Type_seq} -> Type)
         {:->, _, [left, right]} -> "(" <> (left |> translator_fun.()) <> " -> " <> (right |> translator_fun.()) <> ")"
@@ -256,7 +256,13 @@ defmodule Migrator.Translator do
     parsed_spec_tree |> Enum.map(total_translator)
   end
 
-  defp approximate_spec()
+  defp approximate_spec(type) do
+    case type do
+      :top_function -> "dynamic(fun())"
+
+      :field -> "undefined"
+    end
+  end
 
   defp assemble_elixir_type(translated_spec_list) do
 
