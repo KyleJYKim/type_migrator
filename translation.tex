@@ -171,8 +171,9 @@ After obtaining types in Elixir Types we can define merge function. Given two fi
 \begin{figure} [H]
    \[\begin{array}{rcll}
       L_1 \oplus \texttt{[\,]} &= & L_1 \\
-      L_1 \oplus \texttt{[}\,\ETK\fto\tau,\,\,L_2\texttt{]} &=& L_1 \oplus L_2 & \textsl{if }\ \ETK\in L_1 \\
-      L_1 \oplus \texttt{[}\,\ETK\fto\tau,\,\,L_2 \texttt{]} &=& \texttt{[}\,\ETK\fto\tau,\,\,L_1\texttt{]}\oplus L_2  & \textsl{if }\ \ETK\not\in L_1 \\
+      L_1 \oplus \texttt{[}\,\ETK\fto\tau,\,\,L_2\,\texttt{]} &=& L_1 \oplus L_2 & \textsl{if }\ \ETK\in L_1 \\
+      L_1 \oplus \texttt{[}\,\ETK\fto\tau,\,\,L_2\,\texttt{]} &=& \texttt{[}\,\ETK\fto\tau,\,\,L_1\texttt{]}\oplus L_2  & \textsl{if }\ \ETK\not\in L_1 \\
+      L_1 \oplus L_2 &=& \textsl{undefined} & \textsl{otherwise}
       \end{array}\]
    \caption{Merge in Field Types}
    \label{app:merge-in-field-types}
@@ -283,7 +284,7 @@ The top function type is a set of all the possible functions, that is, unions of
 \end{figure}
 
 Elixir Types provides the semantically same type, \texttt{fun()}, which enables the direct translation for \texttt{\fun{\dots}{any()}},
-although, Elixir Types does not directly define \texttt{fun()} as Figure~\ref{app:top-function-type}, due to the triviality of defining the list of function with all the possible arity, and the cost of defining and having all the function types which expand to maximum arity of 255.
+although, Elixir Types does not directly define \texttt{fun()} as Figure~\ref{app:top-function-type}, due to the triviality of defining the list of functions with all the possible arity, and the cost of defining and having all the function types which expand to maximum arity of 255.
 Nonetheless, the fundamental difference in allowance from TypeSpecs, i.e., letting to specify the codomain of a function type, brings subtypes of the top function type on approximation.
 
 The approximation is rather simple because the leniency in expressiveness is proven to be trivial in practice for several reasons.
@@ -347,9 +348,9 @@ Finally, we can write the total merge function with the approximation:
 \begin{figure} [H]
    \[\begin{array}{rcll}
       L_1 \oplus \texttt{[\,]} &= & L_1 \\
-      L_1 \oplus \texttt{[}\,\ETK\fto\tau,\,\,L_2\texttt{]} &=& L_1 \oplus L_2 & \textsl{if }\ \ETK\in L_1 \textsl{ and } \ETK \neq \texttt{:$k$} \\
+      L_1 \oplus \texttt{[}\,\ETK\fto\tau,\,\,L_2\texttt{]} &=& L_1 \oplus L_2 & \textsl{if }\ \ETK\in L_1\\
       L_1 \oplus \texttt{[}\,\ETK\fto\tau,\,\,L_2 \texttt{]} &=& \texttt{[}\,\ETK\fto\tau,\,\,L_1\texttt{]}\oplus L_2  & \textsl{if }\ \ETK\not\in L_1 \\
-      L_1 \oplus \texttt{[}\,\ETK\fto\tau,\,\,L_2 \texttt{]} &=& \texttt{[}\,\ETK\texttt{ and not\,\,:$k$}\fto\tau,\,\,L_1\texttt{]}\oplus L_2  & \textsl{if }\ \texttt{:$k$} \in L_1 \\
+      L_1 \oplus \texttt{[}\,\ETK\fto\tau,\,\,L_2 \texttt{]} &=& \texttt{[}\,\ETK\texttt{ and not\,\,:$k$}\fto\tau,\,\,L_1\texttt{]}\oplus L_2  & \textsl{if }\ \ETK = \texttt{atom()} \textsl{ and } \texttt{:$k$} \in L_1 \\
       L_1 \oplus \texttt{[}\,S\fto\tau,\,\,L_2 \texttt{]} &=& \texttt{[}\,S\fto\tau \texttt{ or }\tau^s,\,\,L_1\texttt{]}\oplus L_2  & \textsl{if }\ s \in L_1 \textsl{ and } s \neq \texttt{:$k$}\\
       \end{array}\]
    \caption{Total Merge in Field Types}

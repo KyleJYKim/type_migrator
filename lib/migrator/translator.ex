@@ -256,6 +256,8 @@ defmodule Migrator.Translator do
     parsed_spec_tree |> Enum.map(total_translator)
   end
 
+  defp approximate_spec()
+
   defp assemble_elixir_type(translated_spec_list) do
 
     type_grouping = fn type, acc ->
