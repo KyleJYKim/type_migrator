@@ -343,15 +343,22 @@ Which is invalid in Elixir Types. Therefore in addition to Figure~\ref{app:appro
 In the all cases, the best we can do is to over-approximate the singleton key types to their super types existing in key types, and then unify their value types with the proceeding field's value types instead of overwriting them.
 Although this will lose the precision that singleton types provide, the advantage of this approximation is while achieving simplicity of the type system, it can also maintain its overall meaning and soundness.
 
+Finally, let us consider the case no merge is required but the approximation is.
+That is when the translation of each field yields undefined.
+The best option here is still to over-approximate it to a key type of which the type is a subtype.
+On top of that, we can intersect \texttt{dynamic()} to the over-approximated key type to semantically display its subtype nature.
+
 Finally, we can write the total merge function with the approximation:
 
 \begin{figure} [H]
    \[\begin{array}{rcll}
       L_1 \oplus \texttt{[\,]} &= & L_1 \\
-      L_1 \oplus \texttt{[}\,\ETK\fto\tau,\,\,L_2\texttt{]} &=& L_1 \oplus L_2 & \textsl{if }\ \ETK\in L_1\\
+      L_1 \oplus \texttt{[}\,\ETK\fto\tau,\,\,L_2\texttt{]} &=& L_1 \oplus L_2 & \textsl{if }\ \ETK\in L_1 \\
       L_1 \oplus \texttt{[}\,\ETK\fto\tau,\,\,L_2 \texttt{]} &=& \texttt{[}\,\ETK\fto\tau,\,\,L_1\texttt{]}\oplus L_2  & \textsl{if }\ \ETK\not\in L_1 \\
-      L_1 \oplus \texttt{[}\,\ETK\fto\tau,\,\,L_2 \texttt{]} &=& \texttt{[}\,\ETK\texttt{ and not\,\,:$k$}\fto\tau,\,\,L_1\texttt{]}\oplus L_2  & \textsl{if }\ \ETK = \texttt{atom()} \textsl{ and } \texttt{:$k$} \in L_1 \\
-      L_1 \oplus \texttt{[}\,S\fto\tau,\,\,L_2 \texttt{]} &=& \texttt{[}\,S\fto\tau \texttt{ or }\tau^s,\,\,L_1\texttt{]}\oplus L_2  & \textsl{if }\ s \in L_1 \textsl{ and } s \neq \texttt{:$k$}\\
+      L_1 \oplus \texttt{[}\,s\fto\tau,\,\,L_2\texttt{]} &=& L_1 \oplus L_2 & \textsl{if }\ S \in L_1 \\
+      L_1 \oplus \texttt{[}\,\ETK\fto\tau,\,\,L_2 \texttt{]} &=& \texttt{[}\,\ETK\texttt{ and not\,\,:$k$}\fto\tau,\,\,L_1\texttt{]}\oplus L_2  & \textsl{if }\ \texttt{:$k$} \in L_1 \textsl{ and } \ETK = \texttt{atom()} \\
+      L_1 \oplus \texttt{[}\,S\fto\tau,\,\,L_2 \texttt{]} &=& \texttt{[}\,S\fto\tau \texttt{ or }\tau^s,\,\,L_1\texttt{]}\oplus L_2  & \textsl{if }\ s \in L_1 \textsl{ and } s \neq \texttt{:$k$} \\
+      \texttt{[}\, L_1,\,\,s\fto\tau,\,\,L_2\texttt{]} &=& \texttt{[}\, L_1,\,\,\ETK^s\texttt{ and dynamic()}\fto\tau,\,\,L_2\texttt{]} & \textsl{otherwise} \\
       \end{array}\]
    \caption{Total Merge in Field Types}
    \label{app:total-merge-in-field-types}
