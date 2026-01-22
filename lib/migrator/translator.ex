@@ -270,8 +270,10 @@ defmodule Migrator.Translator do
     map_list |> Enum.reduce([],
     fn {status, k, v}, acc ->
       case status do
-        :defined -> # TO BE CODED!!
-        :undefined ->
+        # L1 + [K=>t, L2]
+        :defined -> if acc |> Enum.any?(), do: acc, else: acc ++ {k, v}
+        # L1 + [s=>t, L2]; [:k=>t, L1] + [K=>t, L2]; [s=>t, L1] + [S=>t, L2]
+        #:undefined -> BEFORE THIS, LET'S CHANGE AND USE DESCR!! :P
       end
     end)
   end
