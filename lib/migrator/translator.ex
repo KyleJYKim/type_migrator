@@ -84,8 +84,8 @@ defmodule Migrator.Translator do
         # only to mark the final recursive iolist type
         {:last_iolist, _, _} -> {:iolist, [], []}
 
-        {:keyword, _, _} -> [{{:atom, [], []}, {:any, [], []}}]
         {:keyword, [], [type]} -> [{{:atom, [], []}, type}]
+        {:keyword, _, _} -> [{{:atom, [], []}, {:any, [], []}}]
         {:mfa, _, _} -> {:{}, [], [{:module, [], []}, {:atom, [], []}, {:arity, [], []}]}
         {:module, _, _} -> {:atom, [], []}
         {:no_return, _, _} -> {:none, [], []}
@@ -184,12 +184,12 @@ defmodule Migrator.Translator do
                 key_type = k |> translator_fun.()
                 val_type = v |> translator_fun.()
                 if key_type in key_types do
-                  {:defined, key_type, value_type}
+                  {:defined, key_type, val_type}
                 else
-                  {:undefined, key_type, value_type}
+                  {:undefined, key_type, val_type}
                 end
               end)
-              map_list = approximate_spec({:field, map_list})
+              map_list = approximate_spec(:field, map_list)
               "%{#{map_list}}"
           end
         )
@@ -266,16 +266,12 @@ defmodule Migrator.Translator do
   end
 
   defp approximate_spec(:top_function), do: "dynamic(fun())"
-  defp approximate_spec(:field, map_list) do
-    map_list |> Enum.reduce([],
-    fn {status, k, v}, acc ->
-      case status do
-        # L1 + [K=>t, L2]
-        :defined -> if acc |> Enum.any?(), do: acc, else: acc ++ {k, v}
-        # L1 + [s=>t, L2]; [:k=>t, L1] + [K=>t, L2]; [s=>t, L1] + [S=>t, L2]
-        #:undefined -> BEFORE THIS, LET'S CHANGE AND USE DESCR!! :P
-      end
-    end)
+  defp approximate_spec(:field, map_list), do: map_list |> Enum.reduce([], fn {status, k, v}, acc -> merge_fields(status, acc, k, v) end)
+
+  defp merge_fields(:defined, L1, k, v), do: (if L1 |> Enum.any?(), do: L1, else: L1 ++ [{k, v}])
+  defp merge_fields(:undefined, L1, k, v) do
+    # BEFORE DEFINING THIS, LET'S CHANGE AND USE DESCR!!!
+    L1
   end
 
   defp assemble_elixir_type(translated_spec_list) do
