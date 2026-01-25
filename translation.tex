@@ -172,7 +172,9 @@ After obtaining types in Elixir Types we can define merge function. Given two fi
    \[\begin{array}{rcll}
       L_1 \oplus \texttt{[\,]} &= & L_1 \\
       L_1 \oplus \texttt{[}\,\ETK\fto\tau,\,\,L_2\,\texttt{]} &=& L_1 \oplus L_2 & \textsl{if }\ \ETK\in L_1 \\
-      L_1 \oplus \texttt{[}\,\ETK\fto\tau,\,\,L_2\,\texttt{]} &=& \texttt{[}\,\ETK\fto\tau,\,\,L_1\texttt{]}\oplus L_2  & \textsl{if }\ \ETK\not\in L_1 \\
+      L_1 \oplus \texttt{[}\,\ETK\fto\tau,\,\,L_2\,\texttt{]} &=& \texttt{[}\,\ETK\fto\tau,\,\,L_1\texttt{]} \oplus L_2  & \textsl{if }\ \ETK\not\in L_1 \\
+      L_1 \oplus \texttt{[}\,\texttt{:$k$}\fto\tau,\,\,L_2\,\texttt{]} &=& L_1 \oplus L_2 & \textsl{if }\ \ETK\in L_1 \textsl{ and } \ETK \neq \texttt{:$k$}\\
+      L_1 \oplus \texttt{[}\,\ETK\fto\tau,\,\,L_2\,\texttt{]} &=& \texttt{[}\,\ETK \texttt{ and not :$k$}\fto\tau,\,\,L_1\texttt{]} \oplus L_2 & \textsl{if }\ \texttt{:$k$} \in L_1 \textsl{ and } \ETK \neq \texttt{:$k$}\\
       L_1 \oplus L_2 &=& \textsl{undefined} & \textsl{otherwise}
       \end{array}\]
    \caption{Merge in Field Types}
@@ -183,12 +185,9 @@ Notice that merging naturally reverses the order of field types, that is because
 
 We then finally define \textsf{map($L$)} as the map type whose field list is $L$. Then we have $\dsb{\map{\texttt{\TSF$_1$,\,...,\,\TSF$_n$}}} =\textsf{\textsl{map}($\bigoplus_{i=1}^{n}\dsb{\TSF_i}$)}$. If we want a saturated map type (i.e., a map type that specifies all the possible key types), then we have $\dsb{\map{\texttt{\TSF$_1$,\,...,\,\TSF$_n$}}} =\textsf{\textsl{map}($\bigoplus_{i=1}^{n}\dsb{\TSF_i}\oplus\texttt{Empty}$)}$.
 
-In spite of the whole translation process we have completed, there are two missing parts to be complemented: merging of field types with their left-hand side undefined and that being a singleton atom type.
-While the former is naturally agreed to have no direct translation hence requires approximation, one might argue that the latter should be fully addressed in the translation part.
-This argument is solid and true, but we are passing this matter to the approximation.
-That is because the both to-be-dealt cases share the common ground that they are literal types or else called singleton types.
-Therefore, it is easier and more efficient to treat them in the same manner as subtypes except the fact that \texttt{:$k$} will eventually appear in fields as it is one of the actual key types of Elixir Types.
-
+In spite of the whole translation process we have completed, there are two missing parts to be complemented: merging of field types with their left-hand side undefined and that being union types.
+Even though they share the nature of joint sets with \texttt{atom()} and \texttt{:$k$}, the former of to-be-approximated is non-existential in key types of Elixir Types and the latter has to be treated one by one within its union(s).
+Therefore, the proceeding section extends this merge function for the undefined.
 
 \section{Total Approximating Translation of TypeSpecs into Elixir Types}
 
@@ -311,65 +310,51 @@ One small problem is that this approximation will blunt the specification, hence
 \subsection{Approximation of Field Types}
 
 Let us deal with the merging case when left-hand sides of two field types are not disjoint.
-This also involves the case when a required key type in TypeSpecs is translated into \texttt{:$k$} since it is one of the literal types that are subtypes of key types of Elixir Types.
-To define the approximation, let $s$ ranges over all the singleton types and let $S$ to be $\bigcup_{i\in I}s_i$ which represents any set of unions of singleton types or simply a key type in Elixir Types.
+This involves two cases: firstly, when a key type in TypeSpecs is a singleton type; secondly, when it is either a union of two or unions of more than two types.
+The first case breaks into two other semi-cases that are when translating a singleton atom type and others such as singleton types of binary, interval, and empty-list.
+
+To define the approximation of field types for singleton types, let $s$ represent any singleton types except singleton atom types..
+Hence, an $s$ is a subtype of a $\ETK$ from Elixir Types, i.e., $s$ $\leq$ $\ETK$, e.g., \texttt{1..3} is a subtype of \texttt{integer()}.
+In addition, we define $\ETK^s$ to describe when $s$ is promoted to their supertypes, and the same applies to their right-hand side type, $\tau^s$, accordingly.
 In extension to the merge function in Figure~\ref{app:merge-in-field-types}:
 
 \begin{figure} [H]
    \[\begin{array}{rcll}
-      L_1 \oplus \texttt{[}\,s\fto\tau,\,\,L_2\texttt{]} &=& L_1 \oplus L_2 & \textsl{if }\ S \in L_1 \\
-      L_1 \oplus \texttt{[}\,S\fto\tau,\,\,L_2 \texttt{]} &=& \texttt{[}\,S\texttt{ and not\,\,$s$}\fto\tau,\,\,L_1\texttt{]}\oplus L_2  & \textsl{if }\ \texttt{$s$} \in L_1 \\
-      \end{array}\]
-   \caption{Approximated Merge in Field Types}
-   \label{app:approximated-merge-in-field-types}
+      \texttt{[}\,s\fto\tau\texttt{]} \oplus \texttt{[\,]} &=& \texttt{[}\,\ETK^s\fto\tau\texttt{]} \\
+      L_1 \oplus \texttt{[}\,s\fto\tau,\,\,L_2\texttt{]} &=& L_1 \oplus L_2 & \textsl{if }\ \ETK \in L_1 \\
+      L_1 \oplus \texttt{[}\,s\fto\tau,\,\,L_2\texttt{]} &=& \texttt{[}\,\ETK^s\fto\tau,\,\,L_1\texttt{]}\oplus L_2 & \textsl{if }\ \ETK \not\in L_1 \\
+      L_1 \oplus \texttt{[}\,\ETK\fto\tau,\,\,L_2 \texttt{]} &=& \texttt{[}\,\ETK\fto\tau \texttt{ or }\tau^s,\,\,L_1 \texttt{ and not } \ETK^s\fto\tau^s\texttt{]} \oplus L_2  & \textsl{if }\ \ETK^s \in L_1 \\
+   \end{array}\]
+   \caption{Approximated Merge in Field Types for Singletons}
+   \label{app:approximated-merge-in-field-types-for-singletons}
 \end{figure}
 
-This works, for instance, when attempted merging a singleton atom type with \texttt{atom()} and vice versa.
-Since a singleton atom type is a subtype of unions of all the atom types, if a field type with \texttt{:$k$} comes before the next field type with \texttt{atom()} at their left-hand sides, the former field does not fully take precedence over the latter field but only the single type that is itself.
-On the other hand, if a field type with \texttt{atom()} comes before a \texttt{:$k$}, the former takes full-priority over the latter. 
+As you can see, the reason why we distinguish the promoted types from those not is to leave the intention of using the singleton types in TypeSpecs that are deprecated in Elixir Types while maintaining the soundness.
 
-Notwithstanding the fact that it all works on atom types, the second line of Figure~\ref{app:approximated-merge-in-field-types} is incompatible with other singleton types.
-For example, translating \map{\texttt{1..3\,\,=>\,\,float(), integer()\,\,=>\,\,integer()}} requires approximated merge function, but with the definition in Figure~\ref{app:approximated-merge-in-field-types}, it results in \map{\texttt{integer() and not 1..3\,\,=>\,\,integer(), 1..3\,\,=>\,\,float()}}.
-Which is invalid in Elixir Types. Therefore in addition to Figure~\ref{app:approximated-merge-in-field-types}:
+This works, for instance, when attempted merging \texttt{1..3\,\,=>\,\,float()} and \texttt{integer()\,\,=>\,\,integer()}.
+The first merge occurs with \texttt{1..3\,\,=>\,\,float()} and an empty list which is the first case of every merging.
+Then it produces \texttt{integer()$^s$\,\,=>\,\,float()$^s$}, and consecutively merges with \texttt{integer()\,\,=>\,\,integer()}.
+This results in \texttt{integer() => float()$^s$ or integer()}. Keep in mind that the superscript $s$ does not appear in the final result for users.
+
+On top of the definition for singleton types, approximation for union types as key types can be defined in the similar way.
+Most of the translation with union types are done with the basic translation, and yet it requires approximation when union types partially overlaps.
+For this special case, let $U$ be a key type or union types, and let $u$ be a type that is joint with $U$, hence $U = \bigcap_{i\in I}u_i$. 
 
 \begin{figure} [H]
    \[\begin{array}{rcll}
-      L_1 \oplus \texttt{[}\,S\fto\tau,\,\,L_2 \texttt{]} &=& \texttt{[}\,S\fto\tau \texttt{ or }\tau^s,\,\,L_1\texttt{]}\oplus L_2  & \textsl{if }\ s \in L_1 \\
-      \end{array}\]
-   \caption{Approximated Merge with Singleton Key Types}
-   \label{app:approximated-merge-with-singleton-key-types}
+      %L_1 \oplus \texttt{[}\,u\fto\tau,\,\,L_2\texttt{]} &=& L_1 \oplus L_2 & \textsl{if }\ u \in L_1 \\
+      L_1 \oplus \texttt{[}\,U\fto\tau,\,\,L_2\texttt{]} &=& \texttt{[}\,U \texttt{ and not } u\fto\tau,\,\,L_1\texttt{]}\oplus L_2 & \textsl{if }\ u \in L_1 \\
+   \end{array}\]
+   \caption{Approximated Merge in Field Types for Unions}
+   \label{app:approximated-merge-in-field-types-for-unions}
 \end{figure}
 
-In the all cases, the best we can do is to over-approximate the singleton key types to their super types existing in key types, and then unify their value types with the proceeding field's value types instead of overwriting them.
-Although this will lose the precision that singleton types provide, the advantage of this approximation is while achieving simplicity of the type system, it can also maintain its overall meaning and soundness.
+Take a union type like \texttt{pid()\,\,=>\,\,binary()}, which is in $L_1$, to merge it with \texttt{pid() | port() | reference()\,\,=>\,\,atom()}. 
+This results in \texttt{[port() | reference()\,\,=>\,\,atom(), pid()\,\,=>\,\,binary()]} byt the definition.
 
-Finally, we can write the total merge function with the approximation:
-
-\begin{figure} [H]
-   \[\begin{array}{rcll}
-      L_1 \oplus \texttt{[\,]} &= & L_1 \\
-      L_1 \oplus \texttt{[}\,\ETK\fto\tau,\,\,L_2\texttt{]} &=& L_1 \oplus L_2 & \textsl{if }\ \ETK\in L_1 \\
-      L_1 \oplus \texttt{[}\,\ETK\fto\tau,\,\,L_2 \texttt{]} &=& \texttt{[}\,\ETK\fto\tau,\,\,L_1\texttt{]}\oplus L_2  & \textsl{if }\ \ETK\not\in L_1 \\
-      L_1 \oplus \texttt{[}\,s\fto\tau,\,\,L_2\texttt{]} &=& L_1 \oplus L_2 & \textsl{if }\ S \in L_1 \\
-      L_1 \oplus \texttt{[}\,\ETK\fto\tau,\,\,L_2 \texttt{]} &=& \texttt{[}\,\ETK\texttt{ and not\,\,:$k$}\fto\tau,\,\,L_1\texttt{]}\oplus L_2  & \textsl{if }\ \texttt{:$k$} \in L_1 \textsl{ and } \ETK = \texttt{atom()} \\
-      L_1 \oplus \texttt{[}\,S\fto\tau,\,\,L_2 \texttt{]} &=& \texttt{[}\,S\fto\tau \texttt{ or }\tau^s,\,\,L_1\texttt{]}\oplus L_2  & \textsl{if }\ s \in L_1 \textsl{ and } s \neq \texttt{:$k$} \\
-      \end{array}\]
-   \caption{Total Merge in Field Types}
-   \label{app:total-merge-in-field-types}
-\end{figure}
-
-After finished with the total merge, there could remain field types where the translation of each field yielded undefined and no merge occurred.
-The best option here is to over-approximate them to key types of which the types are subtypes.
-On top of that, we can intersect \texttt{dynamic()} to the approximated key types to semantically display their subtype nature.
-
-\begin{figure} [H]
-   \[\begin{array}{rcl}
-      \texttt{[}\, L_1,\,\,s\fto\tau,\,\,L_2\texttt{]} &=& \texttt{[}\, L_1,\,\,\ETK^s\texttt{ and dynamic()}\fto\tau,\,\,L_2\texttt{]}\\
-      \end{array}\]
-   \caption{Over-approximation in Field Types}
-   \label{app:over-approximation-in-field-types}
-\end{figure}
-
+The approximations we have defined could seem verbose. 
+Eventually what necessitated this approximation are the subtle differences that come from need of type promotion for singleton types and of clear definition for union types.
+Which, therefore, have been addressed clearly so far.
 
 %%% APPROXIMATION EXAMPLES %%%
 
