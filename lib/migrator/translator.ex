@@ -8,9 +8,15 @@ defmodule Migrator.Translator do
   3. Parse TypeSpecs
   4. Translate TypeSpecs to Elixir Types
   5. Assemble Elixir Types
+
+  Example in iex:
+    import Migrator.Translator
+    "lib/ex2.ex" |> process
+
   """
 
   # alias Structure.TypespecInfo, as: TsInfo
+  import Module.Types.Descr
 
   def process(path) do
 
@@ -141,112 +147,97 @@ defmodule Migrator.Translator do
       translator_fun = &translator_fun.(&1, translator_fun)
       case type_node do
         # Remote module type (e.g., String.t())
-        {{:., _, [{_, _, module_list}, type]}, _, _} -> (
-          module = module_list |> Enum.reduce("", fn x, acc -> module = Atom.to_string(x)
+        {{:., _, [{_, _, modules}, type]}, _, _} -> (
+          module = modules |> Enum.reduce("", fn x, acc -> module = Atom.to_string(x)
             if acc == "", do: module, else: acc <> "." <> module end)
-          module <> "." <> (type |> translator_fun.()) <> "()"
+          :"#{module}.#{type |> translator_fun.()}()"
         )
 
         # Type | Type
-        {:|, _, [left, right]} -> (left |> translator_fun.()) <> " or " <> (right |> translator_fun.())
+        {:|, _, [left, right]} -> {:union, {left |> translator_fun.(), right |> translator_fun.()}}
 
         # {Type} (Tuple)
-        {:{}, _, tuple_list} -> (
-          tuple_list = tuple_list |> Enum.reduce("",
-          fn x, acc -> element = (x |> translator_fun.())
-            if acc == "", do: element, else: acc <> ", " <> element
-          end)
-          "{#{tuple_list}}"
-        )
-        # {Tuple-with-two-elements}
-        {elem1, elem2} -> (
-          tuple_list = [elem1, elem2] |> Enum.reduce("",
-          fn x, acc -> element = (x |> translator_fun.())
-            if acc == "", do: element, else: acc <> ", " <> element
-          end)
-          "{#{tuple_list}}"
-        )
+        {:{}, _, elements} -> {:tuple, elements |> Enum.reduce([], fn x, acc -> acc ++ (x |> translator_fun.()) end)}
+
+        # {Tuple} (two-elements}
+        {elem1, elem2} -> {:tuple, [elem1, elem2] |> Enum.reduce([], fn x, acc -> acc ++ (x |> translator_fun.()) end)}
 
         # %{..., F_seq} (Map)
-        {:%{}, _, map_list} -> (
-          key_types = {"atom()", "pid()", "port()", "reference()", "float()", "integer()", "bitstring()", "binary()", "tuple()", "open_map()", "fun()", "list()"}
+        {:required, _, [key_type]} -> key_type |> translator_fun.()
+        {:optional, _, [key_type]} -> key_type |> translator_fun.()
+        {:%{}, _, fields} -> (
+          key_types = {:atom, :pid, :port, :reference, :float, :integer, :bitstring, :binary, :tuple, :open_map, :fun, :list}
 
-          case map_list do
-            [{:__struct__, name} | struct_list] ->
-              struct_list = struct_list |> Enum.reduce("",
-              fn {k, v}, acc -> field = (k |> translator_fun.()) <> " => " <> (v |> translator_fun.())
-                if acc == "", do: field, else: acc <> ", " <> field
-              end)
-              "%#{name}{#{struct_list}}"
-            _ ->
-              map_list = map_list |> Enum.map(
-              fn {k, v} ->
-                key_type = k |> translator_fun.()
-                val_type = v |> translator_fun.()
-                if key_type in key_types do
-                  {:defined, key_type, val_type}
-                else
-                  {:undefined, key_type, val_type}
+          fields_merged = fields |> Enum.map(fn {k, v} ->
+              key_type = k |> translator_fun.()
+              val_type = v |> translator_fun.()
+              evaluator = fn key_type, evaluator ->
+                case key_type do
+                  {:union, {left, right}} ->
+                    {:union, {{left |> evaluator.(evaluator), right |> evaluator.(evaluator)}, {:if_set, val_type}}}
+                  {:atom, _} ->
+                    {:defined, {key_type, val_type}}
+                  {type, _} ->
+                    type |> evaluator.(evaluator)
+                  _ ->
+                    if key_type in key_types, do: {:defined, {key_type, {:if_set, val_type}}}, else: {:undefined, {key_type, {:if_set, val_type}}}
                 end
-              end)
-              map_list = approximate_spec(:field, map_list)
-              "%{#{map_list}}"
-          end
+              end
+              key_type |> evaluator.(evaluator)
+            end) |> merge_total()
+
+          {:open_map, fields_merged}
         )
-        # APPLY translation and approximation
-        {:required, _, [type]} -> (type |> translator_fun.())
-        {:optional, _, [type]} -> (type |> translator_fun.())
 
         # [] (empty list)
-        [] -> "empty_list()"
+        [] -> :empty_list
         # [type] or [type, ...] (non-empty list)
-        {:nonempty_maybe_improper_list, _, [type, []]} -> "non_empty_list(#{type |> translator_fun.()}, empty_list())"
+        {:nonempty_maybe_improper_list, _, [type, []]} -> {:non_empty_list, type |> translator_fun.()}
 
         # <<_::n, _::_*n>>
-        {:<<>>, _, [{:"::", _, [_, digit1]}, {:"::", _, [_, {:*, _, [_, digit2]}]}]} -> (
-          if Integer.mod(digit1, 8) == 0 and Integer.mod(digit2, 8) == 0, do: "binary()", else: "bitstring()"
-        )
+        {:<<>>, _, [{:"::", _, [_, digit1]}, {:"::", _, [_, {:*, _, [_, digit2]}]}]} ->
+          if Integer.mod(digit1, 8) == 0 and Integer.mod(digit2, 8) == 0, do: :binary, else: :bitstring
+
         # <<_::_*n>>
-        {:<<>>, _, [{:"::", _, [_, {:*, _, [_, digit]}]}]} -> (
-          if Integer.mod(digit, 8) == 0, do: "binary()", else: "bitstring()"
-        )
+        {:<<>>, _, [{:"::", _, [_, {:*, _, [_, digit]}]}]} ->
+          if Integer.mod(digit, 8) == 0, do: :binary, else: :bitstring
+
         # <<_::n>>
-        {:<<>>, _, [{:"::", _, [_, digit]}]} -> (
-          if Integer.mod(digit, 8) == 0, do: "binary()", else: "bitstring()"
-        )
+        {:<<>>, _, [{:"::", _, [_, digit]}]} ->
+          if Integer.mod(digit, 8) == 0, do: :binary, else: :bitstring
+
         # <<>>
-        {:<<>>, _, _} -> "bitstring()"
+        {:<<>>, _, _} -> :bitstring
 
         # (... -> Type)
-        {:->, _, [:..., right]} -> (
-          right = right |> translator_fun.()
-          if right == "term()", do: "fun()", else: approximate_spec(:top_function)
-        )
+        {:->, _, [:..., return]} ->
+          if return |> translator_fun.() == :term, do: :fun_top, else: approximate_top_fun()
+
         # (Type_seq} -> Type)
-        {:->, _, [left, right]} -> "(" <> (left |> translator_fun.()) <> " -> " <> (right |> translator_fun.()) <> ")"
+        {:->, _, [arguments, return]} -> {:fun, {arguments |> translator_fun.(), return |> translator_fun.()}}
 
         # n..n'
-        {:.., _, [left, right]} -> left <> "--" <> right
+        {:.., _, [digit_l, digit_r]} -> {:interval, {digit_l, digit_r}}
 
         # n (integer singleton types)
-        digit when is_integer(digit) -> "#{digit}--#{digit}"
+        digit when is_integer(digit) -> {:interval, {digit, digit}}
 
         # :k (atom singleton types)
-        atom when is_atom(atom) -> ":" <> Atom.to_string(atom) #|> IO.inspect(label: "ATOM")
+        atom when is_atom(atom) -> {:atom, atom} #|> IO.inspect(label: "ATOM")
 
         # Simple form of basic types (any(), none(), atom(), pid(), port(), reference(), float(), integer(), neg_integer(), non_neg_integer(), pos_integer(), tuple())
         {type, _, []} -> (
           case type do
-            :any -> "term()"
-            :neg_integer -> "#{:infty}--#{-1}"
-            :non_neg_integer -> "#{0}--#{:infty}"
-            :pos_integer -> "#{1}--#{:infty}"
-            _ -> Atom.to_string(type) <> "()"
+            :any -> :term
+            :neg_integer -> {:interval, {:infty, -1}}
+            :non_neg_integer -> {:interval, {0, :infty}}
+            :pos_integer -> {:interval, {1, :infty}}
+            _ -> type
           end
         )
 
         # Type variable
-        {type, _, _} -> Atom.to_string(type)
+        {type, _, _} -> type
 
       end)
     end
@@ -265,14 +256,47 @@ defmodule Migrator.Translator do
     parsed_spec_tree |> Enum.map(total_translator)
   end
 
-  defp approximate_spec(:top_function), do: "dynamic(fun())"
-  defp approximate_spec(:field, map_list), do: map_list |> Enum.reduce([], fn {status, k, v}, acc -> merge_fields(status, acc, k, v) end)
+  defp merge_total(fields) do
 
-  defp merge_fields(:defined, L1, k, v), do: (if L1 |> Enum.any?(), do: L1, else: L1 ++ [{k, v}])
-  defp merge_fields(:undefined, L1, k, v) do
-    # BEFORE DEFINING THIS, LET'S CHANGE AND USE DESCR!!!
-    L1
+    basic_merging = fn {key_type_l1, val_type_l1}, {key_type, val_type} ->
+
+    end
+
+    approximated_merging = fn {key_type_l1, val_type_l1}, {key_type, val_type} ->
+
+    end
+
+    total_merging = fn field_with_status, L1 ->
+      {field_new, L1} = L1 |> Enum.reduce({[], field_with_status}, fn {key_type_l1, val_type_l1}, {L1_acc, {field_status, field}} ->
+        {field_new, field_l1_new} = case {key_type_l1, field_status} do
+          {{:supertyped, _}, _} ->
+            {key_type_l1, val_type_l1} |> approximated_merging.(field)
+          {_, :undefined} ->
+            {key_type_l1, val_type_l1} |> approximated_merging.(field)
+          {_, :union} ->
+            {key_type_l1, val_type_l1} |> approximated_merging.(field)
+          {_, :defined} ->
+            {key_type_l1, val_type_l1} |> basic_merging.(field)
+        end
+        {{field_status, field_new}, L1_acc ++ [field_l1_new]}
+      end)
+      [field_new | L1]
+    end
+
+    # MAKE A CASE WHEN L1 IS EMPTY!!!
+    fields |> Enum.reduce([], fn field, L1 -> field |> total_merging.(Enum.reverse(L1)) end)
   end
+
+  defp approximate_merge(:undefined, L1, k, v) do
+    case k do
+      {:interval, _} -> (if L1 |> Enum.any?(), do: L1, else: L1 ++ [{k, v}])
+      {:atom, _} -> (if L1 |> Enum.any?(), do: L1, else: L1 ++ [{k, v}])
+    end
+    if L1 |> Enum.any?(), do: L1, else: L1 ++ [{k, v}]
+  end
+
+  defp approximate_top_fun(), do: {:gradual, :fun_top}
+
 
   defp assemble_elixir_type(translated_spec_list) do
 
@@ -365,3 +389,137 @@ defmodule Migrator.Translator do
     renamed_list |> IO.inspect |> Enum.map(assembler)
   end
 end
+
+
+
+# LATER FOR STRINGIFY
+# def translate_spec(parsed_spec_tree) do
+
+#     translator = fn type_node, translator_fun -> (
+
+#       translator_fun = &translator_fun.(&1, translator_fun)
+#       case type_node do
+#         # Remote module type (e.g., String.t())
+#         {{:., _, [{_, _, module_list}, type]}, _, _} -> (
+#           module = module_list |> Enum.reduce("", fn x, acc -> module = Atom.to_string(x)
+#             if acc == "", do: module, else: acc <> "." <> module end)
+#           module <> "." <> (type |> translator_fun.()) <> "()"
+#         )
+
+#         # Type | Type
+#         {:|, _, [left, right]} -> (left |> translator_fun.()) <> " or " <> (right |> translator_fun.())
+
+#         # {Type} (Tuple)
+#         {:{}, _, tuple_list} -> (
+#           tuple_list = tuple_list |> Enum.reduce("",
+#           fn x, acc -> element = (x |> translator_fun.())
+#             if acc == "", do: element, else: acc <> ", " <> element
+#           end)
+#           "{#{tuple_list}}"
+#         )
+#         # {Tuple-with-two-elements}
+#         {elem1, elem2} -> (
+#           tuple_list = [elem1, elem2] |> Enum.reduce("",
+#           fn x, acc -> element = (x |> translator_fun.())
+#             if acc == "", do: element, else: acc <> ", " <> element
+#           end)
+#           "{#{tuple_list}}"
+#         )
+
+#         # %{..., F_seq} (Map)
+#         {:%{}, _, map_list} -> (
+#           key_types = {"atom()", "pid()", "port()", "reference()", "float()", "integer()", "bitstring()", "binary()", "tuple()", "open_map()", "fun()", "list()"}
+
+#           case map_list do
+#             [{:__struct__, name} | struct_list] ->
+#               struct_list = struct_list |> Enum.reduce("",
+#               fn {k, v}, acc -> field = (k |> translator_fun.()) <> " => " <> (v |> translator_fun.())
+#                 if acc == "", do: field, else: acc <> ", " <> field
+#               end)
+#               "%#{name}{#{struct_list}}"
+#             _ ->
+#               map_list = map_list |> Enum.map(
+#               fn {k, v} ->
+#                 key_type = k |> translator_fun.()
+#                 val_type = v |> translator_fun.()
+#                 if key_type in key_types do
+#                   {:defined, key_type, val_type}
+#                 else
+#                   {:undefined, key_type, val_type}
+#                 end
+#               end)
+#               map_list = approximate_spec(:field, map_list)
+#               "%{#{map_list}}"
+#           end
+#         )
+#         # APPLY translation and approximation
+#         {:required, _, [type]} -> (type |> translator_fun.())
+#         {:optional, _, [type]} -> (type |> translator_fun.())
+
+#         # [] (empty list)
+#         [] -> "empty_list()"
+#         # [type] or [type, ...] (non-empty list)
+#         {:nonempty_maybe_improper_list, _, [type, []]} -> "non_empty_list(#{type |> translator_fun.()}, empty_list())"
+
+#         # <<_::n, _::_*n>>
+#         {:<<>>, _, [{:"::", _, [_, digit1]}, {:"::", _, [_, {:*, _, [_, digit2]}]}]} -> (
+#           if Integer.mod(digit1, 8) == 0 and Integer.mod(digit2, 8) == 0, do: "binary()", else: "bitstring()"
+#         )
+#         # <<_::_*n>>
+#         {:<<>>, _, [{:"::", _, [_, {:*, _, [_, digit]}]}]} -> (
+#           if Integer.mod(digit, 8) == 0, do: "binary()", else: "bitstring()"
+#         )
+#         # <<_::n>>
+#         {:<<>>, _, [{:"::", _, [_, digit]}]} -> (
+#           if Integer.mod(digit, 8) == 0, do: "binary()", else: "bitstring()"
+#         )
+#         # <<>>
+#         {:<<>>, _, _} -> "bitstring()"
+
+#         # (... -> Type)
+#         {:->, _, [:..., right]} -> (
+#           right = right |> translator_fun.()
+#           if right == "term()", do: "fun()", else: approximate_spec(:top_function)
+#         )
+#         # (Type_seq} -> Type)
+#         {:->, _, [left, right]} -> "(" <> (left |> translator_fun.()) <> " -> " <> (right |> translator_fun.()) <> ")"
+
+#         # n..n'
+#         {:.., _, [left, right]} -> left <> "--" <> right
+
+#         # n (integer singleton types)
+#         digit when is_integer(digit) -> "#{digit}--#{digit}"
+
+#         # :k (atom singleton types)
+#         atom when is_atom(atom) -> ":" <> Atom.to_string(atom) #|> IO.inspect(label: "ATOM")
+
+#         # Simple form of basic types (any(), none(), atom(), pid(), port(), reference(), float(), integer(), neg_integer(), non_neg_integer(), pos_integer(), tuple())
+#         {type, _, []} -> (
+#           case type do
+#             :any -> "term()"
+#             :neg_integer -> "#{:infty}--#{-1}"
+#             :non_neg_integer -> "#{0}--#{:infty}"
+#             :pos_integer -> "#{1}--#{:infty}"
+#             _ -> Atom.to_string(type) <> "()"
+#           end
+#         )
+
+#         # Type variable
+#         {type, _, _} -> Atom.to_string(type)
+
+#       end)
+#     end
+
+#     total_translator = fn {line_num, name, inputs, output, guards} -> (
+
+#       translation = &translator.(&1, translator)
+#       inputs = inputs |> Enum.map(translation)
+#       output = output |> translation.()
+#       guards = if guards == nil, do: nil, else: guards |> Enum.map(fn {k, v} -> Atom.to_string(k) <> ": " <> (v |> translation.()) end)
+
+#       #%TsInfo{name: name, inputs: inputs, output: output, guards: guards}
+#       {line_num, name, inputs, output, guards}
+#     )end
+
+#     parsed_spec_tree |> Enum.map(total_translator)
+#   end

@@ -31,3 +31,5 @@ type_migrator-*.tar
 /translation.fls
 /translation.log
 /translation.synctex.gz
+
+/.tool-versions

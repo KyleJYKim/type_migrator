@@ -352,7 +352,7 @@ For this special case, let $U$ be a key type or union types, and let $u$ be a ty
 \end{figure}
 
 To illustrate, take a union type like \texttt{pid()\,\,=>\,\,binary()}, which is in $L_1$, to merge it with \texttt{pid() | port() | reference()\,\,=>\,\,atom()}. 
-This results in \texttt{[port() | reference()\,\,=>\,\,atom(), pid()\,\,=>\,\,binary()]} byt the definition.
+This results in \texttt{[port() | reference()\,\,=>\,\,atom(), pid()\,\,=>\,\,binary()]} by the definition.
 
 There may be a few views that this seems verbose to break approximated merge function into two cases.
 Nevertheless, Eventually the facts that necessitated this approximation are the subtle differences that come from the need of type promotion for singleton types and that of clear definition for partial joint union types.
