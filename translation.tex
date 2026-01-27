@@ -167,14 +167,12 @@ First we define the translation of single field types. If $\ETK_1,...,\ETK_n$ ar
    \label{app:translation-in-field-types}
 \end{figure}
 
-After obtaining types in Elixir Types we can define merge function. Given two field lists $L_1$ and $L_2$, we write $L_1 \oplus L_2$ the list obtained by adding to $L_1$ all the fields elements $\ETK\fto\tau$ of $L_2$ such that $\ETK\not\in L_1$ and $\ETK\neq\texttt{:}k$. Formally:
+After obtaining types in Elixir Types we can define merge function. Given two field lists $L_1$ and $L_2$, we write $L_1 \oplus L_2$ the list obtained by adding to $L_1$ all the fields elements $\ETK\fto\tau$ of $L_2$. Formally:
 \begin{figure} [H]
    \[\begin{array}{rcll}
       L_1 \oplus \texttt{[\,]} &= & L_1 \\
       L_1 \oplus \texttt{[}\,\ETK\fto\tau,\,\,L_2\,\texttt{]} &=& L_1 \oplus L_2 & \textsl{if }\ \ETK\in L_1 \\
       L_1 \oplus \texttt{[}\,\ETK\fto\tau,\,\,L_2\,\texttt{]} &=& \texttt{[}\,\ETK\fto\tau,\,\,L_1\texttt{]} \oplus L_2  & \textsl{if }\ \ETK\not\in L_1 \\
-      L_1 \oplus \texttt{[}\,\texttt{:$k$}\fto\tau,\,\,L_2\,\texttt{]} &=& L_1 \oplus L_2 & \textsl{if }\ \ETK\in L_1 \textsl{ and } \ETK \neq \texttt{:$k$}\\
-      L_1 \oplus \texttt{[}\,\ETK\fto\tau,\,\,L_2\,\texttt{]} &=& \texttt{[}\,\ETK \texttt{ and not :$k$}\fto\tau,\,\,L_1\texttt{]} \oplus L_2 & \textsl{if }\ \texttt{:$k$} \in L_1 \textsl{ and } \ETK \neq \texttt{:$k$}\\
       L_1 \oplus L_2 &=& \textsl{undefined} & \textsl{otherwise}
       \end{array}\]
    \caption{Merge in Field Types}
@@ -185,24 +183,24 @@ Notice that merging naturally reverses the order of field types, that is because
 
 We then finally define \textsf{map($L$)} as the map type whose field list is $L$. Then we have $\dsb{\map{\texttt{\TSF$_1$,\,...,\,\TSF$_n$}}} =\textsf{\textsl{map}($\bigoplus_{i=1}^{n}\dsb{\TSF_i}$)}$. If we want a saturated map type (i.e., a map type that specifies all the possible key types), then we have $\dsb{\map{\texttt{\TSF$_1$,\,...,\,\TSF$_n$}}} =\textsf{\textsl{map}($\bigoplus_{i=1}^{n}\dsb{\TSF_i}\oplus\texttt{Empty}$)}$.
 
-In spite of the whole translation process we have completed, there are two missing parts to be complemented: merging of field types with their left-hand side undefined and that being union types.
-Even though they share the nature of joint sets with \texttt{atom()} and \texttt{:$k$}, the former of to-be-approximated is non-existential in key types of Elixir Types and the latter has to be treated one by one within its union(s).
-Therefore, the proceeding section extends this merge function for the undefined.
+In spite of the whole translation process we have completed, there are three missing parts to be complemented: the merge of undefined translation; that of atom singleton types; and that of union types.
+In particular, these are the cases when two elements of merge function are not a disjunction.
+Accordingly, the proceeding section further extends the merge function to completion. 
 
 \section{Total Approximating Translation of TypeSpecs into Elixir Types}
 
-The translation defined so far is partial since some TypeSpecs types do not have a corresponding type in Elixir Types. 
+The translation defined so far is partial since some TypeSpecs types do not have their exact corresponding types in Elixir Types. 
 This is not a weakness of the Elixir Types system, but rather a consequence of the design choices made for Elixir Types, to keep them as simple as possible while still being useful. 
-However, it is possible to define a total translation from types in TypeSpecs to ones in Elixir Types hence approximating the original types in TypeSpecs. 
-This total translation can be useful in some contexts, for example, when we want to ensure that every type in TypeSpecs can be represented in Elixir Types even approximately.
+However, it is possible to define a total translation from types in TypeSpecs to ones in Elixir Types by approximating the original types in TypeSpecs. 
+Total translation is useful in the context of migration, when we need to ensure that every type in TypeSpecs is represented in Elixir Types even approximately.
 
-More precisely, the previous translations are undefined in the following cases:
+More precisely, the previous translations are \textit{undefined} in the following cases:
 \begin{itemize}
    % \item Bitstrings with size specifications that are not a multiple of 8 bits (e.g., \texttt{<<\_::3>>}).
    \item $\dsb{\texttt{(\fun{\dots}{\TST})}}$: 
    the top function type when $\dsb{\TST}$ is not equivalent to \texttt{any()}.
    \item $\dsb{\texttt{required(\TST) => $\prm{\TST}$}}$ and $\dsb{\texttt{optional(\TST) => $\prm{\TST}$}}$: 
-   the field types when $\dsb{\TST}$ is equivalent to a singleton atom type or is not equivalent to a disjunction of pairwise distinct key types.
+   the field types when $\dsb{\TST}$ is not equivalent to a disjunction of pairwise distinct key types.
 \end{itemize}
 In the rest of this section we give a conservative extension of the translation defined so far that is total, i.e., it is defined for every type in TypeSpecs. 
 The extension consists in defining approximations for the cases where the previous translation is undefined.
@@ -309,11 +307,12 @@ One small problem is that this approximation will blunt the specification, hence
 
 \subsection{Approximation of Field Types}
 
-The merging case with disjoint left-hand sides does not only perform merge function but also conduct approximation of types in TypeSpecs that are smaller than key types in Elixir Types.
-That is because merge must take original intention of types in TypeSpecs into account, but if we compare types after approximation, in particular over-approximation, users' original aim could be deviated.
-Ultimately, approximated merging involves two cases: firstly, when a left-hand side type in TypeSpecs is smaller than any key types in Elixir Types; secondly, when it involves a union type.
+The merging case with conjunctive left-hand sides does not only perform merge function but also conduct approximation of types in TypeSpecs that are smaller than key types in Elixir Types.
+That is because merge must take original intention of types in TypeSpecs into account, but if we compare types after a single type approximation, in particular over-approximation, users' original aim could be deviated.
+Ultimately, approximated merging involves, from the introduced to-be-complemented three cases at the end of field translation, two cases in the bigger picture: firstly, when a left-hand side type in TypeSpecs is smaller than any key types in Elixir Types; secondly, when it involves either conjunctive union types, or singleton atom types with \texttt{atom()}.
+Tha is essentially because while the former has to perform over-approximation, the latter does not.
 
-To begin with defining the first case, let $s$ represent any types that are smaller than key types in Elixir Types.
+To begin with, let $s$ represent any types that are smaller than key types in Elixir Types.
 With that said, an $s$ becomes a subtype of its corresponding supertype $\ETK$ from Elixir Types, i.e., $s$ $\leq$ $\ETK$, e.g., \texttt{1..3} is a subtype of \texttt{integer()}.
 In addition, we define $\ETK^s$ to describe when $s$ is promoted to their lower-bound supertypes, and $\tau_s$ to indicate the right-hand side type of $\ETK^s$ in $L_1$.
 In extension to the merge function in Figure~\ref{app:merge-in-field-types}:
@@ -337,26 +336,21 @@ Consecutively, it merges with \texttt{integer()\,\,=>\,\,integer()}.
 This results in \texttt{integer() => float()$^s$ or integer()}. 
 Trivially, keep in mind that the superscript $s$ does not appear in the final result for users.
 
-Secondly, approximation for union types as key types could be defined in the similar way.
-And yet we do not specify extra approximation because most of the parts with union types are translated with the basic translation.
-Which merely leave us to define approximation when union types partially overlaps.
-For this special case, let $U$ be a key type or union types, and let $u$ be a type that is joint with $U$, hence $U = \bigcap_{i\in I}u_i$. 
+Secondly, approximation for singleton atom types and conjunctive union types as key types is defined in the similar way.
+Let us set $U$ which ranges over any key types and unions of any key types.
 
 \begin{figure} [H]
    \[\begin{array}{rcll}
-      %L_1 \oplus \texttt{[}\,u\fto\tau,\,\,L_2\texttt{]} &=& L_1 \oplus L_2 & \textsl{if }\ u \in L_1 \\
-      L_1 \oplus \texttt{[}\,U\fto\tau,\,\,L_2\texttt{]} &=& \texttt{[}\,U \texttt{ and not } u\fto\tau,\,\,L_1\texttt{]}\oplus L_2 & \textsl{if }\ u \in L_1 \\
+      L_1 \oplus \texttt{[}\,U\fto\tau,\,\,L_2\,\texttt{]} &=& L_1 \oplus L_2 & \textsl{if }\ U \leq U_{L1} \\
+      L_1 \oplus \texttt{[}\,U\fto\tau,\,\,L_2\,\texttt{]} &=& \texttt{[}\,U \texttt{ and not }U_{L1}\fto\tau,\,\,L_1\texttt{]} \oplus L_2 & \textsl{if }\ U_{L1} \leq U \textsl{ or } U_{L1} \cap U \leq U \\
    \end{array}\]
    \caption{Approximated Merge in Field Types for Unions}
    \label{app:approximated-merge-in-field-types-for-unions}
 \end{figure}
 
-To illustrate, take a union type like \texttt{pid()\,\,=>\,\,binary()}, which is in $L_1$, to merge it with \texttt{pid() | port() | reference()\,\,=>\,\,atom()}. 
-This results in \texttt{[port() | reference()\,\,=>\,\,atom(), pid()\,\,=>\,\,binary()]} by the definition.
+To illustrate, take a union type like \texttt{pid() | port()\,\,=>\,\,binary()}, which is in $L_1$, to merge it with \texttt{port() | reference()\,\,=>\,\,atom()}. 
+This results in \texttt{[reference()\,\,=>\,\,atom(), pid() or port()\,\,=>\,\,binary()]} by the definition.
 
-There may be a few views that this seems verbose to break approximated merge function into two cases.
-Nevertheless, Eventually the facts that necessitated this approximation are the subtle differences that come from the need of type promotion for singleton types and that of clear definition for partial joint union types.
-Which, therefore, have been addressed clearly so far.
 
 
 %%% APPROXIMATION EXAMPLES %%%
