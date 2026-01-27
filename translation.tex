@@ -314,7 +314,7 @@ That is because merge must take original intention of types in TypeSpecs into ac
 Ultimately, approximated merging involves two cases: firstly, when a left-hand side type in TypeSpecs is smaller than any key types in Elixir Types; secondly, when it involves a union type.
 
 To begin with defining the first case, let $s$ represent any types that are smaller than key types in Elixir Types.
-With that said, an $s$ becomes a subtype of a $\ETK$ from Elixir Types, i.e., $s$ $\leq$ $\ETK$, e.g., \texttt{1..3} is a subtype of \texttt{integer()}.
+With that said, an $s$ becomes a subtype of its lower-bound supertype $\ETK$ from Elixir Types, i.e., $s$ $\leq$ $\ETK$, e.g., \texttt{1..3} is a subtype of \texttt{integer()}.
 In addition, we define $\ETK^s$ to describe when $s$ is promoted to their supertypes, and $\tau_s$ to indicate the right-hand side type of $\ETK^s$ in $L_1$.
 In extension to the merge function in Figure~\ref{app:merge-in-field-types}:
 
