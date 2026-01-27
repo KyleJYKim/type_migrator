@@ -258,41 +258,105 @@ defmodule Migrator.Translator do
 
   defp merge_total(fields) do
 
-    basic_merging = fn {key_type_l1, val_type_l1}, {key_type, val_type} ->
+    # return : {:all_match, [match_list]}, {:partial_match, [match_list]}, {:no_match, []}
+    comparing_types = fn {type1, type2}, comparison_fun ->
+        comparison_fun = comparison_fun.(comparison_fun)
+        match_accumulator = fn list ->
+          Enum.reduce({:no_match, []}, fn {status, list}, {acc_status, acc_list} ->
+            case {status, acc_status} do
+              {:all_match, :all_match} -> {:all_match, acc_list ++ list}
+              {:no_match, :no_match} -> {:no_match, []}
+              _ -> {:partial_match, acc_list ++ list}
+            end
+          end)
+        end
+        case {type1, type2} do
+            {{{:union, left1, right1}, {:union, left2, right2}}, _} ->
+              [{left1, left2} |> comparison_fun.(), {left1, right2} |> comparison_fun.(), {right1, left2} |> comparison_fun.(), {right1, right2} |> comparison_fun.()]
+                |> match_accumulator.()
+            {{{:union, left1, right1}, _}, _} ->
+              [{left1, type2} |> comparison_fun.(), {right1, type2} |> comparison_fun.()]
+                |> match_accumulator.()
+            {{_, {:union, left2, right2}}, _} ->
+              [{left2, type1} |> comparison_fun.(), {right2, type1} |> comparison_fun.()]
+                |> match_accumulator.()
+            {:atom, {:atom, _}} -> {:all_match, [type2]}
+            {{:atom, _}, :atom} -> {:partial_match, [type1]}
+            {:supertyped, type1, _} -> if type1 == type2, do: {:all_match, [type2]}, else: {:no_match, []}
+            _ -> if type1 == type2, do: {:all_match, [type2]}, else: {:no_match, []}
+        end
+      end
 
-    end
+    basic_merging = fn {key_type_l1, val_type_l1}, {key_type, val_type} ->
+        {containment_result, match_list} = {key_type_l1, key_type} |> comparing_types.(comparing_types.())
+        case containment_result do
+          :all_match -> {{key_type_l1, val_type_l1}, :empty}
+          :no_match -> {{key_type_l1, val_type_l1}, {key_type, val_type}}
+          :partial_match -> :to_be_coded # singleton atom and atom(), and partial unions...
+        end
+      end
 
     approximated_merging = fn {key_type_l1, val_type_l1}, {key_type, val_type} ->
+        key_type_super = key_type |> get_lower_bound_super_key_type()
+        cond do
+          key_type_l1 == key_type_super ->
+            {{key_type_l1, val_type_l1}, :empty}
+          key_type_l1 != key_type ->
+            {{key_type_l1, val_type_l1}, {key_type_super, val_type}}
+          true ->
+            case key_type_l1 do
+              {:supertyped, _} ->
+                {:empty, {key_type_super, {:union, {val_type, val_type_l1}}}} # need to check if val_type contains val_type_l1, or vice versa.
+            end
+        end
+      end
 
-    end
+    # Must think of how to deal with merging with []!!!
+    # Should there be a merge based on value-type?
 
     total_merging = fn field_with_status, L1 ->
-      {field_new, L1} = L1 |> Enum.reduce({[], field_with_status}, fn {key_type_l1, val_type_l1}, {L1_acc, {field_status, field}} ->
-        {field_new, field_l1_new} = case {key_type_l1, field_status} do
-          {{:supertyped, _}, _} ->
-            {key_type_l1, val_type_l1} |> approximated_merging.(field)
-          {_, :undefined} ->
-            {key_type_l1, val_type_l1} |> approximated_merging.(field)
-          {_, :union} ->
-            {key_type_l1, val_type_l1} |> approximated_merging.(field)
-          {_, :defined} ->
-            {key_type_l1, val_type_l1} |> basic_merging.(field)
-        end
-        {{field_status, field_new}, L1_acc ++ [field_l1_new]}
-      end)
-      [field_new | L1]
-    end
+      {L1, field_new} = L1 |> Enum.reduce({[], field_with_status}, fn {key_type_l1, val_type_l1}, {L1_acc, {field_status, field}} ->
+          {field_l1_new, field_new} = case {key_type_l1, field_status} do
+            {{:supertyped, _}, _} ->
+              {key_type_l1, val_type_l1} |> approximated_merging.(field)
+            {_, :undefined} ->
+              {key_type_l1, val_type_l1} |> approximated_merging.(field)
+            {_, :defined} ->
+              {key_type_l1, val_type_l1} |> basic_merging.(field)
+            {_, :union} ->
+              {key_type_l1, val_type_l1} |> basic_merging.(field)
+          end
+          cond do
+            field_l1_new == :empty ->
+              {L1_acc, {field_status, field_new}}
+            field_new == :empty ->
+              {L1_acc ++ [field_l1_new], :empty}
+            true ->
+              {L1_acc ++ [field_l1_new], {field_status, field_new}}
+          end
+        end)
+        if field_new == :empty, do: L1, else: [field_new | L1]  # natural reverse.. but hmm..
+      end
+
 
     # MAKE A CASE WHEN L1 IS EMPTY!!!
     fields |> Enum.reduce([], fn field, L1 -> field |> total_merging.(Enum.reverse(L1)) end)
   end
 
-  defp approximate_merge(:undefined, L1, k, v) do
-    case k do
-      {:interval, _} -> (if L1 |> Enum.any?(), do: L1, else: L1 ++ [{k, v}])
-      {:atom, _} -> (if L1 |> Enum.any?(), do: L1, else: L1 ++ [{k, v}])
+  defp get_lower_bound_super_key_type(type) do
+    case type do
+      {:union, {left, right}} -> {:union, {left |> get_lower_bound_super_key_type(), right |> get_lower_bound_super_key_type()}}
+      {:tuple, _} -> {:supertyped, :tuple}
+      {:open_map, _} -> {:supertyped, :open_map}
+      :empty_list -> {:supertyped, :list}
+      {:non_empty_list, _} -> {:supertyped, :list}
+      #:bitstring -> {:supertyped, :binary}
+      {:gradual, :fun_top} -> {:supertyped, :fun_top}
+      {:fun, _} -> {:supertyped, :fun_top}
+      {:interval, _} -> {:supertyped, :integer}
+      {:atom, _} -> {:supertyped, :atom}
+      _ -> type
     end
-    if L1 |> Enum.any?(), do: L1, else: L1 ++ [{k, v}]
   end
 
   defp approximate_top_fun(), do: {:gradual, :fun_top}
