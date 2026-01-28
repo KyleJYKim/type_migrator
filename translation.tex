@@ -324,8 +324,8 @@ In extension to the merge function in Figure~\ref{app:merge-in-field-types}:
       L_1 \oplus \texttt{[}\,s\fto\tau,\,\,L_2\texttt{]} &=& \texttt{[}\,\ETK^s\fto\tau,\,\,L_1\texttt{]}\oplus L_2 & \textsl{if }\ \ETK \not\in L_1 \\
       L_1 \oplus \texttt{[}\,\ETK\fto\tau,\,\,L_2 \texttt{]} &=& \texttt{[}\,\ETK\fto\tau \texttt{ or }\tau_s,\,\,L_1 \texttt{ and not } \ETK^s\fto\tau_s\texttt{]} \oplus L_2  & \textsl{if }\ \ETK^s \in L_1 \\
    \end{array}\]
-   \caption{Approximated Merge in Field Types for Singletons}
-   \label{app:approximated-merge-in-field-types-for-singletons}
+   \caption{Approximated Merge in Field Types for Subtypes of Key Types}
+   \label{app:approximated-merge-for-subtypes-of-key-types}
 \end{figure}
 
 As you can see, the reason why we distinguish the promoted types from those not is to leave the intention of using the singleton types in TypeSpecs while maintaining the soundness.
@@ -344,11 +344,11 @@ Let us set $U$ which ranges over any key types and unions of any key types.
       L_1 \oplus \texttt{[}\,U\fto\tau,\,\,L_2\,\texttt{]} &=& L_1 \oplus L_2 & \textsl{if }\ U \leq U_{L1} \\
       L_1 \oplus \texttt{[}\,U\fto\tau,\,\,L_2\,\texttt{]} &=& \texttt{[}\,U \texttt{ and not }U_{L1}\fto\tau,\,\,L_1\texttt{]} \oplus L_2 & \textsl{if }\ U_{L1} \leq U \textsl{ or } U_{L1} \cap U \leq U \\
    \end{array}\]
-   \caption{Approximated Merge in Field Types for Unions}
-   \label{app:approximated-merge-in-field-types-for-unions}
+   \caption{Approximated Merge in Field Types for Unions and Atoms}
+   \label{app:approximated-merge-for-unions-and-atoms}
 \end{figure}
 
-To illustrate, take a union type like \texttt{pid() | port()\,\,=>\,\,binary()}, which is in $L_1$, to merge it with \texttt{port() | reference()\,\,=>\,\,atom()}. 
+To illustrate, take a union type \texttt{pid() | port()\,\,=>\,\,binary()}, which is in $L_1$, to merge it with \texttt{port() | reference()\,\,=>\,\,atom()}. 
 This results in \texttt{[reference()\,\,=>\,\,atom(), pid() or port()\,\,=>\,\,binary()]} by the definition.
 
 
