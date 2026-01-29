@@ -173,7 +173,7 @@ After obtaining types in Elixir Types we can define merge function. Given two fi
       L_1 \oplus \texttt{[\,]} &= & L_1 \\
       L_1 \oplus \texttt{[}\,\ETK\fto\tau,\,\,L_2\,\texttt{]} &=& L_1 \oplus L_2 & \textsl{if }\ \ETK\in L_1 \\
       L_1 \oplus \texttt{[}\,\ETK\fto\tau,\,\,L_2\,\texttt{]} &=& \texttt{[}\,\ETK\fto\tau,\,\,L_1\texttt{]} \oplus L_2  & \textsl{if }\ \ETK\not\in L_1 \\
-      L_1 \oplus L_2 &=& \textsl{undefined} & \textsl{otherwise}
+      %L_1 \oplus L_2 &=& \textsl{undefined} & \textsl{otherwise}
       \end{array}\]
    \caption{Merge in Field Types}
    \label{app:merge-in-field-types}
@@ -194,138 +194,105 @@ This is not a weakness of the Elixir Types system, but rather a consequence of t
 However, it is possible to define a total translation from types in TypeSpecs to ones in Elixir Types by approximating the original types in TypeSpecs. 
 Total translation is useful in the context of migration, when we need to ensure that every type in TypeSpecs is represented in Elixir Types even approximately.
 
-More precisely, the previous translations are \textit{undefined} in the following cases:
-\begin{itemize}
-   % \item Bitstrings with size specifications that are not a multiple of 8 bits (e.g., \texttt{<<\_::3>>}).
-   \item $\dsb{\texttt{(\fun{\dots}{\TST})}}$: 
-   the top function type when $\dsb{\TST}$ is not equivalent to \texttt{any()}.
-   \item $\dsb{\texttt{required(\TST) => $\prm{\TST}$}}$ and $\dsb{\texttt{optional(\TST) => $\prm{\TST}$}}$: 
-   the field types when $\dsb{\TST}$ is not equivalent to a disjunction of pairwise distinct key types.
-\end{itemize}
+More precisely, the previous translations are \textit{undefined} in the cases of translating field types; when $\dsb{\TST}$ in $\dsb{\texttt{required(\TST) => $\prm{\TST}$}}$ or $\dsb{\texttt{optional(\TST) => $\prm{\TST}$}}$ is not equivalent to a disjunction of pairwise distinct key types.
+
 In the rest of this section we give a conservative extension of the translation defined so far that is total, i.e., it is defined for every type in TypeSpecs. 
 The extension consists in defining approximations for the cases where the previous translation is undefined.
+   % \item $\dsb{\texttt{(\fun{\dots}{\TST})}}$: 
+   % the top function type when $\dsb{\TST}$ is not equivalent to \texttt{any()}.
 
-% \subsection{Approximation of Bitstring Types} \label{approximation-of-bitstring-types}
+% \subsection{Approximation of Top Function Types}
 
-% Elixir Types has no plan to support bitstring types which are finer than \texttt{binary()}. 
-% However, most of the bitstring representatives could be trivially translated to \texttt{binary()}.
-% According to the Erlang documentation, bitstrings are a later generalization of binaries, so many texts and much information about binaries apply just as well for bitstrings.
-% %https://www.erlang.org/doc/system/expressions#bit-syntax-expressions
-% In other words, the purpose of using bitstrings with texttt{<<>>} is to construct none other than binaries in more precise manner.
-% This strongly indicates that bitstring types are eventually treated as binary types,
-% Therefore we can also take the bitstring types with $unit*size$ indivisible by 8 as a type of binaries.
-% For example, Figure~\ref{app:bitstring-example} is to be applied to a bitstring with two elements that are 8 bits and 7 bits, respectively.
-% Strictly, 7 bits is not binary, however, if the function is applied to \texttt{<<97::8, 98::7>>}, then the function successfully returns \texttt{"ab"}.
-% That is because 98 (0110 0010), which is \texttt{"b"} by the code points, does not exceed 7 bits and preserves the necessary information when pattern-matched.
-% Of course, the function could be applied to a parameter that requires more bits, but the point is that the parameter is taken as a binary type when the value exists in code points, which is the supposed with bitstring types.
+% The top function type is a set of all the possible functions, that is, unions of functions returning the top type with every arity available as defined in Figure~\ref{app:top-function-type}.
 
-% \begin{figure}[hbtp]
-%     \begin{codefig}
-%       \texttt{@spec id\_bin(<<\_::15>>)::binary()} \\
-%       \texttt{def id\_bin(<<a::8, b::7>>), do: <<a, b>>}
-%     \end{codefig}
-%    \caption{Bitstring Example}
-%    \label{app:bitstring-example}
+% \begin{figure} [H]
+%    \[\begin{array}{rcll}
+%          \texttt{\fun{\dots}{any()}} \equiv \texttt{\fun{none()}{any()}\,\,$|$\,\,\dots\,\,$|$\,\,\fun{($\underbrace{\texttt{none(), \dots, none()}}_{255\text{  times}}$)}{any()}}
+%    \end{array}\]
+%    \caption{Top Function Type}
+%    \label{app:top-function-type}
 % \end{figure}
 
-% On top of that, it is a rare use specifying types with bitstring notations when users want to specify binary types.
-% It is explicitly guided by the Elixir design; when tried with \texttt{<<"a"::7>>}, this will not compile because a literal string in a bitstring is not allowed with a size specifier.
-% Which forces users to have 8-multiple bits except when specified with integer values like Figure~\ref{app:bitstring-example}.
-% AS a result, we address these rare cases as \texttt{binary() and dynamic()} for them to be subtypes of binary types.
+% Elixir Types provides the semantically same type, \texttt{fun()}, which enables the direct translation for \texttt{\fun{\dots}{any()}},
+% although, Elixir Types does not directly define \texttt{fun()} as Figure~\ref{app:top-function-type}, due to the triviality of defining the list of functions with all the possible arity, and the cost of defining and having all the function types which expand to maximum arity of 255.
+% Nonetheless, the fundamental difference in allowance from TypeSpecs, i.e., letting to specify the codomain of a function type, brings subtypes of the top function type on approximation.
+
+% The approximation is rather simple because the leniency in expressiveness is proven to be trivial in practice for several reasons.
+% Most of all, Dialyzer does not differentiate the return type and perceive any form of the top types as \texttt{\fun{\dots}{any()}}.
+% Which means, in TypeSpecs with Dialyzer, \texttt{\fun{\dots}{any()}} can replace any other top type functions with a codomain different than \texttt{any()} and the same applies to the other way around.
+% Secondly, one of the concerns with moving forward with Elixir Types is to fail typecheck, but typecheck will trivially succeed even alone with \texttt{fun()} when approximated since the top function type already takes over all the other function types.
+% One small problem is that this approximation will blunt the specification, hence we can write \texttt{fun() and dynamic()}, which is a subtype of \texttt{fun()}, to semantically display that the approximation is a subtype of the top function type.
 
 % \begin{figure} [H]
 %    \begin{translationfig}
-%       \dsb{\texttt{<<>>}} \approx \texttt{binary() and dynamic()}
-%       \nl 
-%       \dsb{\texttt{<<\_::$n$>>}} \approx 
+%       \dsb{\texttt{(\fun{\dots}{\TST})}} \approx
 %       \left\{
 %          \begin{array}{ll}
-%             \texttt{binary()} & \textsl{if}\,\,\,\,n \bmod 8 = 0
+%             \texttt{fun()} & \textsl{if}\,\,\,\,\dsb{\TST}\,\approx\,\texttt{term()}
 %             \nl
-%             \texttt{binary() and dynamic()} & \textsl{otherwise}
-%          \end{array}
-%       \right.
-%       \nl 
-%       \dsb{\texttt{<<\_::\_*$n$>>}} \approx 
-%       \left\{
-%          \begin{array}{ll}
-%             \texttt{binary()} & \textsl{if}\,\,\,\,n \bmod 8 = 0
-%             \nl
-%             \texttt{binary() and dynamic()} & \textsl{otherwise}
-%          \end{array}
-%       \right.
-%       \nl
-%       \dsb{\texttt{<<\_::$n$,\,\,\_::\_*$n$>>}} \approx 
-%       \left\{
-%          \begin{array}{ll}
-%             \texttt{binary()} & \textsl{if}\,\,\,\,n \bmod 8 = 0
-%             \nl
-%             \texttt{binary() and dynamic()} & \textsl{otherwise}
+%             \texttt{fun() and dynamic()} & \textsl{otherwise}
 %          \end{array}
 %       \right.
 %    \end{translationfig}
-%    \caption{Approximation of bitstring Types}
-%    \label{app:approximation-of-bitstring-types}
+%    \caption{Approximation of Top Function Type}
+%    \label{app:approximation-of-top-function-type}
 % \end{figure}
-
-\subsection{Approximation of Top Function Types}
-
-The top function type is a set of all the possible functions, that is, unions of functions returning the top type with every arity available as defined in Figure~\ref{app:top-function-type}.
-
-\begin{figure} [H]
-   \[\begin{array}{rcll}
-         \texttt{\fun{\dots}{any()}} \equiv \texttt{\fun{none()}{any()}\,\,$|$\,\,\dots\,\,$|$\,\,\fun{($\underbrace{\texttt{none(), \dots, none()}}_{255\text{  times}}$)}{any()}}
-   \end{array}\]
-   \caption{Top Function Type}
-   \label{app:top-function-type}
-\end{figure}
-
-Elixir Types provides the semantically same type, \texttt{fun()}, which enables the direct translation for \texttt{\fun{\dots}{any()}},
-although, Elixir Types does not directly define \texttt{fun()} as Figure~\ref{app:top-function-type}, due to the triviality of defining the list of functions with all the possible arity, and the cost of defining and having all the function types which expand to maximum arity of 255.
-Nonetheless, the fundamental difference in allowance from TypeSpecs, i.e., letting to specify the codomain of a function type, brings subtypes of the top function type on approximation.
-
-The approximation is rather simple because the leniency in expressiveness is proven to be trivial in practice for several reasons.
-Most of all, Dialyzer does not differentiate the return type and perceive any form of the top types as \texttt{\fun{\dots}{any()}}.
-Which means, in TypeSpecs with Dialyzer, \texttt{\fun{\dots}{any()}} can replace any other top type functions with a codomain different than \texttt{any()} and the same applies to the other way around.
-Secondly, one of the concerns with moving forward with Elixir Types is to fail typecheck, but typecheck will trivially succeed even alone with \texttt{fun()} when approximated since the top function type already takes over all the other function types.
-One small problem is that this approximation will blunt the specification, hence we can write \texttt{fun() and dynamic()}, which is a subtype of \texttt{fun()}, to semantically display that the approximation is a subtype of the top function type.
-
-\begin{figure} [H]
-   \begin{translationfig}
-      \dsb{\texttt{(\fun{\dots}{\TST})}} \approx
-      \left\{
-         \begin{array}{ll}
-            \texttt{fun()} & \textsl{if}\,\,\,\,\dsb{\TST}\,\approx\,\texttt{term()}
-            \nl
-            \texttt{fun() and dynamic()} & \textsl{otherwise}
-         \end{array}
-      \right.
-   \end{translationfig}
-   \caption{Approximation of Top Function Type}
-   \label{app:approximation-of-top-function-type}
-\end{figure}
 
 \subsection{Approximation of Field Types}
 
 The merging case with conjunctive left-hand sides does not only perform merge function but also conduct approximation of types in TypeSpecs that are smaller than key types in Elixir Types.
-That is because merge must take original intention of types in TypeSpecs into account, but if we compare types after a single type approximation, in particular over-approximation, users' original aim could be deviated.
-Ultimately, approximated merging involves, from the introduced to-be-complemented three cases at the end of field translation, two cases in the bigger picture: firstly, when a left-hand side type in TypeSpecs is smaller than any key types in Elixir Types; secondly, when it involves either conjunctive union types, or singleton atom types with \texttt{atom()}.
-Tha is essentially because while the former has to perform over-approximation, the latter does not.
+That is because while merge must take original intention of types in TypeSpecs into account, if we compare left-hand side types after blunt individual type approximation, in particular over-approximation, users' original aim could be deviated.
 
-To begin with, let $s$ represent any types that are smaller than key types in Elixir Types.
+By taking that into account, we can safely write the promotion rule from TypeSpecs types that are \textit{undefined} to key types in Elixir Types and the merge function with approximation.
+
+% Ultimately, approximated merging involves, from the introduced to-be-complemented three cases at the end of field translation, two cases in the bigger picture: firstly, when a left-hand side type in TypeSpecs is smaller than any key types in Elixir Types; secondly, when it involves either conjunctive union types, or singleton atom types with \texttt{atom()}.
+% That is essentially because while the former has to perform over-approximation, the latter does not.
+
+To begin with, Let us define promotion function, which approximates $\dsb{\TST}$ to $\ETK^{\dsb{\TST}}$, i.e., the left-hand side type in field types to its lower bound supertype in key types.
+In particular, $\ETK^{\dsb{\TST}}$ is the key type promoted from $\dsb{\TST}$ which carries the information of its original type so that it can be compared not with the promoted type alone but with the intersection of the promoted type and the original type.
+This function is important for approximated merge function in terms of comparison.
+Consider merging \texttt{1..2\,\,\fto\,\,integer()} and \texttt{3..4\,\,\fto\,\,float()}. 
+If we promote \texttt{1..2} and \texttt{2..4} without the original information, the key type comparison is merely of \texttt{integer()} with \texttt{integer()}, resulting in completely overwriting the one comes after.
+Whereas, with our promotion rule, the merge function can use the preserved information for the comparison keeping both right-hand side types in the given case, since the left-hand side original types are disjunctive.
+Hence, translation of field types with applying the promotion function follows:
+
+\begin{figure} [H]
+   \begin{translationfig}
+      \dsb{\texttt{required(\TST) => $\prm{\TST}$}} = 
+      \left\{
+         \begin{array}{ll}
+            \texttt{[\,:$k$\,\,=>\,\,$\dsb{\prm{\TST}}$\,]}
+            & \textsl{if}\,\,\,\,\dsb{\TST}\,\approx\,\texttt{:}k
+            \nl
+            \texttt{[\,}\bigvee_{\{i \in I;\,\,\dsb{\TST_i} \bigcap \ETK_i \neq \emptyset\}}\ETK^{\dsb{\TST_i}}_i\fto\ifset{\dsb{\prm{\TST}}}\texttt{\,]}
+            & \textsl{if}\,\,\,\,\dsb{\TST}\,\not\approx\,\texttt{:}k
+         \end{array}
+      \right.
+      \nl \nl
+      \dsb{\texttt{optional(\TST) => $\prm{\TST}$}} = 
+         \texttt{[\,}\bigvee_{\{i \in I;\,\,\dsb{\TST_i} \bigcap \ETK_i \neq \emptyset\}}\ETK^{\dsb{\TST_i}}_i\fto\ifset{\dsb{\prm{\TST}}}\texttt{\,]}
+   \end{translationfig}
+   % \\[4mm] where all $\ETK_i$'s in $I$ are pairwise distinct.
+   \caption{Approximation in Field Types}
+   \label{app:approximation-in-field-types}
+\end{figure}
+
+Let $s$ represent any types that are smaller than key types in Elixir Types.
 Hence, an $s$ becomes a subtype of its corresponding supertype $\ETK$ from Elixir Types, i.e., $s$ $\leq$ $\ETK$, e.g., \texttt{1..3} is a subtype of \texttt{integer()}.
 In accordance with that, we define $\ETK^s$ and $s^\ETK$ to describe when $s$ is promoted to their lower-bound supertypes and to display their original type when promoted, respectively, and in addition, $\tau_s$ to indicate the right-hand side type of $\ETK^s$ in $L_1$.
 In extension to the merge function in Figure~\ref{app:merge-in-field-types}:
 
 \begin{figure} [H]
    \[\begin{array}{rcll}
-      \texttt{[}\,s\fto\tau\texttt{]} \oplus \texttt{[\,]} &=& \texttt{[}\,\ETK^s\fto\tau\texttt{]} \\
-      L_1 \oplus \texttt{[}\,s\fto\tau,\,\,L_2\texttt{]} &=& L_1 \oplus L_2 & \textsl{if }\ \ETK \in L_1 \textsl{ or } \textsl{(}\ETK^s \in L_1 \textsl{ and } s = s^{\ETK}\textsl{)} \\
-      L_1 \oplus \texttt{[}\,s\fto\tau,\,\,L_2\texttt{]} &=& \texttt{[}\,\ETK^s\fto\tau,\,\,L_1\texttt{]}\oplus L_2 & \textsl{if }\ \ETK \not\in L_1 \\
-      L_1 \oplus \texttt{[}\,s\fto\tau,\,\,L_2 \texttt{]} &=& \texttt{[}\,\ETK^s\fto\tau \texttt{ or }\tau_s,\,\,L_1 \texttt{ and not } \ETK^s\fto\tau_s\texttt{]} \oplus L_2  & \textsl{if }\ \ETK^s \in L_1 \textsl{ and } s \neq s^{\ETK} \\
+      \texttt{[}\,L_1\texttt{]} \oplus \texttt{[\,]} &=& \texttt{[}\,L_1\texttt{]} \\
+      L_1 \oplus \texttt{[}\,\ETK^{\dsb{\TST}}\fto\tau,\,\,L_2\texttt{]} &=& L_1 \oplus L_2 & \textsl{if }\ \ETK_{L_1}^{\dsb{\TST_{L_1}}} \in L_1 \textsl{ and } \ETK \cap \dsb{\TST} \nleq \ETK_{L_1} \cap \dsb{\TST_{L_1}} \\
+      L_1 \oplus \texttt{[}\,\ETK^{\dsb{\TST}}\fto\tau,\,\,L_2\texttt{]} &=& \texttt{[}\,\ETK^{\dsb{\TST}}\fto\tau,\,\,L_1\,\texttt{]} \oplus L_2 & \textsl{if }\ \nexists {\dsb{\TST_{L_1}}}\textsl{ such that } \ETK_{L_1}^{\dsb{\TST_{L_1}}} \notin L_1 \\
+      L_1 \oplus \texttt{[}\,\ETK^{\dsb{\TST}}\fto\tau,\,\,L_2\texttt{]} &=& \texttt{[}\,\ETK^{\dsb{\TST} | \dsb{\TST_{L_1}}}\fto\tau \texttt{ or }\tau_{L_1},\,\,L_1 \setminus \ETK_{L_1}^{\dsb{\TST_{L_1}}}\fto \tau_{L_1}\texttt{]} \oplus L_2  & \textsl{if }\ \ETK_{L_1}^{\dsb{\TST_{L_1}}}\fto \tau_{L_1} \in L_1 \textsl{ and } \ETK \cap \dsb{\TST} \nleq \ETK_{L_1} \cap \dsb{\TST_{L_1}} \\
+      % L_1 \oplus \texttt{[}\,\texttt{:$k$}\fto\tau,\,\,L_2\texttt{]} &=& L_1 \oplus L_2 & \textsl{if }\ \texttt{atom()} \in L_1 \textsl{ and } \texttt{:$k$} \leq \texttt{:$k$}_{L_1} \\
+      % L_1 \oplus \texttt{[}\,\texttt{atom()}\fto\tau,\,\,L_2\texttt{]} &=& \texttt{[}\,\texttt{:$k$}\fto\tau \dsb{\TST_{L_1}}\fto\tau \texttt{ or }\tau_{L_1},\,\,L_1 \setminus \ETK_{L_1}^{\dsb{\TST_{L_1}}}\fto \tau_{L_1}\texttt{]} \oplus L_2 & \textsl{if }\ \texttt{:$k$}\fto\tau_{L_1} \in L_1 \textsl{ and } \texttt{:$k$} \nleq \texttt{:$k$}_{L_1} \\
    \end{array}\]
-   \caption{Approximated Merge for Subtypes of Key Types}
-   \label{app:approximated-merge-for-subtypes-of-key-types}
+   \caption{Merge in Approximated Field Types}
+   \label{app:merge-in-approximated-field-types}
 \end{figure}
 
 As you can see, the reason why we distinguish the promoted types from those not is to leave the intention of using the singleton types in TypeSpecs while maintaining the soundness.
