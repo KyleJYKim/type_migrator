@@ -248,17 +248,17 @@ By taking that into account, we can safely write the promotion rule from TypeSpe
 % Ultimately, approximated merging involves, from the introduced to-be-complemented three cases at the end of field translation, two cases in the bigger picture: firstly, when a left-hand side type in TypeSpecs is smaller than any key types in Elixir Types; secondly, when it involves either conjunctive union types, or singleton atom types with \texttt{atom()}.
 % That is essentially because while the former has to perform over-approximation, the latter does not.
 
-To begin with, Let us define promotion function, which approximates $\dsb{\TST}$ to $\ETK^{\dsb{\TST}}$, i.e., the left-hand side type in field types to its lower bound supertype in key types.
-In particular, $\ETK^{\dsb{\TST}}$ is the key type promoted from $\dsb{\TST}$ which carries the information of its original type so that it can be compared not with the promoted type alone but with the intersection of the promoted type and the original type.
-This function is important for approximated merge function in terms of comparison.
+To begin with, Let us define promotion function, \textsf{promote($\ETF$)}, which approximates $\dsb{\TST}$ to $\ETK^{\dsb{\TST}}$, i.e., the left-hand side type in field types to its lower bound supertype in key types.
+In other words, $\ETK^{\dsb{\TST}}$ is the key type promoted from $\dsb{\TST}$ which carries the information of its original type so that it can be compared not with the promoted type alone but with the intersection of the promoted type and the original type.
+This function is important for the merge function when applied to approximated field types in terms of comparison.
 Consider merging \texttt{1..2\,\,\fto\,\,integer()} and \texttt{3..4\,\,\fto\,\,float()}. 
-If we promote \texttt{1..2} and \texttt{2..4} without the original information, the key type comparison is merely of \texttt{integer()} with \texttt{integer()}, resulting in completely overwriting the one comes after.
-Whereas, with our promotion rule, the merge function can use the preserved information for the comparison keeping both right-hand side types in the given case, since the left-hand side original types are disjunctive.
-Hence, translation of field types with applying the promotion function follows:
+If we promote \texttt{1..2} and \texttt{2..4} without the original information, the key type comparison is merely of \texttt{integer()} with \texttt{integer()}, resulting in completely overwriting the one that comes after with another.
+Whereas, with our promotion rule, the merge function can use the preserved information for the comparison keeping both right-hand side types in the given case; since the left-hand side original types are disjunctive.
+Hence, to rewrite the translation of field types after applying the promotion function:
 
 \begin{figure} [H]
    \begin{translationfig}
-      \dsb{\texttt{required(\TST) => $\prm{\TST}$}} = 
+      \textsf{\textsl{promote}}\texttt{(}\dsb{\texttt{required(\TST) => $\prm{\TST}$}}\texttt{)} = 
       \left\{
          \begin{array}{ll}
             \texttt{[\,:$k$\,\,=>\,\,$\dsb{\prm{\TST}}$\,]}
@@ -269,54 +269,65 @@ Hence, translation of field types with applying the promotion function follows:
          \end{array}
       \right.
       \nl \nl
-      \dsb{\texttt{optional(\TST) => $\prm{\TST}$}} = 
+      \textsf{\textsl{promote}}\texttt{(}\dsb{\texttt{optional(\TST) => $\prm{\TST}$}}\texttt{)} =  
          \texttt{[\,}\bigvee_{\{i \in I;\,\,\dsb{\TST_i} \bigcap \ETK_i \neq \emptyset\}}\ETK^{\dsb{\TST_i}}_i\fto\ifset{\dsb{\prm{\TST}}}\texttt{\,]}
    \end{translationfig}
    % \\[4mm] where all $\ETK_i$'s in $I$ are pairwise distinct.
-   \caption{Approximation in Field Types}
-   \label{app:approximation-in-field-types}
+   \caption{Approximated Translation in Field Types}
+   \label{app:approximated-translation-in-field-types}
 \end{figure}
 
-Let $s$ represent any types that are smaller than key types in Elixir Types.
-Hence, an $s$ becomes a subtype of its corresponding supertype $\ETK$ from Elixir Types, i.e., $s$ $\leq$ $\ETK$, e.g., \texttt{1..3} is a subtype of \texttt{integer()}.
-In accordance with that, we define $\ETK^s$ and $s^\ETK$ to describe when $s$ is promoted to their lower-bound supertypes and to display their original type when promoted, respectively, and in addition, $\tau_s$ to indicate the right-hand side type of $\ETK^s$ in $L_1$.
-In extension to the merge function in Figure~\ref{app:merge-in-field-types}:
+The merge function extends its definition further with the extra information from approximated translation.
+For convenience, we substitute $\dsb{\TST}$ with $\orgtype$ throughout our definition.
+
+Trivially, merging a list of fields to an empty list is the same as the original function producing the list.
+
+In the second and third definitions, we first look for the same key type of the field type in the list.
+If one exists, we get an intersection of the key type and the original type retrieved from the list, and get another intersection from the field type.
+Eventually, compare the derived types and find the subtype relations.
+The second definition is when the the intersection from field type is a subtype of the on from the list, in which case the field type is simply eradicated.
+On the other hand if we find the comparison not in a subtype relation, we append the field type to the list with two union operations.
+That are unification of original types and that of right-hand side types.
+Lastly, the field type from the list that the found key type belonged is eradicated.
+
+For the final definition of merge function, all we need is to find in the list non-existence of the exactly same left-hand side type from the field type.
+Then we can simply add the new field type to the list.
 
 \begin{figure} [H]
    \[\begin{array}{rcll}
       \texttt{[}\,L_1\texttt{]} \oplus \texttt{[\,]} &=& \texttt{[}\,L_1\texttt{]} \\
-      L_1 \oplus \texttt{[}\,\ETK^{\dsb{\TST}}\fto\tau,\,\,L_2\texttt{]} &=& L_1 \oplus L_2 & \textsl{if }\ \ETK_{L_1}^{\dsb{\TST_{L_1}}} \in L_1 \textsl{ and } \ETK \cap \dsb{\TST} \nleq \ETK_{L_1} \cap \dsb{\TST_{L_1}} \\
-      L_1 \oplus \texttt{[}\,\ETK^{\dsb{\TST}}\fto\tau,\,\,L_2\texttt{]} &=& \texttt{[}\,\ETK^{\dsb{\TST}}\fto\tau,\,\,L_1\,\texttt{]} \oplus L_2 & \textsl{if }\ \nexists {\dsb{\TST_{L_1}}}\textsl{ such that } \ETK_{L_1}^{\dsb{\TST_{L_1}}} \notin L_1 \\
-      L_1 \oplus \texttt{[}\,\ETK^{\dsb{\TST}}\fto\tau,\,\,L_2\texttt{]} &=& \texttt{[}\,\ETK^{\dsb{\TST} | \dsb{\TST_{L_1}}}\fto\tau \texttt{ or }\tau_{L_1},\,\,L_1 \setminus \ETK_{L_1}^{\dsb{\TST_{L_1}}}\fto \tau_{L_1}\texttt{]} \oplus L_2  & \textsl{if }\ \ETK_{L_1}^{\dsb{\TST_{L_1}}}\fto \tau_{L_1} \in L_1 \textsl{ and } \ETK \cap \dsb{\TST} \nleq \ETK_{L_1} \cap \dsb{\TST_{L_1}} \\
-      % L_1 \oplus \texttt{[}\,\texttt{:$k$}\fto\tau,\,\,L_2\texttt{]} &=& L_1 \oplus L_2 & \textsl{if }\ \texttt{atom()} \in L_1 \textsl{ and } \texttt{:$k$} \leq \texttt{:$k$}_{L_1} \\
-      % L_1 \oplus \texttt{[}\,\texttt{atom()}\fto\tau,\,\,L_2\texttt{]} &=& \texttt{[}\,\texttt{:$k$}\fto\tau \dsb{\TST_{L_1}}\fto\tau \texttt{ or }\tau_{L_1},\,\,L_1 \setminus \ETK_{L_1}^{\dsb{\TST_{L_1}}}\fto \tau_{L_1}\texttt{]} \oplus L_2 & \textsl{if }\ \texttt{:$k$}\fto\tau_{L_1} \in L_1 \textsl{ and } \texttt{:$k$} \nleq \texttt{:$k$}_{L_1} \\
+      L_1 \oplus \texttt{[}\,\ETK^{\orgtype}\fto\tau,\,\,L_2\texttt{]} &=& L_1 \oplus L_2 & \textsl{if }\ \ETK^{\orgtype_1} \in L_1 \textsl{ and } \ETK \cap {\orgtype} \leq \ETK \cap {\orgtype}_1 \\
+      L_1 \oplus \texttt{[}\,\ETK^{\orgtype}\fto\tau,\,\,L_2\texttt{]} &=& \texttt{[}\,\ETK^{{\orgtype} | {\orgtype}_1}\fto\tau \texttt{ or }\tau_1,\,\,L_1 \setminus \ETK^{{\orgtype}_1}\fto \tau_1\texttt{]} \oplus L_2  & \textsl{if }\ \ETK^{\orgtype_1} \in L_1 \textsl{ and } \ETK \cap \orgtype \nleq \ETK \cap \orgtype_1 \\
+      L_1 \oplus \texttt{[}\,\ETK^{\orgtype}\fto\tau,\,\,L_2\texttt{]} &=& \texttt{[}\,\ETK^{\orgtype}\fto\tau,\,\,L_1\,\texttt{]} \oplus L_2 & \textsl{if }\ \nexists\,{\orgtype}_1\,\,\ETK^{\orgtype_1} \in L_1 \\
    \end{array}\]
    \caption{Merge in Approximated Field Types}
    \label{app:merge-in-approximated-field-types}
 \end{figure}
 
-As you can see, the reason why we distinguish the promoted types from those not is to leave the intention of using the singleton types in TypeSpecs while maintaining the soundness.
+At last, we revise the field type translation to $\dsb{\map{\texttt{\TSF$_1$,\,...,\,\TSF$_n$}}} = \textsf{\textsl{map}($\bigoplus_{i=1}^{n}$\textsl{promote}($\dsb{\TSF_i}$))}$, and by merging \textsf{Empty} to that end of merges, we obtain a saturated map, $\dsb{\map{\texttt{\TSF$_1$,\,...,\,\TSF$_n$}}} =\textsf{\textsl{map}($\bigoplus_{i=1}^{n}$\textsl{promote}($\dsb{\TSF_i}$)$\,\oplus\,\texttt{Empty}$)}$.
 
-This works, for instance, when attempted merging \texttt{1..3\,\,=>\,\,float()} and \texttt{integer()\,\,=>\,\,integer()}.
-The first merge occurs with \texttt{1..3\,\,=>\,\,float()} and an empty list which is the first case of every merge, which produces \texttt{integer()$^s$\,\,=>\,\,float()$^s$}.
-Consecutively, it merges with \texttt{integer()\,\,=>\,\,integer()}.
-This results in \texttt{integer() => float()$^s$ or integer()}. 
-Trivially, keep in mind that the superscript $s$ does not appear in the final result for users.
+% As you can see, the reason why we distinguish the promoted types from those not is to leave the intention of using the singleton types in TypeSpecs while maintaining the soundness.
 
-Secondly, approximation for singleton atom types and conjunctive union types as key types is defined in the similar way.
-Let us set $U$ which ranges over any key types and unions of any key types.
+% This works, for instance, when attempted merging \texttt{1..3\,\,=>\,\,float()} and \texttt{integer()\,\,=>\,\,integer()}.
+% The first merge occurs with \texttt{1..3\,\,=>\,\,float()} and an empty list which is the first case of every merge, which produces \texttt{integer()$^s$\,\,=>\,\,float()$^s$}.
+% Consecutively, it merges with \texttt{integer()\,\,=>\,\,integer()}.
+% This results in \texttt{integer() => float()$^s$ or integer()}. 
+% Trivially, keep in mind that the superscript $s$ does not appear in the final result for users.
 
-\begin{figure} [H]
-   \[\begin{array}{rcll}
-      L_1 \oplus \texttt{[}\,U\fto\tau,\,\,L_2\,\texttt{]} &=& L_1 \oplus L_2 & \textsl{if }\ U \leq U_{L1} \\
-      L_1 \oplus \texttt{[}\,U\fto\tau,\,\,L_2\,\texttt{]} &=& \texttt{[}\,U \texttt{ and not }U_{L1}\fto\tau,\,\,L_1\texttt{]} \oplus L_2 & \textsl{if }\ U_{L1} \leq U \textsl{ or } U_{L1} \cap U \leq U \\
-   \end{array}\]
-   \caption{Approximated Merge for Unions and Atoms}
-   \label{app:approximated-merge-for-unions-and-atoms}
-\end{figure}
+% Secondly, approximation for singleton atom types and conjunctive union types as key types is defined in the similar way.
+% Let us set $U$ which ranges over any key types and unions of any key types.
 
-To illustrate, take a union type \texttt{pid() | port()\,\,=>\,\,binary()}, which is in $L_1$, to merge it with \texttt{port() | reference()\,\,=>\,\,atom()}. 
-This results in \texttt{[reference()\,\,=>\,\,atom(), pid() or port()\,\,=>\,\,binary()]} by the definition.
+% \begin{figure} [H]
+%    \[\begin{array}{rcll}
+%       L_1 \oplus \texttt{[}\,U\fto\tau,\,\,L_2\,\texttt{]} &=& L_1 \oplus L_2 & \textsl{if }\ U \leq U_{L1} \\
+%       L_1 \oplus \texttt{[}\,U\fto\tau,\,\,L_2\,\texttt{]} &=& \texttt{[}\,U \texttt{ and not }U_{L1}\fto\tau,\,\,L_1\texttt{]} \oplus L_2 & \textsl{if }\ U_{L1} \leq U \textsl{ or } U_{L1} \cap U \leq U \\
+%    \end{array}\]
+%    \caption{Approximated Merge for Unions and Atoms}
+%    \label{app:approximated-merge-for-unions-and-atoms}
+% \end{figure}
+
+% To illustrate, take a union type \texttt{pid() | port()\,\,=>\,\,binary()}, which is in $L_1$, to merge it with \texttt{port() | reference()\,\,=>\,\,atom()}. 
+% This results in \texttt{[reference()\,\,=>\,\,atom(), pid() or port()\,\,=>\,\,binary()]} by the definition.
 
 
 
