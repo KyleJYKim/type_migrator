@@ -252,7 +252,7 @@ To begin with, Let us define promotion function, \textsf{promote($\ETF$)}, which
 In other words, $\ETK^{\dsb{\TST}}$ is the key type promoted from $\dsb{\TST}$ which carries the information of its original type so that it can be compared not with the promoted type alone but with the intersection of the promoted type and the original type.
 This function is important for the merge function when applied to approximated field types in terms of comparison.
 Consider merging \texttt{1..2\,\,\fto\,\,integer()} and \texttt{3..4\,\,\fto\,\,float()}. 
-If we promote \texttt{1..2} and \texttt{2..4} without the original information, the key type comparison is merely of \texttt{integer()} with \texttt{integer()}, resulting in completely overwriting the one that comes after with another.
+If we promote \texttt{1..2} and \texttt{3..4} without the original information, the key type comparison is merely of \texttt{integer()} with \texttt{integer()}, resulting in completely overwriting the one that comes after with another.
 Whereas, with our promotion rule, the merge function can use the preserved information for the comparison keeping both right-hand side types in the given case; since the left-hand side original types are disjunctive.
 Hence, to rewrite the translation of field types after applying the promotion function:
 
