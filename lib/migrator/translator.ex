@@ -27,8 +27,8 @@ defmodule Migrator.Translator do
     ast
       |> extract_spec()         |> IO.inspect(label: "EXTRACT SPEC FUNCTION RESULT: \n")
       |> parse_spec()           |> IO.inspect(label: "PARSE SPEC FUNCTION RESULT: \n")
-      |> translate_spec()       |> IO.inspect(label: "TRANSLATE SPEC FUNCTION RESULT: \n")
-      |> assemble_elixir_type()
+      #|> translate_spec()       |> IO.inspect(label: "TRANSLATE SPEC FUNCTION RESULT: \n")
+      #|> assemble_elixir_type()
   end
 
 
@@ -105,15 +105,15 @@ defmodule Migrator.Translator do
         # nil -> :nil
         [type, {:..., [], []}] -> {:nonempty_list, [], [type |> walker_fun.()]} |> walker_fun.()
         [type] -> {:list, [], [type |> walker_fun.()]} |> walker_fun.()
-        {:%{}, _, record_list} -> (
-          record_list = record_list |> Enum.map(
-            fn {k, v} -> case k do
-              {:required, _, _} -> {k, v}
-              {:optional, _, _} -> {k, v}
-              _ -> {{:required, [], [k]}, v}
+        {:%{}, _, fields} -> (
+          fields = fields |> Enum.map(
+            fn {left, right} -> case left do
+              {req_opt, _, _} when req_opt == :optional or :required -> {left, right}
+              type when is_atom(type) -> {{:required, [], [left]}, right}
+              _ -> {{:optional, [], [left]}, right}
             end
           end)
-          {:%{}, [], record_list}
+          {:%{}, [], fields}
         )
         {:%, _, [{_, _, module_list}, {:%{}, _, struct_list}]} -> (
           module = module_list |> Enum.reduce("", fn x, acc -> module = Atom.to_string(x)
@@ -163,6 +163,16 @@ defmodule Migrator.Translator do
         {elem1, elem2} -> {:tuple, [elem1, elem2] |> Enum.reduce([], fn x, acc -> acc ++ (x |> translator_fun.()) end)}
 
         # %{..., F_seq} (Map)
+        {:%{}, _, record_list} -> (
+          record_list = record_list |> Enum.map(
+            fn {left, right} -> case left do
+              {:required, _, [left_type]} when is_atom(left_type) -> {left_type, right |> translator_fun.()}
+              {_, _, [left_type]} -> left_type |> translator_fun.()
+            end
+          end)
+          {:%{}, [], record_list}
+        )
+
         {:required, _, [key_type]} -> key_type |> translator_fun.()
         {:optional, _, [key_type]} -> key_type |> translator_fun.()
         {:%{}, _, fields} -> (
