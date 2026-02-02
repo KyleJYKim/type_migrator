@@ -27,8 +27,8 @@ defmodule Migrator.Translator do
     ast
       |> extract_spec()         |> IO.inspect(label: "EXTRACT SPEC FUNCTION RESULT: \n")
       |> parse_spec()           |> IO.inspect(label: "PARSE SPEC FUNCTION RESULT: \n")
-      |> translate_spec()       |> IO.inspect(label: "TRANSLATE SPEC FUNCTION RESULT: \n")
-      |> assemble_elixir_type()
+      #|> translate_spec()       |> IO.inspect(label: "TRANSLATE SPEC FUNCTION RESULT: \n")
+      #|> assemble_elixir_type()
   end
 
 
@@ -105,15 +105,15 @@ defmodule Migrator.Translator do
         # nil -> :nil
         [type, {:..., [], []}] -> {:nonempty_list, [], [type |> walker_fun.()]} |> walker_fun.()
         [type] -> {:list, [], [type |> walker_fun.()]} |> walker_fun.()
-        {:%{}, _, record_list} -> (
-          record_list = record_list |> Enum.map(
-            fn {k, v} -> case k do
-              {:required, _, _} -> {k, v}
-              {:optional, _, _} -> {k, v}
-              _ -> {{:required, [], [k]}, v}
+        {:%{}, _, fields} -> (
+          fields = fields |> Enum.map(
+            fn {left, right} -> case left do
+              {req_opt, _, _} when req_opt == :optional or :required -> {left, right}
+              type when is_atom(type) -> {{:required, [], [left]}, right}
+              _ -> {{:optional, [], [left]}, right}
             end
           end)
-          {:%{}, [], record_list}
+          {:%{}, [], fields}
         )
         {:%, _, [{_, _, module_list}, {:%{}, _, struct_list}]} -> (
           module = module_list |> Enum.reduce("", fn x, acc -> module = Atom.to_string(x)
@@ -163,6 +163,16 @@ defmodule Migrator.Translator do
         {elem1, elem2} -> {:tuple, [elem1, elem2] |> Enum.reduce([], fn x, acc -> acc ++ (x |> translator_fun.()) end)}
 
         # %{..., F_seq} (Map)
+        {:%{}, _, record_list} -> (
+          record_list = record_list |> Enum.map(
+            fn {left, right} -> case left do
+              {:required, _, [left_type]} when is_atom(left_type) -> {left_type, right |> translator_fun.()}
+              {_, _, [left_type]} -> left_type |> translator_fun.()
+            end
+          end)
+          {:%{}, [], record_list}
+        )
+
         {:required, _, [key_type]} -> key_type |> translator_fun.()
         {:optional, _, [key_type]} -> key_type |> translator_fun.()
         {:%{}, _, fields} -> (
@@ -271,27 +281,29 @@ defmodule Migrator.Translator do
           end)
         end
         case {type1, type2} do
-          {{{:union, left1, right1}, {:union, left2, right2}}, _} ->
+          {{:union, left1, right1}, {:union, left2, right2}} ->
             [{left1, left2} |> comparison_fun.(), {left1, right2} |> comparison_fun.(), {right1, left2} |> comparison_fun.(), {right1, right2} |> comparison_fun.()]
               |> match_accumulator.()
-          {{{:union, left1, right1}, _}, _} ->
+          {{:union, left1, right1}, _} ->
             [{left1, type2} |> comparison_fun.(), {right1, type2} |> comparison_fun.()]
               |> match_accumulator.()
-          {{_, {:union, left2, right2}}, _} ->
+          {_, {:union, left2, right2}} ->
             [{left2, type1} |> comparison_fun.(), {right2, type1} |> comparison_fun.()]
               |> match_accumulator.()
           {:atom, {:atom, _}} -> {:partial_match, [type2]}
           {{:atom, _}, :atom} -> {:partial_match, [type1]}
+          {{:supertyped, type1}, {:supertyped, type1}} -> if type1 == type2, do: {:partial_match, [type2]}, else: {:no_match, []}
+          {_, {:supertyped, type1}} -> if type1 == type2, do: {:partial_match, [type2]}, else: {:no_match, []}
           {{:supertyped, type1}, _} -> if type1 == type2, do: {:partial_match, [type2]}, else: {:no_match, []}
           _ -> if type1 == type2, do: {:all_match, [type2]}, else: {:no_match, []}
         end
       end
 
     approximated_merging = fn {{{key_type_l1, val_type_l1}, {key_type, val_type}}, match_list} ->
-
+        key_type = key_type |> get_lower_bound_super_key_type()
         case key_type do
-          {:supertyped, key_type} -> :not_yet
-
+          {:union, left, right} -> :not_yet
+          {:supertyped, key_type} -> match_list |> Enum.reduce([], fn type -> end)
           _ -> :not_yet
         end
 
@@ -349,8 +361,6 @@ defmodule Migrator.Translator do
         if field_new == :empty, do: L1, else: [field_new | L1]  # natural reverse.. but hmm..
       end
 
-
-    # MAKE A CASE WHEN L1 IS EMPTY!!!
     fields |> Enum.reduce([{:empty, :empty}], fn field, L1 -> field |> total_merging.(L1) end)
   end
 
