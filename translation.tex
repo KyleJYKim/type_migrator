@@ -172,6 +172,7 @@ After obtaining types in Elixir Types we can define merge function. Given two fi
    \[\begin{array}{rcll}
       L_1 \oplus \texttt{[\,]} &= & L_1 \\
       L_1 \oplus \texttt{[}\,\ETK\fto\tau,\,\,L_2\,\texttt{]} &=& L_1 \oplus L_2 & \textsl{if }\ \ETK\in L_1 \\
+      L_1 \oplus \texttt{[}\,\texttt{:}k\fto\tau,\,\,L_2\,\texttt{]} &=& L_1 \oplus L_2 & \textsl{if }\ \texttt{atom()}\in L_1 \\
       L_1 \oplus \texttt{[}\,\ETK\fto\tau,\,\,L_2\,\texttt{]} &=& \texttt{[}\,\ETK\fto\tau,\,\,L_1\texttt{]} \oplus L_2  & \textsl{if }\ \ETK\not\in L_1 \\
       L_1 \oplus L_2 &=& \textsl{undefined} & \textsl{otherwise}
       \end{array}\]
