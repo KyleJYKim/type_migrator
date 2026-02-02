@@ -283,12 +283,16 @@ For convenience, we substitute $\dsb{\TST}$ with $\orgtype$ throughout our defin
 Trivially, merging a list of fields to an empty list is the same as the original function producing the list.
 
 In the second and third definitions, we first look for the same key type of the field type in the list.
-If one exists, we get an intersection of the key type and the original type retrieved from the list, and get another intersection from the field type.
+If one exists, we get an intersection of the key type and the original type retrieved from the list, and get another intersection from the merging field type.
 Eventually, compare the derived types and find the subtype relations.
-The second definition is when the the intersection from field type is a subtype of the on from the list, in which case the field type is simply eradicated.
-On the other hand if we find the comparison not in a subtype relation, we append the field type to the list with two union operations.
-That are unification of original types and that of right-hand side types.
-Lastly, the field type from the list that the found key type belonged is eradicated.
+The second definition is when the the intersection from field type is a subtype of the on from the list, in which case the merging field type is voided.
+On the other hand if we find the comparison not in a subtype relation, we append the merging field type to the list with two union operations.
+That are unification of original left-hand types from both fields and that of right-hand types, and we append it to the list.
+Lastly, the field type found in the list is eradicated.
+
+Although we have covered all the conjunctive cases, atom types need a special treatment after comparison especially when one is not a subtype of another, for the obvious reason that singleton atom types can be used as key types.
+Therefore we do not eliminate the found fields in the list with singleton atom key types, but negate the key types from the original left-hand side types of the merging field types, and append the field to the list.
+For this definition, we use \Atom\ for \texttt{atom()}.
 
 For the final definition of merge function, all we need is to find in the list non-existence of the exactly same left-hand side type from the field type.
 Then we can simply add the new field type to the list.
@@ -297,7 +301,8 @@ Then we can simply add the new field type to the list.
    \[\begin{array}{rcll}
       \texttt{[}\,L_1\texttt{]} \oplus \texttt{[\,]} &=& \texttt{[}\,L_1\texttt{]} \\
       L_1 \oplus \texttt{[}\,\ETK^{\orgtype}\fto\tau,\,\,L_2\texttt{]} &=& L_1 \oplus L_2 & \textsl{if }\ \ETK^{\orgtype_1} \in L_1 \textsl{ and } \ETK \cap {\orgtype} \leq \ETK \cap {\orgtype}_1 \\
-      L_1 \oplus \texttt{[}\,\ETK^{\orgtype}\fto\tau,\,\,L_2\texttt{]} &=& \texttt{[}\,\ETK^{{\orgtype} | {\orgtype}_1}\fto\tau \texttt{ or }\tau_1,\,\,L_1 \setminus \ETK^{{\orgtype}_1}\fto \tau_1\texttt{]} \oplus L_2  & \textsl{if }\ \ETK^{\orgtype_1} \in L_1 \textsl{ and } \ETK \cap \orgtype \nleq \ETK \cap \orgtype_1 \\
+      L_1 \oplus \texttt{[}\,\ETK^{\orgtype}\fto\tau,\,\,L_2\texttt{]} &=& \texttt{[}\,\ETK^{\orgtype\,|\,\orgtype_1}\fto\tau \texttt{ or }\tau_1,\,\,L_1 \setminus \ETK^{{\orgtype}_1}\fto \tau_1\texttt{]} \oplus L_2  & \textsl{if }\ \ETK^{\orgtype_1} \in L_1 \textsl{ and } \ETK \cap \orgtype \nleq \ETK \cap \orgtype_1 \\
+      L_1 \oplus \texttt{[}\,\Atom^{\SAtom}\fto\tau,\,\,L_2\texttt{]} &=& \texttt{[}\,\Atom^{\SAtom\,\setminus\,\SAtom_1}\fto\tau,\,\,L_1\texttt{]} \oplus L_2 & \textsl{if }\ \Atom^{\SAtom} \in L_1 \textsl{ and } \Atom \cap \SAtom \nleq \Atom \cap \SAtom_1 \\
       L_1 \oplus \texttt{[}\,\ETK^{\orgtype}\fto\tau,\,\,L_2\texttt{]} &=& \texttt{[}\,\ETK^{\orgtype}\fto\tau,\,\,L_1\,\texttt{]} \oplus L_2 & \textsl{if }\ \nexists\,{\orgtype}_1\,\,\ETK^{\orgtype_1} \in L_1 \\
    \end{array}\]
    \caption{Merge in Approximated Field Types}
