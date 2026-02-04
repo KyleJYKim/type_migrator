@@ -1,6 +1,6 @@
 defmodule Ex2 do
 
-  @spec record_input5(%{:a => atom | float, binary() => binary()}) :: map()
+  @spec record_input5(%{:a => atom | float, binary() => binary(), binary() => atom()}) :: map()
   def record_input5(x), do: x
 
   @spec record_input4(%{integer() => integer() | float() | atom(), optional(12..16) => float}) :: map()

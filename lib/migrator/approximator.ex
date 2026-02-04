@@ -13,9 +13,9 @@ defmodule Migrator.Approximator do
         :empty_list -> {:list, [left_org]}
         {:non_empty_list, _} -> {:list, [left_org]}
         {:gradual, :fun} -> {:fun, [left_org]}
-        {:fun, _} -> {:fun_top, [left_org]}
+        #{:fun, _} -> {:fun_top, [left_org]}
         {:interval, _} -> {:integer, [left_org]}
-        {:atom, _} -> {:atom, [left_org]}
+        #{:atom, _} -> {:atom, [left_org]}
 
         _ -> {left_org, [left_org]}
       end
@@ -28,9 +28,9 @@ defmodule Migrator.Approximator do
     merging = fn {list1, field_m}, merging_fun ->
         merging_fun = &merging_fun.(&1, merging_fun)
         case list1 do
-          [] -> {field_m, []} |> IO.inspect(label: "START COMPARE")
+          [] -> {field_m, []}
           [field_l1 | rest_l1] ->
-            {field_m_new, rest_l1_new} = {rest_l1, field_m} |> IO.inspect(label: "BEFORE COMPARE FUN") |> merging_fun.() |> IO.inspect(label: "AFTER COMPARE FUN")
+            {field_m_new, rest_l1_new} = {rest_l1, field_m} |> merging_fun.()
             if field_m_new == nil do
               {nil, [field_l1 | rest_l1_new]}
             else
@@ -42,7 +42,7 @@ defmodule Migrator.Approximator do
               atom_type_found_in_list? = left_l1 == :atom
               # If K uinon s is a subtype of K union s'
               {left_m_org_new, merging_org_type_subtype?} = if key_type_found_in_list?, do: {left_l1, {left_m_org, left_l1_org}} |> merge_subtypes(), else: {left_m_org, false}
-              {left_m_org_new, merging_org_type_subtype?} |> IO.inspect(label: "MERGING")
+              {left_m_org_new, merging_org_type_subtype?}
               cond do
                 key_type_found_in_list? and merging_org_type_subtype? -> {nil, [field_l1 | rest_l1_new]}
                 key_type_found_in_list? and !merging_org_type_subtype? -> {{{left_m, left_m_org_new}, (right_l1 ++ right_m) |> Enum.uniq()}, rest_l1_new}
@@ -102,8 +102,8 @@ defmodule Migrator.Approximator do
         end
       end
 
-    {{m_org_new, l1_org_new}, subtype_new?} = left_m_org |> IO.inspect(label: "M_ORG") |> Enum.reduce({{[], left_l1_org}, true}, fn lmo, {{acc_m_org, acc_l1_org}, acc_subtype?} ->
-        acc_l1_org |> IO.inspect(label: "L1_ORG") |> Enum.reduce({{acc_m_org, []}, acc_subtype?}, fn ll1o, {{acc_m_org_new, acc_l1_org_new}, acc_subtype_new?} ->
+    {{m_org_new, l1_org_new}, subtype_new?} = left_m_org |> Enum.reduce({{[], left_l1_org}, true}, fn lmo, {{acc_m_org, acc_l1_org}, acc_subtype?} ->
+        acc_l1_org |> Enum.reduce({{acc_m_org, []}, acc_subtype?}, fn ll1o, {{acc_m_org_new, acc_l1_org_new}, acc_subtype_new?} ->
           case {lmo, ll1o} do
             # {:integer, :integer} -> {:integer, false} # keep both right-hand type?
             {:integer, _} -> {{[:integer], []}, false}
@@ -112,18 +112,13 @@ defmodule Migrator.Approximator do
               {org_type, subtype?} = {{n1_m, n2_m}, {n1_l1, n2_l1}} |> comparing_intervals.()
               case org_type do
                 [org_type_m, org_type_l1] -> {{acc_m_org_new ++ [org_type_m], acc_l1_org_new ++ [org_type_l1]}, acc_subtype_new? and subtype?}
-                 |> IO.inspect(label: "IS_SUBTYPE CHECK1")
                 [org_type_union] -> {{acc_m_org_new, acc_l1_org_new ++ [org_type_union]}, acc_subtype_new? and subtype?}
-                 |> IO.inspect(label: "IS_SUBTYPE CHECK2")
               end
           end
         end)
-      end) |> IO.inspect(label: "IS_SUBTYPE RESULT")
+      end)
     org_type_new = m_org_new ++ l1_org_new
     {org_type_new, subtype_new?}
-  end
-  defp merge_subtypes({:atom, {left_m_org, left_l1_org}}) do
-    # {:atom, _} -> {:atom, [left_org]}
   end
   defp merge_subtypes({:list, {left_m_org, left_l1_org}}) do
     # :empty_list -> {:list, [left_org]}
@@ -133,7 +128,7 @@ defmodule Migrator.Approximator do
     # {:gradual, :fun} -> {:fun, [left_org]}
     # {:fun, _} -> {:fun_top, [left_org]}
   end
-  defp merge_subtypes({_, {left_m_org, left_l1_org}}), do: (if left_m_org == left_l1_org, do: true, else: false)
+  defp merge_subtypes({_, {left_m_org, left_l1_org}}), do: (if left_m_org == left_l1_org, do: {left_m_org, true}, else: {left_m_org ++ left_l1_org, false})
 
   defp remove_extra_information(fields) do
     # Clear up the original types
