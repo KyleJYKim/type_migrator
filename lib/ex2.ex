@@ -1,5 +1,20 @@
 defmodule Ex2 do
 
+  @spec record_input5(%{:a => atom | float, binary() => binary()}) :: map()
+  def record_input5(x), do: x
+
+  @spec record_input4(%{integer() => integer() | float() | atom(), optional(12..16) => float}) :: map()
+  def record_input4(x), do: x
+
+  @spec record_input3(%{optional(20..22) => integer(), integer() => integer(), optional(1..2 | 3..4 | 5..9 | 11..13 | 11..14) => integer()}) :: map()
+  def record_input3(x), do: x
+
+  # @spec record_input2(%{required(:a | :b | :c) => atom, 1..2 | 11..12 => integer}) :: map()
+  # def record_input2(x), do: x
+
+  # @spec record_input1(%{:k => 1..2, required(atom()) => binary(), optional(1..2) => integer(), pid() | port() | reference() => binary()}) :: map()
+  # def record_input1(x), do: x
+
   @spec zero_arity() :: nil
   def zero_arity(), do: nil
 

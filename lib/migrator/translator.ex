@@ -16,6 +16,7 @@ defmodule Migrator.Translator do
   """
 
   # alias Structure.TypespecInfo, as: TsInfo
+  alias Migrator.Approximator, as: Approx
   import Module.Types.Descr
 
   def process(path) do
@@ -27,7 +28,7 @@ defmodule Migrator.Translator do
     ast
       |> extract_spec()         |> IO.inspect(label: "EXTRACT SPEC FUNCTION RESULT: \n")
       |> parse_spec()           |> IO.inspect(label: "PARSE SPEC FUNCTION RESULT: \n")
-      #|> translate_spec()       |> IO.inspect(label: "TRANSLATE SPEC FUNCTION RESULT: \n")
+      |> translate_spec()       #|> Enum.map(fn x -> x |> IO.inspect(label: "TRANSLATE SPEC FUNCTION RESULT: \n") end)
       #|> assemble_elixir_type()
   end
 
@@ -106,11 +107,11 @@ defmodule Migrator.Translator do
         [type, {:..., [], []}] -> {:nonempty_list, [], [type |> walker_fun.()]} |> walker_fun.()
         [type] -> {:list, [], [type |> walker_fun.()]} |> walker_fun.()
         {:%{}, _, fields} -> (
-          fields = fields |> Enum.map(
-            fn {left, right} -> case left do
-              {req_opt, _, _} when req_opt == :optional or :required -> {left, right}
-              type when is_atom(type) -> {{:required, [], [left]}, right}
-              _ -> {{:optional, [], [left]}, right}
+          fields = fields |> Enum.map(fn {left, right} ->
+            case left do
+              {:required, _, left} -> {{:required, [], left}, right}
+              {:optional, _, left} -> {{:optional, [], left}, right}
+              _ -> if is_atom(left), do: {{:required, [], [left]}, right}, else: {{:optional, [], [left]}, right}
             end
           end)
           {:%{}, [], fields}
@@ -121,7 +122,7 @@ defmodule Migrator.Translator do
           {:%{}, [], [__struct__: String.to_atom(module)] ++ struct_list}
         )
 
-        other -> other |> IO.inspect(label: "OTHER IN PARSE FUNCTION: \n")
+        other -> other #|> IO.inspect(label: "OTHER IN PARSE FUNCTION: \n")
       end)
     end
 
@@ -163,40 +164,23 @@ defmodule Migrator.Translator do
         {elem1, elem2} -> {:tuple, [elem1, elem2] |> Enum.reduce([], fn x, acc -> acc ++ (x |> translator_fun.()) end)}
 
         # %{..., F_seq} (Map)
-        {:%{}, _, record_list} -> (
-          record_list = record_list |> Enum.map(
-            fn {left, right} -> case left do
-              {:required, _, [left_type]} when is_atom(left_type) -> {left_type, right |> translator_fun.()}
-              {_, _, [left_type]} -> left_type |> translator_fun.()
-            end
-          end)
-          {:%{}, [], record_list}
-        )
-
-        {:required, _, [key_type]} -> key_type |> translator_fun.()
-        {:optional, _, [key_type]} -> key_type |> translator_fun.()
         {:%{}, _, fields} -> (
-          key_types = {:atom, :pid, :port, :reference, :float, :integer, :bitstring, :binary, :tuple, :open_map, :fun, :list}
-
-          fields_merged = fields |> Enum.map(fn {k, v} ->
-              key_type = k |> translator_fun.()
-              val_type = v |> translator_fun.()
-              evaluator = fn key_type, evaluator ->
-                case key_type do
-                  {:union, {left, right}} ->
-                    {:union, {{left |> evaluator.(evaluator), right |> evaluator.(evaluator)}, {:if_set, val_type}}}
-                  {:atom, _} ->
-                    {:defined, {key_type, val_type}}
-                  {type, _} ->
-                    type |> evaluator.(evaluator)
-                  _ ->
-                    if key_type in key_types, do: {:defined, {key_type, {:if_set, val_type}}}, else: {:undefined, {key_type, {:if_set, val_type}}}
+          fields = fields |> Enum.reduce([], fn field, acc_fields ->
+            field_translator = fn {{_req_or_opt, _, [left]}, right} ->
+              flatten = fn type, flatten_fun ->
+                flatten_fun = &flatten_fun.(&1, flatten_fun)
+                case type do
+                  {:|, _, [left_u, right_u]} -> ([left_u |> flatten_fun.()] ++ [right_u |> flatten_fun.()]) |> Enum.flat_map(fn x -> x end)
+                  _ -> [type |> translator_fun.()]
                 end
               end
-              key_type |> evaluator.(evaluator)
-            end) |> merge_total()
-
-          {:open_map, fields_merged}
+              #right_translated = if req_or_opt == :required and is_atom(left), do: right |> translator_fun.(), else: {:if_set, right |> translator_fun.()}
+              # [Union of F_i] to [F_1, ..., F_n]
+              left |> flatten.(flatten) |> Enum.map(fn l -> {l, right |> flatten.(flatten)} end) # (more precisely only flatten the left-hand side of a field)
+            end
+            acc_fields ++ (field |> field_translator.() |> IO.inspect(label: "FIELD TRANSLATION") |> Approx.promote() |> IO.inspect(label: "FIELD PROMOTION"))
+          end) |> Approx.map() |> IO.inspect(label: "FIELDS MAP")
+          {:%{}, [], fields} |> IO.inspect(label: "FIELDS TRANSLATION")
         )
 
         # [] (empty list)
@@ -221,7 +205,7 @@ defmodule Migrator.Translator do
 
         # (... -> Type)
         {:->, _, [:..., return]} ->
-          if return |> translator_fun.() == :term, do: :fun_top, else: approximate_top_fun()
+          if return |> translator_fun.() == :term, do: :fun, else: approximate_top_fun()
 
         # (Type_seq} -> Type)
         {:->, _, [arguments, return]} -> {:fun, {arguments |> translator_fun.(), return |> translator_fun.()}}
@@ -257,7 +241,7 @@ defmodule Migrator.Translator do
       translation = &translator.(&1, translator)
       inputs = inputs |> Enum.map(translation)
       output = output |> translation.()
-      guards = if guards == nil, do: nil, else: guards |> Enum.map(fn {k, v} -> Atom.to_string(k) <> ": " <> (v |> translation.()) end)
+      #guards = if guards == nil, do: nil, else: guards |> Enum.map(fn {k, v} -> Atom.to_string(k) <> ": " <> (v |> translation.()) end)
 
       #%TsInfo{name: name, inputs: inputs, output: output, guards: guards}
       {line_num, name, inputs, output, guards}
@@ -266,122 +250,7 @@ defmodule Migrator.Translator do
     parsed_spec_tree |> Enum.map(total_translator)
   end
 
-  defp merge_total(fields) do
-
-    # return : {:all_match, [match_list]}, {:partial_match, [match_list]}, {:no_match, []}
-    comparing_types = fn {type1, type2}, comparison_fun ->
-        #comparison_fun = comparison_fun.(comparison_fun)
-        match_accumulator = fn comparing_list ->
-          comparing_list |> Enum.reduce({:no_match, []}, fn {status, list}, {acc_status, acc_list} ->
-            case {status, acc_status} do
-              {:all_match, :all_match} -> {:all_match, acc_list ++ list}
-              {:no_match, :no_match} -> {:no_match, []}
-              _ -> {:partial_match, acc_list ++ list}
-            end
-          end)
-        end
-        case {type1, type2} do
-          {{:union, left1, right1}, {:union, left2, right2}} ->
-            [{left1, left2} |> comparison_fun.(), {left1, right2} |> comparison_fun.(), {right1, left2} |> comparison_fun.(), {right1, right2} |> comparison_fun.()]
-              |> match_accumulator.()
-          {{:union, left1, right1}, _} ->
-            [{left1, type2} |> comparison_fun.(), {right1, type2} |> comparison_fun.()]
-              |> match_accumulator.()
-          {_, {:union, left2, right2}} ->
-            [{left2, type1} |> comparison_fun.(), {right2, type1} |> comparison_fun.()]
-              |> match_accumulator.()
-          {:atom, {:atom, _}} -> {:partial_match, [type2]}
-          {{:atom, _}, :atom} -> {:partial_match, [type1]}
-          {{:supertyped, type1}, {:supertyped, type1}} -> if type1 == type2, do: {:partial_match, [type2]}, else: {:no_match, []}
-          {_, {:supertyped, type1}} -> if type1 == type2, do: {:partial_match, [type2]}, else: {:no_match, []}
-          {{:supertyped, type1}, _} -> if type1 == type2, do: {:partial_match, [type2]}, else: {:no_match, []}
-          _ -> if type1 == type2, do: {:all_match, [type2]}, else: {:no_match, []}
-        end
-      end
-
-    approximated_merging = fn {{{key_type_l1, val_type_l1}, {key_type, val_type}}, match_list} ->
-        key_type = key_type |> get_lower_bound_super_key_type()
-        case key_type do
-          {:union, left, right} -> :not_yet
-          {:supertyped, key_type} -> match_list |> Enum.reduce([], fn type -> end)
-          _ -> :not_yet
-        end
-
-
-        # cond do
-        #   key_type_l1 == key_type_super ->
-        #     {{key_type_l1, val_type_l1}, :empty}
-        #   key_type_l1 != key_type ->
-        #     {{key_type_l1, val_type_l1}, {key_type_super, val_type}}
-        #   true ->
-        # end
-      end
-
-    basic_merging = fn {{key_type_l1, val_type_l1}, {key_type, val_type}} ->
-        comparing_types = &comparing_types.(&1, comparing_types)
-        {containment_result, match_list} = {key_type_l1, key_type} |> comparing_types.()
-        case containment_result do
-          :all_match -> {{key_type_l1, val_type_l1}, :empty}
-          :no_match -> {{key_type_l1, val_type_l1}, {key_type, val_type}}
-          :partial_match -> {{{key_type_l1, val_type_l1}, {key_type, val_type}}, match_list} |> approximated_merging.() # singleton atom and atom(), and partial unions...
-        end
-      end
-
-    # Should there be a merge based on value-type?
-
-    total_merging = fn field_with_status, L1 ->
-      {L1, field_new} = L1 |> Enum.reduce({[], field_with_status}, fn field_l1, {acc_l1, {field_status, {key_type, val_type}}} ->
-          # {field_l1_new, field_new} = case {key_type_l1, field_status} do
-          #   {{:supertyped, _}, _} ->
-          #     {key_type_l1, val_type_l1} |> approximated_merging.(field)
-          #   {_, :undefined} ->
-          #     {key_type_l1, val_type_l1} |> approximated_merging.(field)
-          #   {_, :defined} ->
-          #     {key_type_l1, val_type_l1} |> basic_merging.(field)
-          #   {_, :union} ->
-          #     {key_type_l1, val_type_l1} |> basic_merging.(field)
-          # end
-
-
-          if field_l1 == [] do
-            field = {key_type |> get_lower_bound_super_key_type(), val_type}
-            {[], field}
-          else
-            {field_l1_new, field_new} = {field_l1, {key_type, val_type}} |> basic_merging.()
-            cond do
-              field_l1_new == :empty ->
-                {acc_l1, field_new}
-              field_new == :empty ->
-                {acc_l1 ++ [field_l1_new], :empty}
-              true ->
-                {acc_l1 ++ [field_l1_new], field_new}
-            end
-          end
-        end)
-        if field_new == :empty, do: L1, else: [field_new | L1]  # natural reverse.. but hmm..
-      end
-
-    fields |> Enum.reduce([{:empty, :empty}], fn field, L1 -> field |> total_merging.(L1) end)
-  end
-
-  defp get_lower_bound_super_key_type(type) do
-    case type do
-      {:union, {left, right}} -> {:union, {left |> get_lower_bound_super_key_type(), right |> get_lower_bound_super_key_type()}}
-      {:tuple, _} -> {:supertyped, :tuple}
-      {:open_map, _} -> {:supertyped, :open_map}
-      :empty_list -> {:supertyped, :list}
-      {:non_empty_list, _} -> {:supertyped, :list}
-      #:bitstring -> {:supertyped, :binary}
-      {:gradual, :fun_top} -> {:supertyped, :fun_top}
-      {:fun, _} -> {:supertyped, :fun_top}
-      {:interval, _} -> {:supertyped, :integer}
-      {:atom, _} -> {:supertyped, :atom}
-      _ -> type
-    end
-  end
-
-  defp approximate_top_fun(), do: {:gradual, :fun_top}
-
+  defp approximate_top_fun(), do: {:gradual, :fun}
 
   defp assemble_elixir_type(translated_spec_list) do
 
