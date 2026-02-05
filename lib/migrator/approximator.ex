@@ -131,7 +131,6 @@ defmodule Migrator.Approximator do
   defp merge_subtypes({_, {left_m_org, left_l1_org}}), do: (if left_m_org == left_l1_org, do: {left_m_org, true}, else: {left_m_org ++ left_l1_org, false})
 
   defp remove_extra_information(fields) do
-    # Clear up the original types
-    fields
+    fields |> Enum.map(fn {{key_type, _}, right_f} -> {key_type, right_f} end)
   end
 end
