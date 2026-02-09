@@ -273,7 +273,12 @@ Hence, to rewrite the translation of field types after applying the promotion fu
       \dsb{\texttt{optional(\TST) => $\prm{\TST}$}} =  
          \texttt{[\,}\bigvee_{\{\ETK\in\Bbb{K}^{+} \,|\,\dsb{\TST} \cap \ETK  \neq \emptyset\}}\ETK^{\dsb{\TST}}\fto\ifset{\dsb{\prm{\TST}}}\texttt{\,]}
    \end{translationfig}
-   \\[4mm] where $\Bbb{K}^{+}$ is a set of all the key types except singleton atom types, i.e., $\Bbb{K}^{+}\,=\,\ETK\ \setminus \SAtom$.
+   \\[4mm] where $\Bbb{K}^{+}$ is a set of all the key types except singleton atom types, i.e., $\Bbb{K}^{+}$ is the set \{\texttt{atom()},
+  \texttt{pid()},\texttt{port()}, \texttt{reference()},
+      \texttt{float()}, \texttt{integer()},
+     \texttt{bitstring()}, \texttt{binary()},
+      \texttt{tuple()}, \texttt{open\_map()}, \texttt{fun()},
+       \texttt{list()}\}
    \caption{Approximated Translation in Field Types}
    \label{app:approximated-translation-in-field-types}
 \end{figure}
@@ -303,17 +308,19 @@ Then we can simply add the new field type to the list.
    \[\begin{array}{rcll}
       \texttt{[}\,L_1\texttt{]} \oplus \texttt{[\,]} &=& \texttt{[}\,L_1\texttt{]} \\
       L_1 \oplus \texttt{[}\,\ETK^{\orgtype}\fto\tau,\,\,L_2\texttt{]} &=& L_1 \oplus L_2 & \textsl{if }\ \ETK^{\prm{\orgtype}} \in L_1 \textsl{ and } \ETK \cap {\orgtype} \leq \ETK \cap \prm{\orgtype} \\
-      L_1 \oplus \texttt{[}\,\ETK^{\orgtype}\fto\tau,\,\,L_2\texttt{]} &=& \texttt{[}\,\ETK^{\orgtype\,\vee\,\prm{\orgtype}}\fto\tau \texttt{ or }\prm{\tau},\,\,L_1 \setminus \ETK^{\prm{\orgtype}}\texttt{]} \oplus L_2  & \textsl{if }\ \ETK^{\prm{\orgtype}} \in L_1 \textsl{ and } \ETK \cap \orgtype \nleq \ETK \cap \prm{\orgtype} \\
+      L_1 \oplus \texttt{[}\,\ETK^{\orgtype}\fto\tau,\,\,L_2\texttt{]} &=& \texttt{[}\,\ETK^{\orgtype\,\vee\,\prm{\orgtype}}\fto\tau \texttt{ or }\prm{\tau},\,\,L_1 \setminus \ETK^{\prm{\orgtype}}\texttt{]} \oplus L_2  & \textsl{if }\ \ETK^{\prm{\orgtype}}\fto\prm{\tau} \in L_1 \textsl{ and } \ETK \cap \orgtype \nleq \ETK \cap \prm{\orgtype} \\
       L_1 \oplus \texttt{[}\,\SAtom^{\orgtype}\fto\tau,\,\,L_2\texttt{]} &=& L_1 \oplus L_2 & \textsl{if }\ \texttt{atom()}^{\prm{\orgtype}} \in L_1 \textsl{ and } \SAtom \leq \prm{\orgtype} \\
-      L_1 \oplus \texttt{[}\,\SAtom^{\orgtype}\fto\tau,\,\,L_2\texttt{]} &=& \texttt{[}\,\SAtom^{\orgtype}\fto\tau,\,\,L_1\,\texttt{]} \oplus L_2 & \textsl{if }\ \texttt{atom()}^{\prm{\orgtype}} \in L_1 \textsl{ and } \SAtom \nleq \prm{\orgtype} \\
-      L_1 \oplus \texttt{[}\,\ETK^{\orgtype}\fto\tau,\,\,L_2\texttt{]} &=& \texttt{[}\,\ETK^{\orgtype}\fto\tau,\,\,L_1\,\texttt{]} \oplus L_2 & \textsl{if }\ \ETK\not\in L_1 \\
+      %\color{red}L_1 \oplus \texttt{[}\,\SAtom^{\orgtype}\fto\tau,\,\,L_2\texttt{]} &=& \color{red}\texttt{[}\,\SAtom^{\orgtype}\fto\tau,\,\,L_1\,\texttt{]} \oplus L_2 & \color{red}\textsl{if }\ \texttt{atom()}^{\prm{\orgtype}} \in L_1 \textsl{ and } \SAtom \nleq \prm{\orgtype} \\
+      L_1 \oplus \texttt{[}\,\SAtom^{\orgtype}\fto\tau,\,\,L_2\texttt{]} &=& \texttt{[}\,\SAtom^{\orgtype}\fto\tau,\,\, \texttt{atom()}^{\orgtype\vee\prm{\orgtype}}\fto\prm{\tau}, L_1\,\texttt{]} \oplus L_2 & \textsl{if }\ \texttt{atom()}^{\prm{\orgtype}}\fto\prm{\tau} \in L_1 \textsl{ and } \SAtom \nleq \prm{\orgtype} \\
+     L_1 \oplus \texttt{[}\,\texttt{atom()}^{\orgtype}\fto\tau,\,\,L_2\texttt{]} &=& \texttt{[}\,\texttt{atom()}^{\orgtype\vee\{:k\;\mid\;  :k\in L_1\}}\fto\tau, L_1\,\texttt{]} \oplus L_2 & \textsl{if }\ \texttt{atom()}^{\prm{\orgtype}} \not\in L_1 \textsl{ and } \SAtom \nleq \prm{\orgtype} \\
+      L_1 \oplus \texttt{[}\,\ETK^{\orgtype}\fto\tau,\,\,L_2\texttt{]} &=& \texttt{[}\,\ETK^{\orgtype}\fto\tau,\,\,L_1\,\texttt{]} \oplus L_2 & \textsl{if }\ \ETK\not\in L_1 \textsl{ and } \ETK\not\equiv\texttt{atom()}\\
    \end{array}\]
    \\[4mm] we use the following notation: (1) $\ETK^{\orgtype} \in L$ if $\,\exists\ \tau$ such that $\ETK^{\orgtype}\fto\tau \in L$; (2) $\ETK \in L$ if $\,\exists\ \orgtype$, $\tau$ such that $\ETK^{\orgtype}\fto\tau \in L$; and (3) $L \setminus \ETK$ for $L \setminus (\ETK^{\orgtype}\fto\tau)$ if $\,\exists\, \orgtype$, $\tau$ such that $\ETK^{\orgtype}\fto\tau \in L$.
    \caption{Merge in Approximated Field Types}
    \label{app:merge-in-approximated-field-types}
 \end{figure}
 
-At last, we revise the field type translation to $\dsb{\map{\texttt{\TSF$_1$,\,...,\,\TSF$_n$}}} = \textsf{\textsl{map}($\bigoplus_{i=1}^{n}$$\dsb{\TSF_i}$)}$, and by merging \textsf{Empty} to that end of merges, we obtain a saturated map, $\dsb{\map{\texttt{\TSF$_1$,\,...,\,\TSF$_n$}}} =\textsf{\textsl{map}($\bigoplus_{i=1}^{n}$$\dsb{\TSF_i}$$\,\oplus\,\texttt{Empty}$)}$.
+At last, we revise the field type translation to $\dsb{\map{\texttt{\TSF$_1$,\,...,\,\TSF$_n$}}} = \textsf{\textsl{erase}(\textsl{map}($\bigoplus_{i=1}^{n}$$\dsb{\TSF_i}$))}$, and by merging \textsf{Empty} to that end of merges, we obtain a saturated map, $\dsb{\map{\texttt{\TSF$_1$,\,...,\,\TSF$_n$}}} =\textsf{\textsl{map}($\bigoplus_{i=1}^{n}$$\dsb{\TSF_i}$$\,\oplus\,\texttt{Empty}$)}$.
 
 % As you can see, the reason why we distinguish the promoted types from those not is to leave the intention of using the singleton types in TypeSpecs while maintaining the soundness.
 
