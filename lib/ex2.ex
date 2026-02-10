@@ -1,9 +1,9 @@
 defmodule Ex2 do
   # %{[] => atom() | nonempty_maybe_improper_list(integer(), []) => atom(), nonempty_maybe_improper_list(integer() | atom(), atom()) => binary()}
-  # @spec record_keytype_lists1(%{list(list()) => atom(), list(list(integer())) => binary()}) :: map()
-  # def record_keytype_lists1(x), do: x
+  @spec record_keytype_lists1(%{list() => atom(), list(integer()) => binary()}) :: map()
+  def record_keytype_lists1(x), do: x
 
-  @spec record_keytype_atom_others1(%{optional(:a) => atom | any(), binary() => binary(), binary() => atom()}) :: map()
+  @spec record_keytype_atom_others1(%{optional(:a | :b) => atom | any(), binary() => binary(), binary() => atom()}) :: map()
   def record_keytype_atom_others1(x), do: x
 
   @spec record_keytype_integers2(%{neg_integer() => integer() | float() | atom(), optional(-10..-1) => float}) :: map()

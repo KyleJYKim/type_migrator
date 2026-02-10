@@ -111,10 +111,11 @@ defmodule Migrator.Translator do
         [type] -> {:list, [], [type |> walker_fun.()]} |> walker_fun.()
         {:%{}, _, fields} -> (
           fields = fields |> Enum.map(fn {left, right} ->
+            #right = right |> walker_fun.()
             case left |> IO.inspect(label: "FEILD PARSERRRRRRRRR") do
-              {:required, _, [type]} -> {{:required, [], type}, right} #|> walker_fun.()|> IO.inspect(label: "FEILD PARSERRRRRRRRR1")
-              {:optional, _, [type]} -> {{:optional, [], type}, right} #|> walker_fun.() |> IO.inspect(label: "FEILD PARSERRRRRRRRR2")
-              _ -> if is_atom(left), do: {{:required, [], [left]}, right}, else: {{:optional, [], [left]}, right} #|> walker_fun.() |> IO.inspect(label: "FEILD PARSERRRRRRRRR3")
+              {:required, _, [type]} -> {{:required, [], [type]}, right} |> walker_fun.()
+              {:optional, _, [type]} -> {{:optional, [], [type]}, right} |> walker_fun.()
+              _ -> if is_atom(left), do: {{:required, [], [left]}, right}, else: {{:optional, [], [left]}, right}  |> walker_fun.() |> IO.inspect(label: "FEILD PARSERRRRRRRRR3")
             end
           end)
           {:%{}, [], fields}
@@ -125,9 +126,7 @@ defmodule Migrator.Translator do
           {:%{}, [], [__struct__: String.to_atom(module)] ++ struct_list}
         )
 
-        {:|, _, [left, right]} -> {:|, [], [left, right]} |> IO.inspect(label: "UNION TYPE PARSE")
-
-        other -> other |> IO.inspect(label: "OTHER IN PARSE FUNCTION: \n")
+        other -> other #|> IO.inspect(label: "OTHER IN PARSE FUNCTION: \n")
       end)
     end
 
