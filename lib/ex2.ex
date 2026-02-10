@@ -1,23 +1,25 @@
 defmodule Ex2 do
+  # %{[] => atom() | nonempty_maybe_improper_list(integer(), []) => atom(), nonempty_maybe_improper_list(integer() | atom(), atom()) => binary()}
+  # @spec record_keytype_lists1(%{list(list()) => atom(), list(list(integer())) => binary()}) :: map()
+  # def record_keytype_lists1(x), do: x
 
-  @spec id1(integer()) :: integer()
-  @spec id1(float()) :: float()
-  def id1(x), do: x
+  @spec record_keytype_atom_others1(%{optional(:a) => atom | any(), binary() => binary(), binary() => atom()}) :: map()
+  def record_keytype_atom_others1(x), do: x
 
-  @spec record_input5(%{atom() => atom | float, binary() => binary(), binary() => atom()}) :: map()
-  def record_input5(x), do: x
+  @spec record_keytype_integers2(%{neg_integer() => integer() | float() | atom(), optional(-10..-1) => float}) :: map()
+  def record_keytype_integers2(x), do: x
 
-  @spec record_input4(%{integer() => integer() | float() | atom(), optional(12..16) => float}) :: map()
-  def record_input4(x), do: x
+  @spec record_keytype_integers1(%{optional(20..22) => integer(), neg_integer() => integer(), optional(1..2 | 3..4 | 5..9 | 11..13 | 11..14) => integer()}) :: map()
+  def record_keytype_integers1(x), do: x
 
-  @spec record_input3(%{optional(20..22) => integer(), integer() => integer(), optional(1..2 | 3..4 | 5..9 | 11..13 | 11..14) => integer()}) :: map()
-  def record_input3(x), do: x
+  @spec record_keytype_integers2(%{optional(1..10) => integer(), optional(9..14) => float()}) :: map()
+  def record_keytype_integers2(x), do: x
 
-  # @spec record_input2(%{required(:a | :b | :c) => atom, 1..2 | 11..12 => integer}) :: map()
-  # def record_input2(x), do: x
+  @spec record_keytype_atom_integer1(%{required(:a | :b | :c) => atom, 1..2 | 11..12 => integer}) :: map()
+  def record_keytype_atom_integer1(x), do: x
 
-  # @spec record_input1(%{:k => 1..2, required(atom()) => binary(), optional(1..2) => integer(), pid() | port() | reference() => binary()}) :: map()
-  # def record_input1(x), do: x
+  @spec record_keytype_atoms1(%{:k => 1..2, atom() => binary(), :a => float()}) :: map()
+  def record_keytype_atoms1(x), do: x
 
   @spec zero_arity() :: nil
   def zero_arity(), do: nil
@@ -25,6 +27,9 @@ defmodule Ex2 do
   @spec return_true() :: true
   def return_true(), do: true
 
+  @spec id1(integer()) :: integer()
+  @spec id1(float()) :: float()
+  def id1(x), do: x
 
   @spec id2(atom()) :: v when v: atom()
   def id2(x), do: x

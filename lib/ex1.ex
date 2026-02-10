@@ -34,7 +34,7 @@ defmodule Ex1 do
   def id_records4(x), do: x
   @spec id_records5(%{required(atom()) => integer(), optional(atom()) => binary()}) :: map()
   def id_records5(x), do: x
-  @spec id_records6(%{optional(atom()) => binary(), required(atom()) => integer()}) :: map()
+  @spec id_records6(%{optional(atom()) => binary(), required(:a) => integer()}) :: map()
   def id_records6(x), do: x
   @spec id_records7(%{optional(:a) => binary(), optional(atom()) => integer()}) :: map()
   def id_records7(x), do: x
@@ -55,8 +55,17 @@ defmodule Ex1 do
   @spec id_records12(%{1..3 => integer(), 4..5 => float(), integer() => binary()}) :: map()
   def id_records12(x) when is_map(x), do: x
 
-  @spec id_records13(%{integer() => integer | float()}) :: map()
+  @spec id_records13(%{nonempty_list(binary()) => binary(), nonempty_maybe_improper_list(binary(), []) => integer()}) :: map()
   def id_records13(x) when is_map(x), do: x
+
+  @spec id_records14(%{required(:a | integer()) => integer()}) :: map()
+  def id_records14(x), do: x
+
+  @spec id_records15(%{required(:a | :b) => integer(), :c => float()}) :: map()
+  def id_records15(x), do: x
+
+  @spec id_records16(%{list(integer()) => integer()}) :: map()
+  def id_records16(x), do: x
 
   # Whatever function return type is, it is taken as ...->any()
   # @spec id_fun((...->atom())) :: fun()
@@ -67,6 +76,9 @@ defmodule Ex1 do
 
   @spec id_tuple({%Ex1.Some{a: integer()}, binary()}) :: t when t: tuple()
   def id_tuple(tpl) when is_tuple(tpl), do: tpl
+
+  @spec id_list(list(integer())) :: list(integer())
+  def id_list(lst) when is_list(lst), do: lst
 
   defmodule In do
     # @spec id_exhaustive() :: any()
@@ -121,7 +133,7 @@ defmodule Ex1 do
 
     #def id_records4(), do: Ex1.id_records4(%{:a => "s"})
     #def id_records5(), do: Ex1.id_records5(%{:c => 8, :b => "d"})
-    #def id_records6(), do: Ex1.id_records6(%{:c => "d", :b => "d"})
+    def id_records6(), do: Ex1.id_records6(%{:c => "d", :a => "1"})
     #def id_records7(), do: Ex1.id_records7(%{:a => 1})
 
     def id_records8(), do: Ex1.id_records8(%{:c => "a"})
@@ -130,7 +142,10 @@ defmodule Ex1 do
 
     #def id_records11(), do: Ex1.id_records11(%{2 => 1, 6 => 1.0, 5 => "s"})
     def id_records12(), do: Ex1.id_records12(%{2 => 2, 4 => 3.8})
-    def id_records13(), do: Ex1.id_records13(%{2 => 2, 4 => 3.8})
+    def id_records13(), do: Ex1.id_records13(%{["a"] => "a"})
+    def id_records14(), do: Ex1.id_records14(%{})
+    def id_records15(), do: Ex1.id_records15(%{:c => 1.1})
+    def id_records16(), do: Ex1.id_records16(%{[1] => 1})
 
     #def id_fun(), do: Ex1.id_fun(fn x -> <<97>> end)
 
@@ -139,6 +154,8 @@ defmodule Ex1 do
     def id_bin(), do: Ex1.id_bin(<<97::size(8), 98::size(7)>>)
 
     #def id_tuple(), do: Ex1.id_tuple({1,"d"})
+
+    def id_list(), do: Ex1.id_list([1])
 
   end
 

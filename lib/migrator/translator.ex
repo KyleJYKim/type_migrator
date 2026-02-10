@@ -26,9 +26,9 @@ defmodule Migrator.Translator do
       |> Code.string_to_quoted!
 
     ast
-      |> extract_spec()         |> IO.inspect(label: "EXTRACT SPEC FUNCTION RESULT: \n")
-      |> parse_spec()           |> IO.inspect(label: "PARSE SPEC FUNCTION RESULT: \n")
-      |> translate_spec()       #|> Enum.map(fn x -> x |> IO.inspect(label: "TRANSLATE SPEC FUNCTION RESULT: \n") end)
+      |> extract_spec()         |> IO.inspect(label: "EXTRACT SPEC FUNCTION RESULT\n")
+      |> parse_spec()           |> IO.inspect(label: "PARSE SPEC FUNCTION RESULT\n")
+      |> translate_spec()       #|> Enum.map(fn x -> x |> IO.inspect(label: "TRANSLATE SPEC FUNCTION RESULT\n") end)
       #|> assemble_elixir_type()
   end
 
@@ -71,12 +71,14 @@ defmodule Migrator.Translator do
         {:nonempty_bitstring, _, _} -> {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, 1]}, {:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, 1]}]}]}
         {:boolean, _, _} -> {:|, [], [true, false]}
         {:byte, _, _} -> {:.., [context: Elixir, imports: [{0, Kernel}, {2, Kernel}]], [0, 255]}
-        {:nonempty_list, [], [type]} -> {:nonempty_maybe_improper_list, [], [type, []]}
-        {:list, [], [type]} -> {:|, [], [[], {:nonempty_list, [], [type]}]}
+        {:nonempty_list, _, [type]} -> {:nonempty_maybe_improper_list, [], [type, []]}
+        {:list, _, []} -> {:|, [], [[], {:nonempty_list, [], [{:any, [], []}]}]} |> walker_fun.()
+        {:list, _, [type]} -> {:|, [], [[], {:nonempty_list, [], [type]}]}
         {:nonempty_list, _, _} -> {:nonempty_list, [], [{:any, [], []}]} |> walker_fun.()
         # {:nonempty_improper_list, [], [type1, type2]} -> {:nonempty_maybe_improper_list, [], [type1, type2]}
-        {:maybe_improper_list, [], [type1, type2]} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:|, [], [type1, type2]}]}]}
+        {:maybe_improper_list, _, [type1, type2]} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:|, [], [type1, type2]}]}]}
         {:maybe_improper_list, _, _} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:any, [], []}, {:any, [], []}]}]}
+        {:nonempty_maybe_improper_list, _, [type1, type2]} -> {:nonempty_maybe_improper_list, [], [type1, type2]}
         {:nonempty_maybe_improper_list, _, _} -> {:nonempty_maybe_improper_list, [], [{:any, [], []}, {:any, [], []}]}
         {:char, _, _} -> {:.., [context: Elixir, imports: [{0, Kernel}, {2, Kernel}]], [0, 1114111]}
         {:charlist, _, _} -> {:list, [], [{:char, [], []}]} |> walker_fun.()
@@ -104,14 +106,15 @@ defmodule Migrator.Translator do
         # true -> :true
         # false -> :false
         # nil -> :nil
+        {:map, _, _} -> {:%{}, [], [{{:optional, [], [{:any, [], []}]}, {:any, [], []}}]}
         [type, {:..., [], []}] -> {:nonempty_list, [], [type |> walker_fun.()]} |> walker_fun.()
         [type] -> {:list, [], [type |> walker_fun.()]} |> walker_fun.()
         {:%{}, _, fields} -> (
           fields = fields |> Enum.map(fn {left, right} ->
-            case left do
-              {:required, _, left} -> {{:required, [], left}, right}
-              {:optional, _, left} -> {{:optional, [], left}, right}
-              _ -> if is_atom(left), do: {{:required, [], [left]}, right}, else: {{:optional, [], [left]}, right}
+            case left |> IO.inspect(label: "FEILD PARSERRRRRRRRR") do
+              {:required, _, [type]} -> {{:required, [], type}, right} #|> walker_fun.()|> IO.inspect(label: "FEILD PARSERRRRRRRRR1")
+              {:optional, _, [type]} -> {{:optional, [], type}, right} #|> walker_fun.() |> IO.inspect(label: "FEILD PARSERRRRRRRRR2")
+              _ -> if is_atom(left), do: {{:required, [], [left]}, right}, else: {{:optional, [], [left]}, right} #|> walker_fun.() |> IO.inspect(label: "FEILD PARSERRRRRRRRR3")
             end
           end)
           {:%{}, [], fields}
@@ -122,7 +125,9 @@ defmodule Migrator.Translator do
           {:%{}, [], [__struct__: String.to_atom(module)] ++ struct_list}
         )
 
-        other -> other #|> IO.inspect(label: "OTHER IN PARSE FUNCTION: \n")
+        {:|, _, [left, right]} -> {:|, [], [left, right]} |> IO.inspect(label: "UNION TYPE PARSE")
+
+        other -> other |> IO.inspect(label: "OTHER IN PARSE FUNCTION: \n")
       end)
     end
 
@@ -165,28 +170,33 @@ defmodule Migrator.Translator do
 
         # %{..., F_seq} (Map)
         {:%{}, _, fields} -> (
-          fields = fields |> Enum.reduce([], fn field, acc_fields ->
-            field_translator = fn {{_req_or_opt, _, [left]}, right} ->
-              flatten = fn type, flatten_fun ->
-                flatten_fun = &flatten_fun.(&1, flatten_fun)
-                case type do
-                  {:|, _, [left_u, right_u]} -> ([left_u |> flatten_fun.()] ++ [right_u |> flatten_fun.()]) |> Enum.flat_map(fn x -> x end)
-                  _ -> [type |> translator_fun.()]
-                end
+          flatten = fn type, flatten_fun ->
+              flatten_fun = &flatten_fun.(&1, flatten_fun)
+              case type do
+                {:|, _, [left_u, right_u]} -> ([left_u |> flatten_fun.()] ++ [right_u |> flatten_fun.()]) |> Enum.flat_map(fn x -> x end)
+                _ -> [type |> translator_fun.()]
               end
-              #right_translated = if req_or_opt == :required and is_atom(left), do: right |> translator_fun.(), else: {:if_set, right |> translator_fun.()}
-              # [Union of F_i] to [F_1, ..., F_n]
-              left |> flatten.(flatten) |> Enum.map(fn l -> {l, right |> flatten.(flatten)} end) # (more precisely only flatten the left-hand side of a field)
             end
-            acc_fields ++ (field |> field_translator.() |> IO.inspect(label: "FIELD TRANSLATION") |> Approx.promote() |> IO.inspect(label: "FIELD PROMOTION"))
-          end) |> Approx.map() |> IO.inspect(label: "FIELDS MAP")
-          {:%{}, [], fields} |> IO.inspect(label: "FIELDS TRANSLATION")
+          field_translator = fn {{req_or_opt, _, [left]}, right} ->
+              # [Union of F_i] to [F_1, ..., F_n]
+              if req_or_opt == :required and is_atom(left) do
+                [{{:atom_req, left}, right |> flatten.(flatten)}]
+              else
+                left |> flatten.(flatten) |> Enum.map(fn l -> {l, right |> flatten.(flatten)} end)
+              end
+            end
+          fields = fields |> Enum.reduce([], fn field, acc_fields ->
+              acc_fields ++ (field  |> IO.inspect(label: "BEFORE FIELD TRANSLATION") |> field_translator.() |> IO.inspect(label: "FIELD TRANSLATION") |> Approx.promote() |> IO.inspect(label: "FIELD PROMOTION"))
+            end) |> Approx.map() |> IO.inspect(label: "FIELDS MAP")
+          {:%{}, [], fields}
         )
 
         # [] (empty list)
         [] -> :empty_list
         # [type] or [type, ...] (non-empty list)
-        {:nonempty_maybe_improper_list, _, [type, []]} -> {:non_empty_list, type |> translator_fun.()}
+        # {:nonempty_maybe_improper_list, _, [type, []]} -> {:non_empty_list, {type |> translator_fun.(), :empty_list}}
+        # [type1 | type2] (non-empty list)
+        {:nonempty_maybe_improper_list, _, [type1, type2]} -> {:non_empty_list, {type1 |> translator_fun.(), type2 |> translator_fun.()}}
 
         # <<_::n, _::_*n>>
         {:<<>>, _, [{:"::", _, [_, digit1]}, {:"::", _, [_, {:*, _, [_, digit2]}]}]} ->
@@ -211,6 +221,9 @@ defmodule Migrator.Translator do
         {:->, _, [arguments, return]} -> {:fun, {arguments |> translator_fun.(), return |> translator_fun.()}}
 
         # n..n'
+        {:.., _, [{:-, _, [digit_l]}, {:-, _, [digit_r]}]} -> {:interval, {-digit_l, -digit_r}}
+        # {:.., _, [digit_l, {:-, _, [digit_r]}]} -> {:interval, {digit_l, -digit_r}}
+        {:.., _, [{:-, _, [digit_l]}, digit_r]} -> {:interval, {-digit_l, digit_r}}
         {:.., _, [digit_l, digit_r]} -> {:interval, {digit_l, digit_r}}
 
         # n (integer singleton types)
