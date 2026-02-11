@@ -1,5 +1,5 @@
 defmodule Ex2 do
-  # %{[] => atom() | nonempty_maybe_improper_list(integer(), []) => atom(), nonempty_maybe_improper_list(integer() | atom(), atom()) => binary()}
+
   @spec record_keytype_lists1(%{list() => atom(), list(integer()) => binary()}) :: map()
   def record_keytype_lists1(x), do: x
 
@@ -59,8 +59,10 @@ defmodule Ex2 do
   @spec triple_arity(integer(), number(), :ok | :fail) :: atom() | tuple()
   def triple_arity(x, y, z), do: (if z == :fail, do: :fail, else: {x, y, z})
 
+  @spec list_literal_id([integer(), ...]) :: list(integer())
+  def list_literal_id(xs) when is_list(xs), do: xs
 
-  @spec top_fun_id((... -> integer())) :: (... -> integer())
+  @spec top_fun_id((integer() -> integer())) :: (... -> integer())
   def top_fun_id(f) when is_function(f), do: f
 
   defmodule Undefined do

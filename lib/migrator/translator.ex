@@ -26,9 +26,9 @@ defmodule Migrator.Translator do
       |> Code.string_to_quoted!
 
     ast
-      |> extract_spec()         |> IO.inspect(label: "EXTRACT SPEC FUNCTION RESULT\n")
-      |> parse_spec()           |> IO.inspect(label: "PARSE SPEC FUNCTION RESULT\n")
-      |> translate_spec()       #|> Enum.map(fn x -> x |> IO.inspect(label: "TRANSLATE SPEC FUNCTION RESULT\n") end)
+      |> extract_spec()         |> IO.inspect(label: "EXTRACT SPEC FUNCTION RESULT \n")
+      |> parse_spec()           |> Enum.map(fn x -> x |> IO.inspect(label: "\n PARSE SPEC FUNCTION RESULT \n") end)
+      |> translate_spec()       |> Enum.map(fn x -> x |> IO.inspect(label: "\n TRANSLATE SPEC FUNCTION RESULT \n") end)
       #|> assemble_elixir_type()
   end
 
@@ -37,17 +37,15 @@ defmodule Migrator.Translator do
   # Note: Patterns are matched only when tried with elixir codes written on files (not from prompt).
     spec_extractor = fn ast, name, acc, extractor ->
       case ast do
-        {:defmodule, _, [{:__aliases__, _, [module_name]},[do: {:__block__, [], module_block}]]} -> (
+        {:defmodule, _, [{:__aliases__, _, [module_name]},[do: {:__block__, [], module_block}]]} ->
           name = if name == "", do: "#{module_name}", else: "#{name}.#{module_name}"
           module_block |> Enum.reduce(acc, fn x, acc -> extractor.(x, name, acc, extractor) end)
-        )
 
-        {:@, [line: line_num], [{:spec, _, [{:"::", _, [{fun_name, _, inputs}, output]}]}]} -> (
+        {:@, [line: line_num], [{:spec, _, [{:"::", _, [{fun_name, _, inputs}, output]}]}]} ->
           acc ++ [{line_num, "#{name}.#{fun_name}", inputs, output, nil}]
-        )
-        {:@, [line: line_num], [{:spec, _, [{:when, _, [{:"::", _, [{fun_name, _, inputs}, output]}, guards]}]}]} -> (
+
+        {:@, [line: line_num], [{:spec, _, [{:when, _, [{:"::", _, [{fun_name, _, inputs}, output]}, guards]}]}]} ->
           acc ++ [{line_num, "#{name}.#{fun_name}", inputs, output, guards}]
-        )
 
         _ -> acc
       end
@@ -58,86 +56,91 @@ defmodule Migrator.Translator do
 
   defp parse_spec(spec_tree) do
 
-    parser_walker = fn type_node, walker_fun -> (
-      # walker_fun/2 is used when the first level node is needed to be parsed, i.e., defined as the basic types.
-      walker_fun = &walker_fun.(&1, walker_fun)
+    parser = fn type_node, parser_fun ->
+      parser_fun = &parser_fun.(&1, parser_fun)
       case type_node do
+        {:|, _, [type1, type2]} -> {:|, [], [type1, type2] |> Enum.map(parser_fun)}
         {:term, _, _} -> {:any, [], []}
-        {:arity, _, _} -> {:.., [context: Elixir, imports: [{0, Kernel}, {2, Kernel}]], [0, 255]}
+        {:arity, _, _} -> {:.., [], [0, 255]}
         # {:as_boolean, [], [type]} -> type
-        {:binary, _, _} -> {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, 8]}]}]}
-        {:nonempty_binary, _, _} -> {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, 8]}, ]}
-        {:bitstring, _, _} -> {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, 1]}]}]}
-        {:nonempty_bitstring, _, _} -> {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, 1]}, {:"::", [], [{:_, [], Elixir}, {:*, [context: Elixir, imports: [{2, Kernel}]], [{:_, [], Elixir}, 1]}]}]}
+        {:binary, _, _} -> {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, {:*, [], [{:_, [], Elixir}, 8]}]}]}
+        {:nonempty_binary, _, _} -> {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, 8]}]}
+        {:bitstring, _, _} -> {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, {:*, [], [{:_, [], Elixir}, 1]}]}]}
+        {:nonempty_bitstring, _, _} -> {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, 1]}, {:"::", [], [{:_, [], Elixir}, {:*, [], [{:_, [], Elixir}, 1]}]}]}
         {:boolean, _, _} -> {:|, [], [true, false]}
-        {:byte, _, _} -> {:.., [context: Elixir, imports: [{0, Kernel}, {2, Kernel}]], [0, 255]}
-        {:nonempty_list, _, [type]} -> {:nonempty_maybe_improper_list, [], [type, []]}
-        {:list, _, []} -> {:|, [], [[], {:nonempty_list, [], [{:any, [], []}]}]} |> walker_fun.()
-        {:list, _, [type]} -> {:|, [], [[], {:nonempty_list, [], [type]}]}
-        {:nonempty_list, _, _} -> {:nonempty_list, [], [{:any, [], []}]} |> walker_fun.()
+        {:byte, _, _} -> {:.., [], [0, 255]}
+        {:list, _, []} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:any, [], []}, []]}]}
+        {:list, _, [type]} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [type |> parser_fun.(), []]}]}
+        {:nonempty_list, _, []} -> {:nonempty_maybe_improper_list, [], [{:any, [], []}, []]}
+        {:nonempty_list, _, [type]} -> {:nonempty_maybe_improper_list, [], [type |> parser_fun.(), []]}
         # {:nonempty_improper_list, [], [type1, type2]} -> {:nonempty_maybe_improper_list, [], [type1, type2]}
-        {:maybe_improper_list, _, [type1, type2]} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:|, [], [type1, type2]}]}]}
-        {:maybe_improper_list, _, _} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:any, [], []}, {:any, [], []}]}]}
-        {:nonempty_maybe_improper_list, _, [type1, type2]} -> {:nonempty_maybe_improper_list, [], [type1, type2]}
-        {:nonempty_maybe_improper_list, _, _} -> {:nonempty_maybe_improper_list, [], [{:any, [], []}, {:any, [], []}]}
-        {:char, _, _} -> {:.., [context: Elixir, imports: [{0, Kernel}, {2, Kernel}]], [0, 1114111]}
-        {:charlist, _, _} -> {:list, [], [{:char, [], []}]} |> walker_fun.()
-        {:nonempty_charlist, _, _} -> {:nonempty_list, [], [{:char, [], []}]} |> walker_fun.()
+        {:maybe_improper_list, _, []} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:any, [], []}, {:any, [], []}]}]}
+        {:maybe_improper_list, _, [type1, type2]} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:|, [], [type1, type2] |> Enum.map(parser_fun)}]}]}
+        {:nonempty_maybe_improper_list, _, []} -> {:nonempty_maybe_improper_list, [], [{:any, [], []}, {:any, [], []}]}
+        {:nonempty_maybe_improper_list, _, [type1, type2]} -> {:nonempty_maybe_improper_list, [], [type1, type2] |> Enum.map(parser_fun)}
+        {:char, _, _} -> {:.., [], [0, 1114111]}
+        {:charlist, _, _} -> {:list, [], [{:char, [], []}]} |> parser_fun.()
+        {:nonempty_charlist, _, _} -> {:nonempty_list, [], [{:char, [], []}]} |> parser_fun.()
         {:fun, _, _} -> [{:->, [], [[{:..., [], []}], {:any, [], []}]}]
         {:function, _, _} -> [{:->, [], [[{:..., [], []}], {:any, [], []}]}]
-        {:identifier, _, _} -> {:|, [], [{:pid, [context: Elixir, imports: [{1, IEx.Helpers}, {3, IEx.Helpers}]], []}, {:|, [], [{:port, [context: Elixir, imports: [{1, IEx.Helpers}, {2, IEx.Helpers}]], []}, {:reference, [], []}]}]}
+        {:identifier, _, _} -> {:|, [], [{:pid, [], []}, {:|, [], [{:port, [], []}, {:reference, [], []}]}]}
 
         # iolist will not expand more than once since translation is to only display..., or not even once is necessary.
         {:iodata, _, _} -> {:|, [], [{:iolist, [], []}, {:binary, [], []}]}
-        {:iolist, _, _} -> {:maybe_improper_list, [], [{:|, [], [{:byte, [], []}, {:|, [], [{:binary, [], []}, {:last_iolist, [], []}]}]}, {:|, [], [{:binary, [], []}, []]}]} |> walker_fun.()
+        {:iolist, _, _} -> {:maybe_improper_list, [], [{:|, [], [{:byte, [], []}, {:|, [], [{:binary, [], []}, {:last_iolist, [], []}]}]}, {:|, [], [{:binary, [], []}, []]}]} |> parser_fun.()
         # only to mark the final recursive iolist type
         {:last_iolist, _, _} -> {:iolist, [], []}
 
-        {:keyword, [], [type]} -> [{{:atom, [], []}, type}]
-        {:keyword, _, _} -> [{{:atom, [], []}, {:any, [], []}}]
-        {:mfa, _, _} -> {:{}, [], [{:module, [], []}, {:atom, [], []}, {:arity, [], []}]}
+        {:keyword, _, [type]} -> [{{:atom, [], []}, type |> parser_fun.()}] |> parser_fun.()
+        {:keyword, _, _} -> [{{:atom, [], []}, {:any, [], []}}] |> parser_fun.()
+        {:mfa, _, _} -> {:{}, [], [{:atom, [], []}, {:atom, [], []}, {:arity, [], []}]}
         {:module, _, _} -> {:atom, [], []}
         {:no_return, _, _} -> {:none, [], []}
         {:node, _, _} -> {:atom, [], []}
         {:number, _, _} -> {:|, [], [{:integer, [], []}, {:float, [], []}]}
         {:struct, _, _} -> {:%{}, [], [{:__struct__, {:atom, [], []}}, {{:optional, [], [{:atom, [], []}]}, {:any, [], []}}]}
         {:timeout, _, _} -> {:|, [], [:infinity, {:non_neg_integer, [], []}]}
-
         # true -> :true
         # false -> :false
         # nil -> :nil
+
+        [{:->, _, [types_in, type_out]}] -> {:->, [], [types_in |> Enum.map(parser_fun), type_out |> parser_fun.()]}
+        [type, {:..., _, _}] -> {:nonempty_list, [], [type]} |> parser_fun.()
+        [type] -> {:list, [], [type]} |> parser_fun.()
+
         {:map, _, _} -> {:%{}, [], [{{:optional, [], [{:any, [], []}]}, {:any, [], []}}]}
-        [type, {:..., [], []}] -> {:nonempty_list, [], [type |> walker_fun.()]} |> walker_fun.()
-        [type] -> {:list, [], [type |> walker_fun.()]} |> walker_fun.()
         {:%{}, _, fields} -> (
           fields = fields |> Enum.map(fn {left, right} ->
-            #right = right |> walker_fun.()
-            case left |> IO.inspect(label: "FEILD PARSERRRRRRRRR") do
-              {:required, _, [type]} -> {{:required, [], [type]}, right} |> walker_fun.()
-              {:optional, _, [type]} -> {{:optional, [], [type]}, right} |> walker_fun.()
-              _ -> if is_atom(left), do: {{:required, [], [left]}, right}, else: {{:optional, [], [left]}, right}  |> walker_fun.() |> IO.inspect(label: "FEILD PARSERRRRRRRRR3")
+            right = right |> parser_fun.()
+            case left do
+              {:required, _, [type]} -> {{:required, [], [type |> parser_fun.()]}, right}
+              {:optional, _, [type]} -> {{:optional, [], [type |> parser_fun.()]}, right}
+              type -> if is_atom(type), do: {{:required, [], [type]}, right}, else: {{:optional, [], [type |> parser_fun.()]}, right}
             end
           end)
           {:%{}, [], fields}
         )
-        {:%, _, [{_, _, module_list}, {:%{}, _, struct_list}]} -> (
-          module = module_list |> Enum.reduce("", fn x, acc -> module = Atom.to_string(x)
-            if acc == "", do: module, else: acc <> "." <> module end)
-          {:%{}, [], [__struct__: String.to_atom(module)] ++ struct_list}
+        {:%, _, [{_, _, modules}, {:%{}, _, fields}]} -> (
+          strt_name = modules |> Enum.reduce("", fn m, acc -> if acc == "", do: "#{m}", else: "#{acc}.#{m}" end) |> String.to_atom()
+          {:%{}, [], fields} = {:%{}, [], fields} |> parser_fun.()
+          {:%{}, [], [__struct__: strt_name] ++ fields}
         )
 
-        other -> other #|> IO.inspect(label: "OTHER IN PARSE FUNCTION: \n")
-      end)
+        {type1, type2} -> {type1 |> parser_fun.(), type2 |> parser_fun.()}
+
+        {type, _, [type | rest]} -> {type, [], [type | rest] |> Enum.map(parser_fun)} |> IO.inspect(label: "UNKNOWN TYPE IN PARSE FUNCTION: U GOTTA LOOK IT UP")
+        other -> other #|> IO.inspect(label: "OTHER IN PARSE FUNCTION")
+      end
     end
 
     total_parser = fn {line_num, name, inputs, output, guards} -> (
 
-      walker = &parser_walker.(&1, parser_walker)
-      macro_walker = &Macro.prewalk(&1, walker)
-
-      inputs = inputs |> Enum.map(macro_walker)
-      output = output |> macro_walker.()
-      guards = if guards == nil, do: nil, else: guards |> Enum.map(fn {k, v} -> {k, v |> macro_walker.()} end)
+      # walker = &parser_walker.(&1, parser_walker)
+      # macro_walker = &Macro.prewalk(&1, walker)
+      parsing = &parser.(&1, parser)
+      inputs = inputs |> Enum.map(parsing)
+      output = output |> parsing.()
+      guards = if guards == nil, do: nil, else: guards |> Enum.map(fn {k, v} -> {k, v |> parsing.()} end)
 
       {line_num, name, inputs, output, guards}
     )end
@@ -150,7 +153,7 @@ defmodule Migrator.Translator do
     translator = fn type_node, translator_fun -> (
 
       translator_fun = &translator_fun.(&1, translator_fun)
-      case type_node do
+      case type_node |> IO.inspect(label: "TYPE_NODE IN TRANSLATOR") do
         # Remote module type (e.g., String.t())
         {{:., _, [{_, _, modules}, type]}, _, _} -> (
           module = modules |> Enum.reduce("", fn x, acc -> module = Atom.to_string(x)
@@ -162,10 +165,10 @@ defmodule Migrator.Translator do
         {:|, _, [left, right]} -> {:union, {left |> translator_fun.(), right |> translator_fun.()}}
 
         # {Type} (Tuple)
-        {:{}, _, elements} -> {:tuple, elements |> Enum.reduce([], fn x, acc -> acc ++ (x |> translator_fun.()) end)}
+        {:{}, _, elements} -> {:tuple, elements |> Enum.reduce([], fn elem, acc -> acc ++ [elem |> translator_fun.()] end)}
 
         # {Tuple} (two-elements}
-        {elem1, elem2} -> {:tuple, [elem1, elem2] |> Enum.reduce([], fn x, acc -> acc ++ (x |> translator_fun.()) end)}
+        {elem1, elem2} -> {:tuple, [elem1, elem2] |> Enum.reduce([], fn elem, acc -> acc ++ [elem |> translator_fun.()] end)}
 
         # %{..., F_seq} (Map)
         {:%{}, _, fields} -> (
@@ -184,10 +187,16 @@ defmodule Migrator.Translator do
                 left |> flatten.(flatten) |> Enum.map(fn l -> {l, right |> flatten.(flatten)} end)
               end
             end
-          fields = fields |> Enum.reduce([], fn field, acc_fields ->
-              acc_fields ++ (field  |> IO.inspect(label: "BEFORE FIELD TRANSLATION") |> field_translator.() |> IO.inspect(label: "FIELD TRANSLATION") |> Approx.promote() |> IO.inspect(label: "FIELD PROMOTION"))
-            end) |> Approx.map() |> IO.inspect(label: "FIELDS MAP")
-          {:%{}, [], fields}
+          case fields do
+            [{:__struct__, strt_name} | fields] ->
+              fields |> Enum.reduce([], fn field, acc_fields -> acc_fields ++ (field |> field_translator.() |> Approx.promote()) end) |> Approx.map()
+              {:%, {strt_name, fields}}
+            _ ->
+              fields |> Enum.reduce([], fn field, acc_fields ->
+                  acc_fields ++ (field  |> IO.inspect(label: "BEFORE FIELD TRANSLATION") |> field_translator.() |> IO.inspect(label: "FIELD TRANSLATION") |> Approx.promote() |> IO.inspect(label: "FIELD PROMOTION"))
+                end) |> Approx.map() |> IO.inspect(label: "FIELDS MAP")
+              {:%{}, fields}
+          end
         )
 
         # [] (empty list)
@@ -213,11 +222,11 @@ defmodule Migrator.Translator do
         {:<<>>, _, _} -> :bitstring
 
         # (... -> Type)
-        {:->, _, [:..., return]} ->
-          if return |> translator_fun.() == :term, do: :fun, else: approximate_top_fun()
+        {:->, [], [[{:..., _, []}], type_out]} ->
+          if (type_out |> translator_fun.()) == :term, do: :fun, else: approximate_top_fun()
 
         # (Type_seq} -> Type)
-        {:->, _, [arguments, return]} -> {:fun, {arguments |> translator_fun.(), return |> translator_fun.()}}
+        {:->, _, [types_in, type_out]} -> {:fun, {types_in |> Enum.map(translator_fun), type_out |> translator_fun.()}}
 
         # n..n'
         {:.., _, [{:-, _, [digit_l]}, {:-, _, [digit_r]}]} -> {:interval, {-digit_l, -digit_r}}
