@@ -34,3 +34,4 @@ type_migrator-*.tar
 /translation.pdf
 
 /.tool-versions
+translation.pdf
