@@ -19,27 +19,45 @@ defmodule Migrator.Translator do
   alias Migrator.Approximator, as: Approx
   import Module.Types.Descr
 
+  #def process(path, %{quoted: print_quoted?, translated: print_translated?, assembled: print_assembled?}\\ {true, true, true}) do
   def process(path) do
-
-    ast = path
+    quoted = path
       |> File.read!
       |> Code.string_to_quoted!
 
-    ast
-      |> extract_spec()         |> IO.inspect(label: "EXTRACT SPEC FUNCTION RESULT \n")
-      |> parse_spec()           |> Enum.map(fn x -> x |> IO.inspect(label: "\n PARSE SPEC FUNCTION RESULT \n") end)
-      |> translate_spec()       |> Enum.map(fn x -> x |> IO.inspect(label: "\n TRANSLATE SPEC FUNCTION RESULT \n") end)
-      #|> assemble_elixir_type()
+    translated = quoted
+      |> extract_spec()         #|> IO.inspect(label: "### EXTRACT SPEC FUNCTION RESULT \n")
+      |> parse_spec()           #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### PARSE SPEC FUNCTION RESULT \n") end)
+      |> translate_spec()       |> Enum.map(fn x -> x |> IO.inspect(label: "\n ### TRANSLATE SPEC FUNCTION RESULT \n") end)
+
+    assembled = translated
+      |> group_by_notation
+      |> rename_type_variables
+      |> assemble_elixir_type() #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### ASSEMBLE SPEC FUNCTION RESULT \n") end)
+
+    IO.puts("QUOTED: \n")
+    quoted |> IO.inspect()
+    IO.puts("TRANSLATED: \n")
+    translated |> Enum.map(fn x -> x |> IO.inspect() end)
+    IO.puts("ASSEMBLED: \n")
+    assembled |> Enum.map(fn x -> x |> IO.inspect() end)  # document it.
   end
 
 
   defp extract_spec(ast) do
   # Note: Patterns are matched only when tried with elixir codes written on files (not from prompt).
     spec_extractor = fn ast, name, acc, extractor ->
-      case ast do
-        {:defmodule, _, [{:__aliases__, _, [module_name]},[do: {:__block__, [], module_block}]]} ->
+      case ast |> IO.inspect(label: "AST IN SPEC EXTRACTOR") do
+        {:defmodule, _, [{:__aliases__, _, [module_name]}, [do: module_ast]]} ->
           name = if name == "", do: "#{module_name}", else: "#{name}.#{module_name}"
-          module_block |> Enum.reduce(acc, fn x, acc -> extractor.(x, name, acc, extractor) end)
+          module_ast |> extractor.(name, acc, extractor)
+
+        {:__block__, [], block} ->
+          block |> Enum.reduce(acc, fn block_ast, acc -> extractor.(block_ast, name, acc, extractor) end)
+
+        # {:defmodule, _, [{:__aliases__, _, [module_name]}, [do: {:__block__, [], module_block}]]} ->
+        #   name = if name == "", do: "#{module_name}", else: "#{name}.#{module_name}"
+        #   module_block |> Enum.reduce(acc, fn x, acc -> extractor.(x, name, acc, extractor) end)
 
         {:@, [line: line_num], [{:spec, _, [{:"::", _, [{fun_name, _, inputs}, output]}]}]} ->
           acc ++ [{line_num, "#{name}.#{fun_name}", inputs, output, nil}]
@@ -58,7 +76,8 @@ defmodule Migrator.Translator do
 
     parser = fn type_node, parser_fun ->
       parser_fun = &parser_fun.(&1, parser_fun)
-      case type_node do
+      case type_node |> IO.inspect(label: "TYPE_NODE in PARSER") do
+        {_, _, nil} -> type_node # Type Variables
         {:|, _, [type1, type2]} -> {:|, [], [type1, type2] |> Enum.map(parser_fun)}
         {:term, _, _} -> {:any, [], []}
         {:arity, _, _} -> {:.., [], [0, 255]}
@@ -150,10 +169,9 @@ defmodule Migrator.Translator do
 
   defp translate_spec(parsed_spec_tree) do
 
-    translator = fn type_node, translator_fun -> (
-
-      translator_fun = &translator_fun.(&1, translator_fun)
-      case type_node |> IO.inspect(label: "TYPE_NODE IN TRANSLATOR") do
+    translator = fn {type_node, guards}, translator_fun -> (
+      translator_fun = &translator_fun.({&1, guards}, translator_fun)
+      case type_node do
         # Remote module type (e.g., String.t())
         {{:., _, [{_, _, modules}, type]}, _, _} -> (
           module = modules |> Enum.reduce("", fn x, acc -> module = Atom.to_string(x)
@@ -189,13 +207,13 @@ defmodule Migrator.Translator do
             end
           case fields do
             [{:__struct__, strt_name} | fields] ->
-              fields |> Enum.reduce([], fn field, acc_fields -> acc_fields ++ (field |> field_translator.() |> Approx.promote()) end) |> Approx.map()
-              {:%, {strt_name, fields}}
+              new_fields = fields |> Enum.reduce([], fn field, acc_fields -> acc_fields ++ (field |> field_translator.() |> Approx.promote()) end) |> Approx.map()
+              {:%, {strt_name, new_fields}}
             _ ->
-              fields |> Enum.reduce([], fn field, acc_fields ->
+              new_fields = fields |> Enum.reduce([], fn field, acc_fields ->
                   acc_fields ++ (field  |> IO.inspect(label: "BEFORE FIELD TRANSLATION") |> field_translator.() |> IO.inspect(label: "FIELD TRANSLATION") |> Approx.promote() |> IO.inspect(label: "FIELD PROMOTION"))
                 end) |> Approx.map() |> IO.inspect(label: "FIELDS MAP")
-              {:%{}, fields}
+              {:%{}, new_fields}
           end
         )
 
@@ -238,10 +256,10 @@ defmodule Migrator.Translator do
         digit when is_integer(digit) -> {:interval, {digit, digit}}
 
         # :k (atom singleton types)
-        atom when is_atom(atom) -> {:atom, atom} #|> IO.inspect(label: "ATOM")
+        atom when is_atom(atom) -> {:atom, atom}
 
         # Simple form of basic types (any(), none(), atom(), pid(), port(), reference(), float(), integer(), neg_integer(), non_neg_integer(), pos_integer(), tuple())
-        {type, _, []} -> (
+        {type, _, []} ->
           case type do
             :any -> :term
             :neg_integer -> {:interval, {:infty, -1}}
@@ -249,22 +267,19 @@ defmodule Migrator.Translator do
             :pos_integer -> {:interval, {1, :infty}}
             _ -> type
           end
-        )
 
-        # Type variable
-        {type, _, _} -> type
-
+        # Types without "()" at the end: type variables or basic types without "()".
+        {type, _, nil} -> if guards[type], do: {:var, type}, else: {type, [], []} |> translator_fun.()  #|> IO.inspect(label: "TYPE VARIABLE")
+        #{type, _, info} -> {type, info}
       end)
     end
 
     total_translator = fn {line_num, name, inputs, output, guards} -> (
-
       translation = &translator.(&1, translator)
-      inputs = inputs |> Enum.map(translation)
-      output = output |> translation.()
-      #guards = if guards == nil, do: nil, else: guards |> Enum.map(fn {k, v} -> Atom.to_string(k) <> ": " <> (v |> translation.()) end)
+      inputs = inputs |> Enum.map(fn input -> {input, guards} |> translation.() end)
+      output = {output, guards} |> translation.()
+      guards = if guards == nil, do: nil, else: guards |> Enum.map(fn {var, type} -> {var, {type, guards} |> translation.()} end)
 
-      #%TsInfo{name: name, inputs: inputs, output: output, guards: guards}
       {line_num, name, inputs, output, guards}
     )end
 
@@ -273,228 +288,102 @@ defmodule Migrator.Translator do
 
   defp approximate_top_fun(), do: {:gradual, :fun}
 
-  defp assemble_elixir_type(translated_spec_list) do
+  defp group_by_notation(translated_spec_list) do
+    translated_spec_list |> Enum.reduce([], fn type, acc ->
+        {_, name, _, _, _} = type
+        prev_name = case acc do
+          [] -> ""
+          [head | _] -> (
+            {_, name, _, _, _} = hd(head)
+            name
+          )
+        end
 
-    type_grouping = fn type, acc ->
-      {_, name, _, _, _} = type
-      prev_name = case acc do
-        [] -> ""
-        [head | _] -> (
-          {_, name, _, _, _} = hd(head)
-          name
-        )
-      end
+        if prev_name == name do
+          [head | tail] = acc
+          [head ++ [type]] ++ tail
+        else
+          [[type]] ++ acc
+        end
+      end) |> Enum.reverse()
+  end
 
-      if prev_name == name do
-        [head | tail] = acc
-        [head ++ [type]] ++ tail
-      else
-        [[type]] ++ acc
-      end
-    end
-
-    grouped_list = translated_spec_list |> Enum.reduce([], type_grouping) |> Enum.reverse()
-
-    type_renaming = fn type_info, {prev_list, renamed} ->
-      # {[...], %{}}, {} -> {{[...], %{}}, {}}
-      case {type_info, prev_list, renamed} do
-        {type_info, [], %{}} -> {[type_info], %{}}
-        {{line_num, name, inputs, output, guards}, prev_list, renamed} -> (
-          if guards == nil do
-            {prev_list ++ [type_info], renamed}
-          else
-            {new_inputs, new_output, new_guards, new_renamed} = prev_list |> Enum.reduce({inputs, output, guards, renamed}, fn {_, _, _, _, prev_guards}, {inputs, output, guards, renamed} ->
+  defp rename_type_variables(grouped_translated_spec_list) do
+    grouped_translated_spec_list |> Enum.map(fn group ->
+        if length(group) == 1 do
+          group
+        else
+          group |> Enum.reduce({[],%{}}, fn {line_num, name, inputs, output, guards}, {acc_notation, found_names} ->
               if guards == nil do
-                {prev_list ++ [type_info], renamed}
+                {acc_notation, found_names}
               else
-                {new_guards, {new_inputs, new_output, new_renamed}} = guards |> Enum.map_reduce({inputs, output, renamed}, fn guard, {inputs, output, renamed} ->
-                  prev_guards |> Enum.reduce({guard, {inputs, output, renamed}}, fn prev_guard, {guard, {inputs, output, renamed}} ->
-                    guard_list = guard|> String.split(": ")
-                    prev_guard_list = prev_guard |> String.split(": ")
-                    if hd(guard_list) == hd(prev_guard_list) do
-                      {num, renamed} = renamed |> Map.get_and_update(hd(guard_list), fn v -> if v == nil, do: {2, 2}, else: {v+1, v+1} end)
-                      new_inputs = inputs |> Enum.map(fn input -> input |> String.replace(hd(guard_list), "#{hd(guard_list)}_#{num}") end)
-                      new_output = output |> String.replace(hd(guard_list), "#{hd(guard_list)}_#{num}")
-                      {"#{hd(guard_list)}_#{num}: #{tl(guard_list)}", {new_inputs, new_output, renamed}}
-                    else
-                      {guard, {inputs, output, renamed}}
-                    end
-                  end)
+                {new_guards, new_found_names} = guards |> Enum.reduce({[], found_names}, fn {name, type}, {acc_guards, acc_found_guards} ->
+                  {renamed_guard, new_found_names} = acc_found_guards |> Map.get_and_update(name, fn cnt -> if cnt == nil, do: {{name, type}, 1}, else: {{String.to_atom("#{name}_#{cnt+1}"), type}, cnt+1} end)
+                  {acc_guards ++ [renamed_guard], new_found_names}
                 end)
-                {new_inputs, new_output, new_guards, new_renamed}
+                renamer = fn type, renamer_fun ->
+                    renamer_fun = &renamer_fun.(&1, renamer_fun)
+                    case type do
+                      {:var, var} ->
+                        cnt = new_found_names[var]
+                        if cnt == 1 or cnt == nil, do: {:var, var}, else: {:var, String.to_atom("#{var}_#{cnt}")}
+                      {type1, type2} -> {type1 |> renamer_fun.(), type2 |> renamer_fun.()}
+                      _ -> type
+                    end
+                  end
+                new_inputs = inputs |> Enum.map(&renamer.(&1, renamer))
+                new_output = output |> renamer.(renamer)
+                {acc_notation ++ [{line_num, name, new_inputs, new_output, new_guards}], new_found_names}
               end
-            end)
-            {prev_list ++ [{line_num, name, new_inputs, new_output, new_guards}], new_renamed}
+            end) |> elem(0)
+        end
+      end)
+  end
+
+  defp assemble_elixir_type(renamed_grouped_translated_spec_list) do
+    placing = fn type, placing_fun ->
+        placing_fun = &placing_fun.(&1, placing_fun)
+
+          ###########
+          # TO FIX: map type with atom keys and struct!!!
+          ###########
+          case type do
+            {:union, {type1, type2}} -> "#{type1 |> placing_fun.()} or #{type2 |> placing_fun.()}"
+            {:fun, {type1, type2}} -> "(" <> "#{type1 |> Enum.reduce(" ", fn t, acc -> if acc == " ", do: t |> placing_fun.(), else: acc <> ", " <> (t |> placing_fun.()) end)} -> #{type2 |> placing_fun.()}" <> ")"
+            {:non_empty_list, {type1, type2}} -> "non_empty_list(" <> "#{type1 |> placing_fun.()}, #{type2 |> placing_fun.()}" <> ")"
+            {:%{}, fields} ->
+              fields_str = fields |> Enum.reduce("", fn {type_l, type_r}, acc ->
+                  field_str = "#{type_l |> placing_fun.()}" <> " => " <> "#{type_r |> placing_fun.()}"
+                  if acc == "", do: field_str, else: acc <> ", " <> field_str
+                end)
+              "%{" <> fields_str <> "}"
+            {:if_set, type} -> "if_set(" <> "#{type |> placing_fun.()}" <> ")"
+            {:gradual, type} -> "dynamic(" <> "#{type |> placing_fun.()}" <> ")"
+            {:interval, {digit1, digit2}} -> "#{digit1}..#{digit2}"
+            {:atom, atom} -> ":" <> "#{atom}"
+            {:var, type} -> "#{type}"
+            _ -> "#{type}()"
           end
-        )
-      end
-    end
-    # [[{},{}, ...], [{}, ...], ...] |> Enum.map([{}, ...] |> Enum.reduce({[...], %{}}, {} -> {{[...], %{}}, {}}))
-    renamer = fn list -> elem(list |> Enum.reduce({[], %{}}, type_renaming), 0) end
-    renamed_list = grouped_list |> Enum.map(renamer)
+        end
 
-    type_assembler = fn group, acc, assembler ->
-      assembler = &assembler.(&1, &2, assembler)
-      case {group, acc} do
-        {[], {acc_line_num, name, acc_body, acc_guard}} -> (
-          full_body = if acc_guard == "", do: acc_body, else: acc_body <> " when " <> acc_guard
-          {acc_line_num, name, full_body}
-        )
-        {[{line_num, name, inputs, output, guards} | tail], {}} -> (
-          new_body = "(#{inputs |> Enum.reduce("", fn x, acc -> if acc == "", do: "#{x}", else: "#{acc}, #{x}" end)} -> #{output})"
-          new_guard = if guards == nil, do: "", else: "#{guards |> Enum.reduce("", fn x, acc -> if acc == "", do: "#{x}", else: "#{acc}, #{x}" end)}"
+    renamed_grouped_translated_spec_list |> Enum.map(fn group ->
+        {line_nums, name, body, guard} =
+          group |> Enum.reduce({[], "", "", ""}, fn {line_num, name, inputs, output, guards}, {acc_line_nums, _acc_name, acc_body, acc_guard} ->
+            inputs_str = inputs |> Enum.reduce(" ", fn input, acc ->
+                if acc == " ", do: input |> placing.(placing), else: acc <>  ", " <> (input |> placing.(placing))
+              end)
+            output_str = output |> placing.(placing)
+            str_body = "(" <> inputs_str <> ")" <> " -> " <> output_str
+            str_guard = if guards == nil, do: "", else: "#{guards |> Enum.reduce("", fn {var, type}, acc -> if acc == "", do: "#{var}: #{type |> placing.(placing)}", else: acc <> ", " <> "#{var}: #{type |> placing.(placing)}" end)}"
 
-          tail |> assembler.({[line_num], name, new_body, new_guard})
-        )
-        {[{line_num, name, inputs, output, guards} | tail], {acc_line_num, name, acc_body, acc_guard}} -> (
-          new_body = "(#{inputs |> Enum.reduce("", fn x, acc -> if acc == "", do: "#{x}", else: "#{acc}, #{x}" end)} -> #{output})"
-          new_guard = if guards == nil, do: "", else: "#{guards |> Enum.reduce("", fn x, acc -> if acc == "", do: "#{x}", else: "#{acc}, #{x}" end)}"
+            new_acc_line_num = acc_line_nums ++ [line_num]
+            new_acc_body = if acc_body == "", do: str_body, else: acc_body <> " and " <> str_body
+            new_acc_guard = if guards == nil, do: acc_guard, else: (if acc_guard == "", do: str_guard, else: acc_guard <> ", " <> str_guard)
 
-          new_acc_line_num = acc_line_num ++ [line_num]
-          new_acc_body = acc_body <> " and " <> new_body
-          new_acc_guard = if guards == nil, do: acc_guard, else: (if acc_guard == "", do: new_guard, else: acc_guard <> ", " <> new_guard)
-
-          tail |> assembler.({new_acc_line_num, name, new_acc_body, new_acc_guard})
-        )
-      end
-    end
-
-    # [[{}, ...], ...] -> [{}, ...]
-    assembler = &type_assembler.(&1, {}, type_assembler)
-    renamed_list |> IO.inspect |> Enum.map(assembler)
+            {new_acc_line_num, name, new_acc_body, new_acc_guard}
+          end)
+        full_expression = "$ " <> (if guard == "", do: body, else: body <> " when " <> guard)
+        {line_nums, name, full_expression}
+      end)
   end
 end
-
-
-
-# LATER FOR STRINGIFY
-# def translate_spec(parsed_spec_tree) do
-
-#     translator = fn type_node, translator_fun -> (
-
-#       translator_fun = &translator_fun.(&1, translator_fun)
-#       case type_node do
-#         # Remote module type (e.g., String.t())
-#         {{:., _, [{_, _, module_list}, type]}, _, _} -> (
-#           module = module_list |> Enum.reduce("", fn x, acc -> module = Atom.to_string(x)
-#             if acc == "", do: module, else: acc <> "." <> module end)
-#           module <> "." <> (type |> translator_fun.()) <> "()"
-#         )
-
-#         # Type | Type
-#         {:|, _, [left, right]} -> (left |> translator_fun.()) <> " or " <> (right |> translator_fun.())
-
-#         # {Type} (Tuple)
-#         {:{}, _, tuple_list} -> (
-#           tuple_list = tuple_list |> Enum.reduce("",
-#           fn x, acc -> element = (x |> translator_fun.())
-#             if acc == "", do: element, else: acc <> ", " <> element
-#           end)
-#           "{#{tuple_list}}"
-#         )
-#         # {Tuple-with-two-elements}
-#         {elem1, elem2} -> (
-#           tuple_list = [elem1, elem2] |> Enum.reduce("",
-#           fn x, acc -> element = (x |> translator_fun.())
-#             if acc == "", do: element, else: acc <> ", " <> element
-#           end)
-#           "{#{tuple_list}}"
-#         )
-
-#         # %{..., F_seq} (Map)
-#         {:%{}, _, map_list} -> (
-#           key_types = {"atom()", "pid()", "port()", "reference()", "float()", "integer()", "bitstring()", "binary()", "tuple()", "open_map()", "fun()", "list()"}
-
-#           case map_list do
-#             [{:__struct__, name} | struct_list] ->
-#               struct_list = struct_list |> Enum.reduce("",
-#               fn {k, v}, acc -> field = (k |> translator_fun.()) <> " => " <> (v |> translator_fun.())
-#                 if acc == "", do: field, else: acc <> ", " <> field
-#               end)
-#               "%#{name}{#{struct_list}}"
-#             _ ->
-#               map_list = map_list |> Enum.map(
-#               fn {k, v} ->
-#                 key_type = k |> translator_fun.()
-#                 val_type = v |> translator_fun.()
-#                 if key_type in key_types do
-#                   {:defined, key_type, val_type}
-#                 else
-#                   {:undefined, key_type, val_type}
-#                 end
-#               end)
-#               map_list = approximate_spec(:field, map_list)
-#               "%{#{map_list}}"
-#           end
-#         )
-#         # APPLY translation and approximation
-#         {:required, _, [type]} -> (type |> translator_fun.())
-#         {:optional, _, [type]} -> (type |> translator_fun.())
-
-#         # [] (empty list)
-#         [] -> "empty_list()"
-#         # [type] or [type, ...] (non-empty list)
-#         {:nonempty_maybe_improper_list, _, [type, []]} -> "non_empty_list(#{type |> translator_fun.()}, empty_list())"
-
-#         # <<_::n, _::_*n>>
-#         {:<<>>, _, [{:"::", _, [_, digit1]}, {:"::", _, [_, {:*, _, [_, digit2]}]}]} -> (
-#           if Integer.mod(digit1, 8) == 0 and Integer.mod(digit2, 8) == 0, do: "binary()", else: "bitstring()"
-#         )
-#         # <<_::_*n>>
-#         {:<<>>, _, [{:"::", _, [_, {:*, _, [_, digit]}]}]} -> (
-#           if Integer.mod(digit, 8) == 0, do: "binary()", else: "bitstring()"
-#         )
-#         # <<_::n>>
-#         {:<<>>, _, [{:"::", _, [_, digit]}]} -> (
-#           if Integer.mod(digit, 8) == 0, do: "binary()", else: "bitstring()"
-#         )
-#         # <<>>
-#         {:<<>>, _, _} -> "bitstring()"
-
-#         # (... -> Type)
-#         {:->, _, [:..., right]} -> (
-#           right = right |> translator_fun.()
-#           if right == "term()", do: "fun()", else: approximate_spec(:top_function)
-#         )
-#         # (Type_seq} -> Type)
-#         {:->, _, [left, right]} -> "(" <> (left |> translator_fun.()) <> " -> " <> (right |> translator_fun.()) <> ")"
-
-#         # n..n'
-#         {:.., _, [left, right]} -> left <> "--" <> right
-
-#         # n (integer singleton types)
-#         digit when is_integer(digit) -> "#{digit}--#{digit}"
-
-#         # :k (atom singleton types)
-#         atom when is_atom(atom) -> ":" <> Atom.to_string(atom) #|> IO.inspect(label: "ATOM")
-
-#         # Simple form of basic types (any(), none(), atom(), pid(), port(), reference(), float(), integer(), neg_integer(), non_neg_integer(), pos_integer(), tuple())
-#         {type, _, []} -> (
-#           case type do
-#             :any -> "term()"
-#             :neg_integer -> "#{:infty}--#{-1}"
-#             :non_neg_integer -> "#{0}--#{:infty}"
-#             :pos_integer -> "#{1}--#{:infty}"
-#             _ -> Atom.to_string(type) <> "()"
-#           end
-#         )
-
-#         # Type variable
-#         {type, _, _} -> Atom.to_string(type)
-
-#       end)
-#     end
-
-#     total_translator = fn {line_num, name, inputs, output, guards} -> (
-
-#       translation = &translator.(&1, translator)
-#       inputs = inputs |> Enum.map(translation)
-#       output = output |> translation.()
-#       guards = if guards == nil, do: nil, else: guards |> Enum.map(fn {k, v} -> Atom.to_string(k) <> ": " <> (v |> translation.()) end)
-
-#       #%TsInfo{name: name, inputs: inputs, output: output, guards: guards}
-#       {line_num, name, inputs, output, guards}
-#     )end
-
-#     parsed_spec_tree |> Enum.map(total_translator)
-#   end
