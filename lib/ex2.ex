@@ -35,13 +35,13 @@ defmodule Ex2 do
 
   defmodule In do
 
-    # @spec id1(<<_::8, _::_*8>>) :: <<_::_*8>>
-    # def id1(x) when is_binary(x), do: x
+    @spec id1(<<_::8, _::_*8>>) :: <<_::_*8>>
+    def id1(x) when is_binary(x), do: x
 
-    # @spec fun_t(a) :: b when a: integer(), b: binary()
-    # @spec fun_t(a) :: b when a: float(), b: binary()
-    # def fun_t(x) when is_integer(x), do: Integer.to_string(x)
-    # def fun_t(x) when is_float(x), do: Float.to_string(x)
+    @spec fun_t(a) :: b when a: integer(), b: binary()
+    @spec fun_t(a) :: b when a: float(), b: binary()
+    def fun_t(x) when is_integer(x), do: Integer.to_string(x)
+    def fun_t(x) when is_float(x), do: Float.to_string(x)
 
     @spec fun_guards(binary(), a) :: binary when a: integer(), binary: binary()
     @spec fun_guards(binary(), a) :: binary when a: float(), binary: binary()

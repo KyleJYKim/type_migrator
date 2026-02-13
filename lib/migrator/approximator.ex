@@ -101,7 +101,7 @@ defmodule Migrator.Approximator do
     removing_extra_information = fn fields ->
         fields |> Enum.map(fn {{key_type, org_type}, right_f} ->
           case org_type do
-            [atom_req: singleton] -> {singleton, right_f}
+            [atom_req: singleton] -> {{:atom, singleton}, right_f}
             _ -> {key_type, right_f}
           end
         end)

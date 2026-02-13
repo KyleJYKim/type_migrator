@@ -25,20 +25,22 @@ defmodule Migrator.Translator do
       |> File.read!
       |> Code.string_to_quoted!
 
+    IO.puts("QUOTED: \n")
+    quoted |> IO.inspect()
+
     translated = quoted
       |> extract_spec()         #|> IO.inspect(label: "### EXTRACT SPEC FUNCTION RESULT \n")
-      |> parse_spec()           #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### PARSE SPEC FUNCTION RESULT \n") end)
-      |> translate_spec()       |> Enum.map(fn x -> x |> IO.inspect(label: "\n ### TRANSLATE SPEC FUNCTION RESULT \n") end)
+      |> parse_spec()           |> Enum.map(fn x -> x |> IO.inspect(label: "\n ### PARSE SPEC FUNCTION RESULT \n") end)
+      |> translate_spec()       #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### TRANSLATE SPEC FUNCTION RESULT \n") end)
+
+    IO.puts("TRANSLATED: \n")
+    translated |> Enum.map(fn x -> x |> IO.inspect() end)
 
     assembled = translated
       |> group_by_notation
       |> rename_type_variables
       |> assemble_elixir_type() #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### ASSEMBLE SPEC FUNCTION RESULT \n") end)
 
-    IO.puts("QUOTED: \n")
-    quoted |> IO.inspect()
-    IO.puts("TRANSLATED: \n")
-    translated |> Enum.map(fn x -> x |> IO.inspect() end)
     IO.puts("ASSEMBLED: \n")
     assembled |> Enum.map(fn x -> x |> IO.inspect() end)  # document it.
   end
@@ -47,7 +49,7 @@ defmodule Migrator.Translator do
   defp extract_spec(ast) do
   # Note: Patterns are matched only when tried with elixir codes written on files (not from prompt).
     spec_extractor = fn ast, name, acc, extractor ->
-      case ast |> IO.inspect(label: "AST IN SPEC EXTRACTOR") do
+      case ast do
         {:defmodule, _, [{:__aliases__, _, [module_name]}, [do: module_ast]]} ->
           name = if name == "", do: "#{module_name}", else: "#{name}.#{module_name}"
           module_ast |> extractor.(name, acc, extractor)
@@ -76,7 +78,7 @@ defmodule Migrator.Translator do
 
     parser = fn type_node, parser_fun ->
       parser_fun = &parser_fun.(&1, parser_fun)
-      case type_node |> IO.inspect(label: "TYPE_NODE in PARSER") do
+      case type_node do
         {_, _, nil} -> type_node # Type Variables
         {:|, _, [type1, type2]} -> {:|, [], [type1, type2] |> Enum.map(parser_fun)}
         {:term, _, _} -> {:any, [], []}
@@ -148,7 +150,7 @@ defmodule Migrator.Translator do
         {type1, type2} -> {type1 |> parser_fun.(), type2 |> parser_fun.()}
 
         {type, _, [type | rest]} -> {type, [], [type | rest] |> Enum.map(parser_fun)} |> IO.inspect(label: "UNKNOWN TYPE IN PARSE FUNCTION: U GOTTA LOOK IT UP")
-        other -> other #|> IO.inspect(label: "OTHER IN PARSE FUNCTION")
+        other -> other |> IO.inspect(label: "OTHER IN PARSE FUNCTION")
       end
     end
 
@@ -183,10 +185,10 @@ defmodule Migrator.Translator do
         {:|, _, [left, right]} -> {:union, {left |> translator_fun.(), right |> translator_fun.()}}
 
         # {Type} (Tuple)
-        {:{}, _, elements} -> {:tuple, elements |> Enum.reduce([], fn elem, acc -> acc ++ [elem |> translator_fun.()] end)}
+        {:{}, _, elements} -> {:tuple, elements |> Enum.reduce([], fn elem, acc -> acc ++ [elem |> translator_fun.()] end)} |> IO.inspect(label: "TUPLE INSPECT1")
 
         # {Tuple} (two-elements}
-        {elem1, elem2} -> {:tuple, [elem1, elem2] |> Enum.reduce([], fn elem, acc -> acc ++ [elem |> translator_fun.()] end)}
+        {elem1, elem2} -> {:tuple, [elem1, elem2] |> Enum.reduce([], fn elem, acc -> acc ++ [elem |> translator_fun.()|> IO.inspect(label: "TUPLE ELEM INSPECT2")] end)} |> IO.inspect(label: "TUPLE INSPECT2")
 
         # %{..., F_seq} (Map)
         {:%{}, _, fields} -> (
@@ -207,12 +209,12 @@ defmodule Migrator.Translator do
             end
           case fields do
             [{:__struct__, strt_name} | fields] ->
-              new_fields = fields |> Enum.reduce([], fn field, acc_fields -> acc_fields ++ (field |> field_translator.() |> Approx.promote()) end) |> Approx.map()
+              new_fields = fields |> Enum.reduce([], fn field, acc_fields ->
+                acc_fields ++ (field |> field_translator.() |> Approx.promote()) end) |> Approx.map()
               {:%, {strt_name, new_fields}}
             _ ->
               new_fields = fields |> Enum.reduce([], fn field, acc_fields ->
-                  acc_fields ++ (field  |> IO.inspect(label: "BEFORE FIELD TRANSLATION") |> field_translator.() |> IO.inspect(label: "FIELD TRANSLATION") |> Approx.promote() |> IO.inspect(label: "FIELD PROMOTION"))
-                end) |> Approx.map() |> IO.inspect(label: "FIELDS MAP")
+                  acc_fields ++ (field |> field_translator.() |> Approx.promote()) end) |> Approx.map()
               {:%{}, new_fields}
           end
         )
@@ -348,12 +350,27 @@ defmodule Migrator.Translator do
           # TO FIX: map type with atom keys and struct!!!
           ###########
           case type do
-            {:union, {type1, type2}} -> "#{type1 |> placing_fun.()} or #{type2 |> placing_fun.()}"
-            {:fun, {type1, type2}} -> "(" <> "#{type1 |> Enum.reduce(" ", fn t, acc -> if acc == " ", do: t |> placing_fun.(), else: acc <> ", " <> (t |> placing_fun.()) end)} -> #{type2 |> placing_fun.()}" <> ")"
-            {:non_empty_list, {type1, type2}} -> "non_empty_list(" <> "#{type1 |> placing_fun.()}, #{type2 |> placing_fun.()}" <> ")"
+            {:union, {type_left, type_right}} ->
+              "#{type_left |> placing_fun.()} or #{type_right |> placing_fun.()}"
+            {:fun, {types_in, type_out}} ->
+              "(" <> "#{types_in |> Enum.reduce(" ", fn t, acc -> if acc == " ", do: t |> placing_fun.(), else: acc <> ", " <> (t |> placing_fun.()) end)} -> #{type_out |> placing_fun.()}" <> ")"
+            {:non_empty_list, {type_content, type_termination}} ->
+              "non_empty_list(" <> "#{type_content |> placing_fun.()}, #{type_termination |> placing_fun.()}" <> ")"
+            {:tuple, types} ->
+              types_str = types |> Enum.reduce("", fn type, acc ->
+                  type_str = "#{type |> placing_fun.()}"
+                  if acc == "", do: type_str, else: acc <> ", " <> type_str
+                end)
+              "{" <> types_str <> "}"
+            {:%, {strt_name, fields}} ->
+              fields_str = fields |> Enum.reduce("", fn {type_left, type_right}, acc ->
+                  field_str = "#{type_left |> placing_fun.()}" <> " => " <> "#{type_right |> placing_fun.()}"
+                  if acc == "", do: field_str, else: acc <> ", " <> field_str
+                end)
+              "%#{strt_name}{" <> fields_str <> "}"
             {:%{}, fields} ->
-              fields_str = fields |> Enum.reduce("", fn {type_l, type_r}, acc ->
-                  field_str = "#{type_l |> placing_fun.()}" <> " => " <> "#{type_r |> placing_fun.()}"
+              fields_str = fields |> Enum.reduce("", fn {type_left, type_right}, acc ->
+                  field_str = "#{type_left |> placing_fun.()}" <> " => " <> "#{type_right |> placing_fun.()}"
                   if acc == "", do: field_str, else: acc <> ", " <> field_str
                 end)
               "%{" <> fields_str <> "}"
@@ -373,11 +390,11 @@ defmodule Migrator.Translator do
                 if acc == " ", do: input |> placing.(placing), else: acc <>  ", " <> (input |> placing.(placing))
               end)
             output_str = output |> placing.(placing)
-            str_body = "(" <> inputs_str <> ")" <> " -> " <> output_str
+            str_body = inputs_str <> " -> " <> output_str
             str_guard = if guards == nil, do: "", else: "#{guards |> Enum.reduce("", fn {var, type}, acc -> if acc == "", do: "#{var}: #{type |> placing.(placing)}", else: acc <> ", " <> "#{var}: #{type |> placing.(placing)}" end)}"
 
             new_acc_line_num = acc_line_nums ++ [line_num]
-            new_acc_body = if acc_body == "", do: str_body, else: acc_body <> " and " <> str_body
+            new_acc_body = if acc_body == "", do: str_body, else: "(" <> acc_body <> ") and (" <> str_body <> ")"
             new_acc_guard = if guards == nil, do: acc_guard, else: (if acc_guard == "", do: str_guard, else: acc_guard <> ", " <> str_guard)
 
             {new_acc_line_num, name, new_acc_body, new_acc_guard}
