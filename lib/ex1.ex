@@ -10,11 +10,9 @@ defmodule Ex1 do
 
   # TypeSpec multi-clause redundancy check: compile warning, dialyzer pass
   @spec id_redundancy(integer | float) :: float()
-  @spec id_redundancy(float) :: float()
-  @spec id_redundancy(float) :: float()
+  #@spec id_redundancy(float) :: float()
   def id_redundancy(x) when is_integer(x) or is_float(x), do: x + 1.0
-  def id_redundancy(x) when is_float(x), do: x + 1
-  def id_redundancy(x) when is_float(x), do: x + 1.0
+  #def id_redundancy(x) when is_float(x), do: x + 1.0
 
 
   # Optional: order matters, following functions show different results
@@ -74,6 +72,7 @@ defmodule Ex1 do
   @spec id_bin(<<_::15>>)::binary()
   def id_bin(<<a::8, b::7>>), do: <<a, b>>
 
+  @spec id_tuple({atom(), 1..10, binary()}) :: t when t: tuple()
   @spec id_tuple({%Ex1.Some{a: integer()}, binary()}) :: t when t: tuple()
   def id_tuple(tpl) when is_tuple(tpl), do: tpl
 
@@ -153,7 +152,7 @@ defmodule Ex1 do
     def fun(x) when x == 1, do: x+1
     def id_bin(), do: Ex1.id_bin(<<97::size(8), 98::size(7)>>)
 
-    #def id_tuple(), do: Ex1.id_tuple({1,"d"})
+    def id_tuple(), do: Ex1.id_tuple({:a, 1, "q"})
 
     def id_list(), do: Ex1.id_list([1])
 

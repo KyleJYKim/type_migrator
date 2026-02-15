@@ -1,6 +1,6 @@
 defmodule Ex2 do
 
-  @spec record_keytype_lists1(%{list() => atom(), list(integer()) => binary()}) :: map()
+  @spec record_keytype_lists1(%{list(integer() | atom() | float() | binary()) => atom(), list(identifier()) => integer()}) :: map()
   def record_keytype_lists1(x), do: x
 
   @spec record_keytype_atom_others1(%{optional(:a | :b) => atom | any(), binary() => binary(), binary() => atom()}) :: map()
@@ -45,7 +45,7 @@ defmodule Ex2 do
 
     @spec fun_guards(binary(), a) :: binary when a: integer(), binary: binary()
     @spec fun_guards(binary(), a) :: binary when a: float(), binary: binary()
-    def fun_guards(bin, x) when is_binary(bin) and is_binary(x), do: Integer.to_string(x)
+    def fun_guards(bin, x) when is_binary(bin) and is_integer(x), do: Integer.to_string(x)
     def fun_guards(bin, x) when is_binary(bin) and is_float(x), do: Float.to_string(x)
   end
 

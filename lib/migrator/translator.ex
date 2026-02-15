@@ -195,7 +195,7 @@ defmodule Migrator.Translator do
           flatten = fn type, flatten_fun ->
               flatten_fun = &flatten_fun.(&1, flatten_fun)
               case type do
-                {:|, _, [left_u, right_u]} -> ([left_u |> flatten_fun.()] ++ [right_u |> flatten_fun.()]) |> Enum.flat_map(fn x -> x end)
+                {:|, _, [type_l, type_r]} -> ([type_l |> flatten_fun.()] ++ [type_r |> flatten_fun.()]) |> Enum.flat_map(fn x -> x end)
                 _ -> [type |> translator_fun.()]
               end
             end
@@ -345,11 +345,9 @@ defmodule Migrator.Translator do
   defp assemble_elixir_type(renamed_grouped_translated_spec_list) do
     placing = fn type, placing_fun ->
         placing_fun = &placing_fun.(&1, placing_fun)
-
-          ###########
-          # TO FIX: map type with atom keys and struct!!!
-          ###########
           case type do
+            {:union, {type_left, type_right}} ->
+              "#{type_left |> placing_fun.()} or #{type_right |> placing_fun.()}"
             {:union, {type_left, type_right}} ->
               "#{type_left |> placing_fun.()} or #{type_right |> placing_fun.()}"
             {:fun, {types_in, type_out}} ->
@@ -377,8 +375,12 @@ defmodule Migrator.Translator do
             {:if_set, type} -> "if_set(" <> "#{type |> placing_fun.()}" <> ")"
             {:gradual, type} -> "dynamic(" <> "#{type |> placing_fun.()}" <> ")"
             {:interval, {digit1, digit2}} -> "#{digit1}..#{digit2}"
+            {:atom, nil} -> "nil"
+            {:atom, true} -> "true"
+            {:atom, false} -> "false"
             {:atom, atom} -> ":" <> "#{atom}"
             {:var, type} -> "#{type}"
+            :... -> "..."
             _ -> "#{type}()"
           end
         end
