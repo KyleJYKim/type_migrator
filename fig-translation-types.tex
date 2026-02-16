@@ -48,7 +48,7 @@
             \texttt{bitstring()} & \textsl{otherwise}
          \end{array}
       \right.
-      \nl 
+      \\ [5mm]
       \dsb{\texttt{<<\_::\_*$n$>>}} = 
       \left\{
          \begin{array}{ll}
@@ -57,7 +57,7 @@
             \texttt{bitstring()} & \textsl{otherwise}
          \end{array}
       \right.
-      \nl
+      \\ [5mm]
       \dsb{\texttt{<<\_::$n$,\,\,\_::\_*$n$>>}} = 
       \left\{
          \begin{array}{ll}
@@ -66,7 +66,7 @@
             \texttt{bitstring()} & \textsl{otherwise}
          \end{array}
       \right.
-      \nl 
+      \\ [5mm]
       \dsb{\texttt{(\fun{$\ov{\TST}}{\TST}$)}} = \texttt{(\fun{$\dsb{\ov{\TST}}$}$\dsb{\TST}$)}
       \nl 
       \dsb{\texttt{(\fun{\dots}{\TST})}} = 
@@ -75,10 +75,10 @@
             \texttt{fun()} & \textsl{if}\,\,\,\,\dsb{\TST}\,\approx\,\texttt{term()}
             \nl
             %\textsl{undefined} & \textsl{otherwise}
-            \texttt{\fun{none()}{$\dsb{\TST}$}\,\,\texttt{ or }\,\,\dots\,\,\texttt{ or }\,\,\fun{($\underbrace{\texttt{none(), \dots, none()}}_{255\text{  times}}$)}{$\dsb{\TST}$}} & \textsl{otherwise}
+            \texttt{\fun{none()}{$\dsb{\TST}$}\,\,\texttt{ or }\,\,\dots\,\,\texttt{ or }\,\,(\fun{$\underbrace{\texttt{none(), \dots, none()}}_{255\text{  times}}$}{$\dsb{\TST}$})} & \textsl{otherwise}
          \end{array}
       \right.
-      \nl 
+      \\ [7mm]
       \dsb{n} = n\texttt{..}n
       \nl 
       \dsb{n\texttt{..}n'} = n\texttt{..}n'
