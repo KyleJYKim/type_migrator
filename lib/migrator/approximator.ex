@@ -58,10 +58,13 @@ defmodule Migrator.Approximator do
                 key_type_found_in_list? and atom_type_found_in_list? and merging_org_type_subtype? ->
                   {nil, [field_l1 | rest_l1_new]}
                 key_type_found_in_list? and atom_type_found_in_list? and !merging_org_type_subtype? ->
-                  case left_m_org_new do
-                    [atom_req: _] -> {field_m_new, [field_l1 | rest_l1_new]}
-                    [:atom] -> {field_m_new, [field_l1 | rest_l1_new]}
-                    _ -> {{{left_m, left_m_org_new}, (right_l1 ++ right_m) |> Enum.uniq()}, rest_l1_new}
+                  # [{:atom_req, :k}, :atom]
+                  atom_req_in_list? = left_m_org_new |> Enum.reduce(false, fn t, acc -> if is_tuple(t) and t |> elem(0) == :atom_req, do: true, else: acc end)
+                  atom_set_in_list? = left_m_org_new |> Enum.reduce(false, fn t, acc -> if is_atom(t) and t == :atom, do: true, else: acc end)
+                  cond do
+                    atom_req_in_list? -> {field_m_new, [field_l1 | rest_l1_new]}
+                    atom_set_in_list? -> {field_m_new, [field_l1 | rest_l1_new]}
+                    true -> {{{left_m, left_m_org_new}, (right_l1 ++ right_m) |> Enum.uniq()}, rest_l1_new}
                   end
                 !key_type_found_in_list? ->
                   {field_m_new, [field_l1 | rest_l1_new]}
@@ -120,10 +123,11 @@ defmodule Migrator.Approximator do
           {:none, _} -> {acc_types, true}
 
           {{:atom, _}, :atom} -> {acc_new_types, true}
-          {{:atom_req, _}, :atom} -> {acc_new_types, true}
           {:atom, {:atom, _}} -> {(acc_new_types |> List.delete(t2)) ++ [:atom], false or acc_new_subtype?}
-          {:atom, {:atom_req, _}} -> {acc_new_types ++ [:atom], false or acc_new_subtype?} # Keep the atom here
           {{:atom, _}, {:atom, _}} -> {(acc_new_types |> List.delete(t2)) ++ [t1, t2], false or acc_new_subtype?}
+
+          {{:atom_req, _}, :atom} -> {acc_new_types, true}
+          {:atom, {:atom_req, _}} -> {acc_new_types ++ [:atom], false or acc_new_subtype?} # Keep the singleton here
           {{:atom_req, _}, {:atom_req, _}} -> {(acc_new_types |> List.delete(t2)) ++ [t1, t2], false or acc_new_subtype?}
 
           {{:interval, _}, :integer} -> {acc_new_types, true}
@@ -148,7 +152,7 @@ defmodule Migrator.Approximator do
           _ -> {acc_new_types ++ [t1, t2], false or acc_new_subtype?}
         end
       end)
-      {new_types, new_subtype? and acc_subtype?} |> IO.inspect(label: "WHAT THE F")
+      {new_types, new_subtype? and acc_subtype?} |> IO.inspect(label: "UNIFICATION RESULT in THE MIDDLE")
     end)
   end
 
