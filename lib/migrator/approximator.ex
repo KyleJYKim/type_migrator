@@ -11,7 +11,7 @@ defmodule Migrator.Approximator do
         #{:open_map, _} -> {:open_map, left_org}
         :empty_list -> {:list, [left_org]}
         {:non_empty_list, _} -> {:list, [left_org]}
-        #{:fun, _} -> {:fun_top, [left_org]}
+        {:fun, _} -> {:fun, [left_org]}
         {:gradual, :fun} -> {:fun, [left_org]}
         {:interval, _} -> {:integer, [left_org]}
         {:atom, singleton} -> {:atom, [singleton]}
@@ -37,6 +37,8 @@ defmodule Migrator.Approximator do
               {{left_m, left_m_org}, right_m} = field_m_new
               # If K^s' in L_1
               key_type_found_in_list? = left_l1 == left_m
+              left_m |> IO.inspect(label: "Key-type Found in List1?")
+              left_l1 |> IO.inspect(label: "Key-type Found in List2?")
               # If atom^s' in L_1
               atom_type_found_in_list? = left_l1 == :atom
               # If K union s is a subtype of K union s'
@@ -118,17 +120,19 @@ defmodule Migrator.Approximator do
     types1 |> Enum.reduce({types2, true}, fn t1, {acc_types, acc_subtype?} ->
       {new_types, new_subtype?} = acc_types |> Enum.reduce({acc_types, false}, fn t2, {acc_new_types, acc_new_subtype?} ->
         case {t1, t2} |> IO.inspect(label: "{T1, T2} in Unify TYPES") do
+          # Deleting from acc is not necessary but let's fix it later..
+
           _ when t1 == t2 -> {acc_types, true}
           {_, :term} -> {acc_types, true}
           {:none, _} -> {acc_types, true}
 
-          {{:atom, _}, :atom} -> {acc_new_types, true}
-          {:atom, {:atom, _}} -> {(acc_new_types |> List.delete(t2)) ++ [:atom], false or acc_new_subtype?}
-          {{:atom, _}, {:atom, _}} -> {(acc_new_types |> List.delete(t2)) ++ [t1, t2], false or acc_new_subtype?}
-
           {{:atom_req, _}, :atom} -> {acc_new_types, true}
           {:atom, {:atom_req, _}} -> {acc_new_types ++ [:atom], false or acc_new_subtype?} # Keep the singleton here
           {{:atom_req, _}, {:atom_req, _}} -> {(acc_new_types |> List.delete(t2)) ++ [t1, t2], false or acc_new_subtype?}
+
+          {{:atom, _}, :atom} -> {acc_new_types, true}
+          {:atom, {:atom, _}} -> {(acc_new_types |> List.delete(t2)) ++ [:atom], false or acc_new_subtype?}
+          {{:atom, _}, {:atom, _}} -> {(acc_new_types |> List.delete(t2)) ++ [t1, t2], false or acc_new_subtype?}
 
           {{:interval, _}, :integer} -> {acc_new_types, true}
           {:integer, {:interval, _}} -> {(acc_new_types |> List.delete(t2)) ++ [:integer], false or acc_new_subtype?}
@@ -143,13 +147,15 @@ defmodule Migrator.Approximator do
           {{:tuple, els1}, {:tuple, els2}} -> {unified_type, subtype?} = {:tuple, {els1, els2}} |> merge_types()
             {(acc_new_types |> List.delete(t2)) ++ unified_type, subtype? or acc_new_subtype?}
 
+          {{:fun, _}, :fun} -> {acc_new_types, true}
+          {:fun, {:fun, _}} -> {(acc_new_types |> List.delete(t2)) ++ [:fun], false or acc_new_subtype?}
           {{:fun, {ts1_in, t1_out}}, {:fun, {ts2_in, t2_out}}} -> {unified_type, subtype?} = {:fun, {{ts1_in, t1_out}, {ts2_in, t2_out}}} |> merge_types()
             {(acc_new_types |> List.delete(t2)) ++ unified_type, subtype? or acc_new_subtype?}
           #{:gradual, :fun} -> {:fun, [left_org]}
 
           # {{:map, _}, {:map, _}} ->
 
-          _ -> {acc_new_types ++ [t1, t2], false or acc_new_subtype?}
+          _ -> {(acc_new_types |> List.delete(t2)) ++ [t1, t2], false or acc_new_subtype?}
         end
       end)
       {new_types, new_subtype? and acc_subtype?} |> IO.inspect(label: "UNIFICATION RESULT in THE MIDDLE")
