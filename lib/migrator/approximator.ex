@@ -1,6 +1,6 @@
 defmodule Migrator.Approximator do
 
-  #key_types = {:atom, :pid, :port, :reference, :float, :integer, :bitstring, :binary, :tuple, :open_map, :fun, :list}
+  # key_types = {:atom, :pid, :port, :reference, :float, :integer, :bitstring, :binary, :tuple, :open_map, :fun, :list}
 
   def promote(field_org) do
     promoter = fn left_org ->
@@ -38,8 +38,8 @@ defmodule Migrator.Approximator do
               {{left_m, left_m_org}, right_m} = field_m_new
               # If K^s' in L_1
               key_type_found_in_list? = left_l1 == left_m
-              left_m |> IO.inspect(label: "Key-type Found in List1?")
-              left_l1 |> IO.inspect(label: "Key-type Found in List2?")
+              # left_m |> IO.inspect(label: "Key-type Found in List1?")
+              # left_l1 |> IO.inspect(label: "Key-type Found in List2?")
               # If atom^s' in L_1
               atom_type_found_in_list? = left_l1 == :atom
               # If K union s is a subtype of K union s'
@@ -53,11 +53,26 @@ defmodule Migrator.Approximator do
               # atom_type_found_in_list? |> IO.inspect(label: "ATOM_TYPE_FOUND_IN_LIST?")
               # merging_org_type_subtype? |> IO.inspect(label: "MERGING_ORG_TYPE_SUBTYPE?")
 
+              right_hand_merge = fn types ->
+                    types = types |> Enum.uniq()
+                    types |> Enum.reduce(types, fn t1, acc ->
+                    subtype? = acc |> Enum.reduce(false, fn t2, acc_subtype? ->
+                      if t1 == t2 do
+                        acc_subtype?
+                      else
+                        {_, subtype?} = {t1, t2} |> unify_types()
+                        subtype? or acc_subtype?
+                      end
+                    end)
+                    if subtype?, do: acc |> List.delete(t1), else: acc
+                  end)
+                end
+
               cond do
                 key_type_found_in_list? and !atom_type_found_in_list? and merging_org_type_subtype? ->
                   {nil, [field_l1 | rest_l1_new]}
                 key_type_found_in_list? and !atom_type_found_in_list? and !merging_org_type_subtype? ->
-                  {{{left_m, left_m_org_new}, (right_l1 ++ right_m) |> Enum.uniq()}, rest_l1_new}
+                  {{{left_m, left_m_org_new}, (right_l1 ++ right_m) |> IO.inspect(label: "BEFORE RIGHT HAND MERGE") |> right_hand_merge.() |> IO.inspect(label: "AFTER RIGHT HAND MERGE")}, rest_l1_new}
                 key_type_found_in_list? and atom_type_found_in_list? and merging_org_type_subtype? ->
                   {nil, [field_l1 | rest_l1_new]}
                 key_type_found_in_list? and atom_type_found_in_list? and !merging_org_type_subtype? ->
@@ -67,7 +82,7 @@ defmodule Migrator.Approximator do
                   cond do
                     atom_req_in_list? -> {field_m_new, [field_l1 | rest_l1_new]}
                     atom_set_in_list? -> {field_m_new, [field_l1 | rest_l1_new]}
-                    true -> {{{left_m, left_m_org_new}, (right_l1 ++ right_m) |> Enum.uniq()}, rest_l1_new}
+                    true -> {{{left_m, left_m_org_new}, (right_l1 ++ right_m) |> IO.inspect(label: "BEFORE RIGHT HAND MERGE") |> right_hand_merge.() |> IO.inspect(label: "AFTER RIGHT HAND MERGE")}, rest_l1_new}
                   end
                 !key_type_found_in_list? ->
                   {field_m_new, [field_l1 | rest_l1_new]}
@@ -165,7 +180,7 @@ defmodule Migrator.Approximator do
           _ -> {(acc_new_types |> List.delete(t2)) ++ [t1, t2], false or acc_new_subtype?}
         end
       end)
-      {new_types, new_subtype? and acc_subtype?} |> IO.inspect(label: "UNIFICATION RESULT in THE MIDDLE")
+      {new_types, new_subtype? and acc_subtype?} #|> IO.inspect(label: "UNIFICATION RESULT in THE MIDDLE")
     end)
   end
 

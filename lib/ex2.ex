@@ -3,8 +3,9 @@ defmodule Ex2 do
     defstruct [:atom, :binary, integer: 0, float: 0.0]
     @type t :: %Types{integer: integer(), float: float(), atom: atom(), binary: binary()}
   end
-  @spec record_keytype_structs3(%{struct() => integer(), %Types{integer: integer(), float: float()} => float()}) :: map()
-  def record_keytype_structs3(x), do: x
+
+  # @spec record_keytype_structs3(%{struct() => integer(), %Types{integer: integer(), float: float()} => float()}) :: map()
+  # def record_keytype_structs3(x), do: x
 
   # @spec record_keytype_structs2(%{%Types{integer: integer(), float: float(), binary: binary()} => integer(), %Types{integer: integer(), float: float()} => float()}) :: map()
   # def record_keytype_structs2(x), do: x
@@ -36,7 +37,6 @@ defmodule Ex2 do
   # @spec record_keytype_lists1(%{list(integer() | atom() | float() | binary()) => atom(), list(identifier()) => integer()}) :: map()
   # def record_keytype_lists1(x), do: x
 
-  # Key type merge
   # @spec record_keytype_atom_others1(%{optional(:a | :b) => atom | any(), binary() => binary(), binary() => atom()}) :: map()
   # def record_keytype_atom_others1(x), do: x
 
@@ -79,10 +79,10 @@ defmodule Ex2 do
     # def id1(x) when is_binary(x), do: x
 
     # Guards' type variable merge
-    # @spec fun_t(a) :: b when a: integer(), b: binary()
-    # @spec fun_t(a) :: b when a: float(), b: binary()
-    # def fun_t(x) when is_integer(x), do: Integer.to_string(x)
-    # def fun_t(x) when is_float(x), do: Float.to_string(x)
+    @spec fun_t(a) :: b when a: integer(), b: binary()
+    @spec fun_t(a) :: b when a: float(), b: binary()
+    def fun_t(x) when is_integer(x), do: Integer.to_string(x)
+    def fun_t(x) when is_float(x), do: Float.to_string(x)
 
     # @spec fun_guards(binary(), a) :: binary when a: integer(), binary: binary()
     # @spec fun_guards(binary(), a) :: binary when a: float(), binary: binary()
