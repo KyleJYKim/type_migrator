@@ -16,6 +16,7 @@ defmodule Migrator.Approximator do
         {:gradual, :fun} -> {:fun, [left_org]}
         {:interval, _} -> {:integer, [left_org]}
         {:atom, singleton} -> {:atom, [singleton]}
+        {:atom_opt, _} -> {:atom, [left_org]}
         {:atom_req, _} -> {:atom, [left_org]}
 
         _ -> {left_org, [left_org]}
@@ -53,37 +54,23 @@ defmodule Migrator.Approximator do
               # atom_type_found_in_list? |> IO.inspect(label: "ATOM_TYPE_FOUND_IN_LIST?")
               # merging_org_type_subtype? |> IO.inspect(label: "MERGING_ORG_TYPE_SUBTYPE?")
 
-              right_hand_merge = fn types ->
-                    types = types |> Enum.uniq()
-                    types |> Enum.reduce(types, fn t1, acc ->
-                    subtype? = acc |> Enum.reduce(false, fn t2, acc_subtype? ->
-                      if t1 == t2 do
-                        acc_subtype?
-                      else
-                        {_, subtype?} = {t1, t2} |> unify_types()
-                        subtype? or acc_subtype?
-                      end
-                    end)
-                    if subtype?, do: acc |> List.delete(t1), else: acc
-                  end)
-                end
-
               cond do
                 key_type_found_in_list? and !atom_type_found_in_list? and merging_org_type_subtype? ->
                   {nil, [field_l1 | rest_l1_new]}
                 key_type_found_in_list? and !atom_type_found_in_list? and !merging_org_type_subtype? ->
-                  {{{left_m, left_m_org_new}, (right_l1 ++ right_m) |> IO.inspect(label: "BEFORE RIGHT HAND MERGE") |> right_hand_merge.() |> IO.inspect(label: "AFTER RIGHT HAND MERGE")}, rest_l1_new}
+                  {{{left_m, left_m_org_new}, (right_l1 ++ right_m)}, rest_l1_new}
                 key_type_found_in_list? and atom_type_found_in_list? and merging_org_type_subtype? ->
                   {nil, [field_l1 | rest_l1_new]}
                 key_type_found_in_list? and atom_type_found_in_list? and !merging_org_type_subtype? ->
-                  # [{:atom_req, :k}, :atom]
-                  atom_req_in_list? = left_m_org_new |> Enum.reduce(false, fn t, acc -> if is_tuple(t) and t |> elem(0) == :atom_req, do: true, else: acc end)
-                  atom_set_in_list? = left_m_org_new |> Enum.reduce(false, fn t, acc -> if is_atom(t) and t == :atom, do: true, else: acc end)
-                  cond do
-                    atom_req_in_list? -> {field_m_new, [field_l1 | rest_l1_new]}
-                    atom_set_in_list? -> {field_m_new, [field_l1 | rest_l1_new]}
-                    true -> {{{left_m, left_m_org_new}, (right_l1 ++ right_m) |> IO.inspect(label: "BEFORE RIGHT HAND MERGE") |> right_hand_merge.() |> IO.inspect(label: "AFTER RIGHT HAND MERGE")}, rest_l1_new}
-                  end
+                  # atom_req_in_list? = left_m_org_new |> Enum.reduce(false, fn t, acc -> if is_tuple(t) and t |> elem(0) == :atom_req, do: true, else: acc end)
+                  # atom_opt_in_list? = left_m_org_new |> Enum.reduce(false, fn t, acc -> if is_tuple(t) and t |> elem(0) == :atom_opt, do: true, else: acc end)
+                  # atom_set_in_list? = left_m_org_new |> Enum.reduce(false, fn t, acc -> if is_atom(t) and t == :atom, do: true, else: acc end)
+                  {field_m_new, [field_l1 | rest_l1_new]} |> IO.inspect(label: "NEW ATOM THING")
+                  # cond do
+                  #   atom_req_in_list? -> {field_m_new, [field_l1 | rest_l1_new]}
+                  #   atom_set_in_list? -> {field_m_new, [field_l1 | rest_l1_new]}
+                  #   true -> {{{left_m, left_m_org_new}, (right_l1 ++ right_m) |> IO.inspect(label: "BEFORE RIGHT HAND MERGE") |> right_hand_merge.() |> IO.inspect(label: "AFTER RIGHT HAND MERGE")}, rest_l1_new}
+                  # end
                 !key_type_found_in_list? ->
                   {field_m_new, [field_l1 | rest_l1_new]}
               end
@@ -91,8 +78,23 @@ defmodule Migrator.Approximator do
         end
       end
 
+    uniq_right_hand = fn types ->
+          types = types |> Enum.uniq()
+          types |> Enum.reduce(types, fn t1, acc ->
+          subtype? = acc |> Enum.reduce(false, fn t2, acc_subtype? ->
+            if t1 == t2 do
+              acc_subtype?
+            else
+              {_, subtype?} = {t1, t2} |> unify_types()
+              subtype? or acc_subtype?
+            end
+          end)
+          if subtype?, do: acc |> List.delete(t1), else: acc
+        end)
+      end
+
     checking_if_set = fn fields -> fields |> Enum.map(fn {left_f, right_f} ->
-          right_f_new = right_f |> Enum.reduce({nil}, fn type, acc ->
+          right_f_new = right_f |> uniq_right_hand.() |> Enum.reduce({nil}, fn type, acc ->
               case acc do
                 {nil} -> type
                 {:union, _} -> {:union, {type, acc}}
@@ -116,12 +118,13 @@ defmodule Migrator.Approximator do
               [field_new | list_l1_new]
             end
           end) |> checking_if_set.()
-      end
+      end #|> right_hand_merge.()
 
     removing_extra_information = fn fields ->
         fields |> Enum.map(fn {{key_type, org_type}, right_f} ->
           case org_type do
             [atom_req: singleton] -> {{:atom, singleton}, right_f}
+            [atom_opt: singleton] -> {{:atom, singleton}, right_f}
             _ -> {key_type, right_f}
           end
         end)
@@ -146,9 +149,13 @@ defmodule Migrator.Approximator do
           {:atom, {:atom_req, _}} -> {acc_new_types ++ [:atom], false or acc_new_subtype?} # Keep the singleton here
           {{:atom_req, _}, {:atom_req, _}} -> {(acc_new_types |> List.delete(t2)) ++ [t1, t2], false or acc_new_subtype?}
 
-          {{:atom, _}, :atom} -> {acc_new_types, true}
-          {:atom, {:atom, _}} -> {(acc_new_types |> List.delete(t2)) ++ [:atom], false or acc_new_subtype?}
-          {{:atom, _}, {:atom, _}} -> {(acc_new_types |> List.delete(t2)) ++ [t1, t2], false or acc_new_subtype?}
+          {{:atom_opt, _}, :atom} -> {acc_new_types, true}
+          {:atom, {:atom_opt, _}} -> {acc_new_types ++ [:atom], false or acc_new_subtype?}
+          {{:atom_opt, _}, {:atom_opt, _}} -> {(acc_new_types |> List.delete(t2)) ++ [t1, t2], false or acc_new_subtype?}
+
+          # {{:atom, _}, :atom} -> {acc_new_types, true}
+          # {:atom, {:atom, _}} -> {(acc_new_types |> List.delete(t2)) ++ [:atom], false or acc_new_subtype?}
+          # {{:atom, _}, {:atom, _}} -> {(acc_new_types |> List.delete(t2)) ++ [t1, t2], false or acc_new_subtype?}
 
           {{:interval, _}, :integer} -> {acc_new_types, true}
           {:integer, {:interval, _}} -> {(acc_new_types |> List.delete(t2)) ++ [:integer], false or acc_new_subtype?}

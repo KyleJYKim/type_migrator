@@ -82,46 +82,9 @@ defmodule Ex1 do
   defmodule In do
     # @spec id_exhaustive() :: any()
     # def id_exhaustive(), do: Ex1.id_exhaustive(:a)
-    """
-      # Compiler warning:
-      code block contains unused literal
-      "
-      The function call will not succeed.
-      Ex1.id_exhaustive(:a) will never return since the success typing is:
-        (binary() | number()) :: binary() | number()
-      and the contract is
-      Contract head:
-        (integer()) :: integer()
-      Contract head:
-        (float()) :: float()
-      Contract head:
-        (binary()) :: binary()
-      "
-      (remove the literal or assign it to _ to avoid warnings)
-
-      # Dialyzer error:
-      The function call will not succeed.
-
-      Ex1.id_exhaustive(:a)
-
-      will never return since the success typing is:
-      (binary() | number()) :: binary() | number()
-
-      and the contract is
-      Contract head:
-      (integer()) :: integer()
-
-      Contract head:
-      (float()) :: float()
-
-      Contract head:
-      (binary()) :: binary()
-    """
 
     #@spec id_redundancy() :: any()
     #def id_redundancy(), do: Ex1.id_redundancy()
-    """
-    """
 
     #@spec id_records() :: %{required(:atom) => integer(), optional(atom()) => any()}
     #def id_records1(), do: Ex1.id_records1(%{:a => 1, :b => :r})

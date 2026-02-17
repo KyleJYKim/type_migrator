@@ -202,9 +202,14 @@ defmodule Migrator.Translator do
           field_translator = fn {{req_or_opt, _, [left]}, right} ->
               # [Union of F_i] to [F_1, ..., F_n]
               if req_or_opt == :required and is_atom(left) do
-                [{{:atom_req, left}, right |> flatten.(flatten)}] |> IO.inspect(label: "RIGHTTTTTTTTTTTTT")
+                [{{:atom_req, left}, right |> flatten.(flatten)}]
               else
-                left |> flatten.(flatten) |> Enum.map(fn l -> {l, right |> flatten.(flatten)} end)
+                left |> flatten.(flatten) |> Enum.map(fn l ->
+                    case l do
+                      {:atom, singleton} -> {{:atom_opt, singleton}, right |> flatten.(flatten)}
+                      _ -> {l, right |> flatten.(flatten)}
+                    end
+                  end)
               end
             end
           case fields do
@@ -325,14 +330,15 @@ defmodule Migrator.Translator do
                 {acc_notation, found_names}
               else
                 {new_guards, new_found_names} = guards |> Enum.reduce({[], found_names}, fn {name, type}, {acc_guards, acc_found_guards} ->
-                  {renamed_guard, new_found_names} = acc_found_guards |> Map.get_and_update(name, fn cnt -> if cnt == nil, do: {{name, type}, 1}, else: {{String.to_atom("#{name}_#{cnt+1}"), type}, cnt+1} end)
-                  {acc_guards ++ [renamed_guard], new_found_names}
-                end)
+                    {renamed_guard, new_found_names} = acc_found_guards |> Map.get_and_update({name, type}, fn cnt -> if cnt == nil, do: {{name, type}, 1}, else: {{String.to_atom("#{name}_#{cnt+1}"), type}, cnt+1} end)
+                    {acc_guards ++ [renamed_guard], new_found_names} |> IO.inspect(label: "BEFORE RENAME")
+                  end)
                 renamer = fn type, renamer_fun ->
                     renamer_fun = &renamer_fun.(&1, renamer_fun)
                     case type do
                       {:var, var} ->
-                        cnt = new_found_names[var]
+                        type = guards[var]
+                        cnt = new_found_names[{var, type}]
                         if cnt == 1 or cnt == nil, do: {:var, var}, else: {:var, String.to_atom("#{var}_#{cnt}")}
                       {type1, type2} -> {type1 |> renamer_fun.(), type2 |> renamer_fun.()}
                       _ -> type
