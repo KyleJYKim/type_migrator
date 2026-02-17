@@ -102,8 +102,8 @@ defmodule Migrator.Translator do
         {:char, _, _} -> {:.., [], [0, 1114111]}
         {:charlist, _, _} -> {:list, [], [{:char, [], []}]} |> parser_fun.()
         {:nonempty_charlist, _, _} -> {:nonempty_list, [], [{:char, [], []}]} |> parser_fun.()
-        {:fun, _, _} -> [{:->, [], [[{:..., [], []}], {:any, [], []}]}]
-        {:function, _, _} -> [{:->, [], [[{:..., [], []}], {:any, [], []}]}]
+        {:fun, _, _} -> {:->, [], [[{:..., [], []}], {:any, [], []}]} |> IO.inspect(label: "Optional Value")
+        {:function, _, _} -> {:fun, [], []} |> parser_fun.()
         {:identifier, _, _} -> {:|, [], [{:pid, [], []}, {:|, [], [{:port, [], []}, {:reference, [], []}]}]}
 
         # iolist will not expand more than once since translation is to only display..., or not even once is necessary.
@@ -119,7 +119,7 @@ defmodule Migrator.Translator do
         {:no_return, _, _} -> {:none, [], []}
         {:node, _, _} -> {:atom, [], []}
         {:number, _, _} -> {:|, [], [{:integer, [], []}, {:float, [], []}]}
-        {:struct, _, _} -> {:%{}, [], [{:__struct__, {:atom, [], []}}, {{:optional, [], [{:atom, [], []}]}, {:any, [], []}}]}
+        {:struct, _, _} -> {:%, [], [{:struct, [], [:__struct_top__]}, {:%{}, [], [{:__struct__, {:atom, [], []}}, {{:optional, [], [{:atom, [], []}]}, {:any, [], []}}]}]} |> parser_fun.()
         {:timeout, _, _} -> {:|, [], [:infinity, {:non_neg_integer, [], []}]}
         # true -> :true
         # false -> :false
@@ -173,7 +173,7 @@ defmodule Migrator.Translator do
 
     translator = fn {type_node, guards}, translator_fun -> (
       translator_fun = &translator_fun.({&1, guards}, translator_fun)
-      case type_node do
+      case type_node |> IO.inspect(label: "Type_node in Translation") do
         # Remote module type (e.g., String.t())
         {{:., _, [{_, _, modules}, type]}, _, _} -> (
           module = modules |> Enum.reduce("", fn x, acc -> module = Atom.to_string(x)
@@ -202,20 +202,20 @@ defmodule Migrator.Translator do
           field_translator = fn {{req_or_opt, _, [left]}, right} ->
               # [Union of F_i] to [F_1, ..., F_n]
               if req_or_opt == :required and is_atom(left) do
-                [{{:atom_req, left}, right |> flatten.(flatten)}]
+                [{{:atom_req, left}, right |> flatten.(flatten)}] |> IO.inspect(label: "RIGHTTTTTTTTTTTTT")
               else
                 left |> flatten.(flatten) |> Enum.map(fn l -> {l, right |> flatten.(flatten)} end)
               end
             end
           case fields do
             [{:__struct__, strt_name} | fields] ->
-              new_fields = fields |> Enum.reduce([], fn field, acc_fields ->
+              new_fields = fields |> IO.inspect(label: "STRUCT FIELDS") |> Enum.reduce([], fn field, acc_fields ->
                 acc_fields ++ (field |> field_translator.() |> Approx.promote()) end) |> Approx.map()
-              {:%, {strt_name, new_fields}}
+              {:struct, {strt_name, new_fields}}
             _ ->
               new_fields = fields |> Enum.reduce([], fn field, acc_fields ->
                   acc_fields ++ (field |> field_translator.() |> Approx.promote()) end) |> Approx.map()
-              {:%{}, new_fields}
+              {:open_map, new_fields}
           end
         )
 
@@ -243,8 +243,15 @@ defmodule Migrator.Translator do
 
         # (... -> Type)
         {:->, [], [[{:..., _, []}], type_out]} ->
-          if (type_out |> translator_fun.()) == :term, do: :fun, else: approximate_top_fun()
-
+          if (type_out |> translator_fun.()) == :term do
+            :fun
+          else # Approx.: {:gradual, :fun}
+            # 0..255 |> Range.to_list()
+            #   |> Enum.reduce([], fn n, acc -> [{:fun, {List.duplicate(:none, n), type_out |> translator_fun.()}} | acc] end)
+            #   |> Enum.reduce(nil, fn t, acc -> if acc == nil, do: t, else: {:union, {t, acc}} end)
+            {:fun, {:all_arity, type_out |> translator_fun.()}}
+            # 0..255 |> Stream.map(&({:fun, {List.duplicate(:none, &1), type_out |> translator_fun.()}}))
+          end
         # (Type_seq} -> Type)
         {:->, _, [types_in, type_out]} -> {:fun, {types_in |> Enum.map(translator_fun), type_out |> translator_fun.()}}
 
@@ -287,8 +294,6 @@ defmodule Migrator.Translator do
 
     parsed_spec_tree |> Enum.map(total_translator)
   end
-
-  defp approximate_top_fun(), do: {:gradual, :fun}
 
   defp group_by_notation(translated_spec_list) do
     translated_spec_list |> Enum.reduce([], fn type, acc ->
@@ -348,8 +353,10 @@ defmodule Migrator.Translator do
           case type do
             {:union, {type_left, type_right}} ->
               "#{type_left |> placing_fun.()} or #{type_right |> placing_fun.()}"
-            {:union, {type_left, type_right}} ->
-              "#{type_left |> placing_fun.()} or #{type_right |> placing_fun.()}"
+            {:fun, {:all_arity, type_out}} ->
+              "(" <> "( -> #{type_out |> placing_fun.()}) or ... or (none(), ..., none() -> #{type_out |> placing_fun.()})" <> ")"
+              # 0..255 |> Stream.map(&({:fun, {List.duplicate(:none, &1), type_out}})) |> Enum.reverse()
+              #        |> Enum.reduce(nil, fn t, acc -> if acc == nil, do: t, else: {:union, {t, acc}} end) |> placing_fun.()
             {:fun, {types_in, type_out}} ->
               "(" <> "#{types_in |> Enum.reduce(" ", fn t, acc -> if acc == " ", do: t |> placing_fun.(), else: acc <> ", " <> (t |> placing_fun.()) end)} -> #{type_out |> placing_fun.()}" <> ")"
             {:non_empty_list, {type_content, type_termination}} ->
@@ -360,13 +367,13 @@ defmodule Migrator.Translator do
                   if acc == "", do: type_str, else: acc <> ", " <> type_str
                 end)
               "{" <> types_str <> "}"
-            {:%, {strt_name, fields}} ->
+            {:struct, {strt_name, fields}} ->
               fields_str = fields |> Enum.reduce("", fn {type_left, type_right}, acc ->
                   field_str = "#{type_left |> placing_fun.()}" <> " => " <> "#{type_right |> placing_fun.()}"
                   if acc == "", do: field_str, else: acc <> ", " <> field_str
                 end)
               "%#{strt_name}{" <> fields_str <> "}"
-            {:%{}, fields} ->
+            {:open_map, fields} ->
               fields_str = fields |> Enum.reduce("", fn {type_left, type_right}, acc ->
                   field_str = "#{type_left |> placing_fun.()}" <> " => " <> "#{type_right |> placing_fun.()}"
                   if acc == "", do: field_str, else: acc <> ", " <> field_str

@@ -7,8 +7,9 @@ defmodule Migrator.Approximator do
       case left_org do
         # {:union, {left_u, right_u}} -> {:union, {left_u |> promoter_fun.(), right_u |> promoter_fun.()}}
 
-        #{:tuple, _} -> {:tuple, left_org}
-        #{:open_map, _} -> {:open_map, left_org}
+        {:open_map, _} -> {:open_map, [left_org]}
+        {:struct, _} -> {:open_map, [left_org]}
+        {:tuple, _} -> {:tuple, [left_org]}
         :empty_list -> {:list, [left_org]}
         {:non_empty_list, _} -> {:list, [left_org]}
         {:fun, _} -> {:fun, [left_org]}
@@ -153,7 +154,13 @@ defmodule Migrator.Approximator do
             {(acc_new_types |> List.delete(t2)) ++ unified_type, subtype? or acc_new_subtype?}
           #{:gradual, :fun} -> {:fun, [left_org]}
 
-          # {{:map, _}, {:map, _}} ->
+          {{:open_map, fields1}, {:open_map, fields2}} -> {unified_type, subtype?} = {:open_map, {fields1, fields2}} |> merge_types()
+            {(acc_new_types |> List.delete(t2)) ++ unified_type, subtype? or acc_new_subtype?}
+
+          {{:struct, _}, {:struct, {:__struct_top__, _}}} -> {acc_new_types, true}
+          {{:struct, {:__struct_top__, _}}, {:struct, _}} -> {(acc_new_types |> List.delete(t2)) ++ [t1], false or acc_new_subtype?}
+          {{:struct, fields1}, {:struct, fields2}} -> {unified_type, subtype?} = {:struct, {fields1, fields2}} |> merge_types()
+            {(acc_new_types |> List.delete(t2)) ++ unified_type, subtype? or acc_new_subtype?}
 
           _ -> {(acc_new_types |> List.delete(t2)) ++ [t1, t2], false or acc_new_subtype?}
         end
@@ -211,20 +218,80 @@ defmodule Migrator.Approximator do
   end
 
   defp merge_types({:fun, {{ts1_in, t1_out}, {ts2_in, t2_out}}}) do
-    if length(ts1_in) == length(ts1_in) do
-      {_, subtype_out?} = {t1_out, t2_out} |> unify_types()
-      # input type of function: contra-variant
-      subtype_in? = ts2_in |> Enum.zip(ts1_in) |> Enum.reduce(true, fn {t2, t1}, acc_subtype? ->
-        {_, subtype_in?} = {t2, t1} |> unify_types()
-        subtype_in? and acc_subtype?
-      end)
-      if subtype_in? and subtype_out? do
-        {{:fun, {ts2_in, t2_out}}, true}
-      else
+    case {ts1_in, ts2_in} do
+      {_, :all_arity} ->
+        {_, subtype_out?} = {t1_out, t2_out} |> unify_types()
+        if subtype_out? do
+          {{:fun, {ts2_in, t2_out}}, true}
+        else
+          {[{:fun, {ts1_in, t1_out}}, {:fun, {ts2_in, t2_out}}], false}
+        end
+      {:all_arity, _} ->
         {[{:fun, {ts1_in, t1_out}}, {:fun, {ts2_in, t2_out}}], false}
-      end
+      _ ->
+        if length(ts1_in) == length(ts1_in) do
+          {_, subtype_out?} = {t1_out, t2_out} |> unify_types()
+          # input type of function: contra-variant
+          subtype_in? = ts2_in |> Enum.zip(ts1_in) |> Enum.reduce(true, fn {t2, t1}, acc_subtype? ->
+            {_, subtype_in?} = {t2, t1} |> unify_types()
+            subtype_in? and acc_subtype?
+          end)
+          if subtype_in? and subtype_out? do
+            {{:fun, {ts2_in, t2_out}}, true}
+          else
+            {[{:fun, {ts1_in, t1_out}}, {:fun, {ts2_in, t2_out}}], false}
+          end
+        else
+          {[{:fun, {ts1_in, t1_out}}, {:fun, {ts2_in, t2_out}}], false}
+        end
+    end
+  end
+
+  defp merge_types({:open_map, {fields1, fields2}}) when is_list(fields1) and is_list(fields2) do
+    subtype? = fields1 |> Enum.reduce(true, fn f1, acc_subtype? ->
+      new_subtype? = fields2 |> Enum.reduce(false, fn f2, acc_new_subtype? ->
+        {l1, r1} = f1
+        {l2, r2} = f2
+        [r1, r2] = [r1, r2] |> Enum.map(fn r ->
+            case r do
+              {:if_set, t} -> t
+              _ -> r
+            end
+          end)
+        {_, l_subtype?} = {l1, l2} |> unify_types()
+        {_, r_subtype?} = {r1, r2} |> unify_types()
+        (l_subtype? and r_subtype?) or acc_new_subtype?
+      end)
+      new_subtype? and acc_subtype?
+    end)
+    if subtype? do
+      {[{:open_map, fields2}], true}
     else
-      {[{:fun, {ts1_in, t1_out}}, {:fun, {ts2_in, t2_out}}], false}
+      {[{:open_map, fields1}, {:open_map, fields2}], false}
+    end
+  end
+
+  defp merge_types({:struct, {{label1, fields1}, {label2, fields2}}}) when is_list(fields1) and is_list(fields2) do
+    subtype? = fields1 |> Enum.reduce(true, fn f1, acc_subtype? ->
+      new_subtype? = fields2 |> Enum.reduce(false, fn f2, acc_new_subtype? ->
+        {l1, r1} = f1
+        {l2, r2} = f2
+        [r1, r2] = [r1, r2] |> Enum.map(fn r ->
+            case r do
+              {:if_set, t} -> t
+              _ -> r
+            end
+          end)
+        {_, l_subtype?} = {l1, l2} |> unify_types()
+        {_, r_subtype?} = {r1, r2} |> unify_types()
+        (l_subtype? and r_subtype?) or acc_new_subtype?
+      end)
+      new_subtype? and acc_subtype?
+    end)
+    if subtype? do
+      {[{:struct, {label2, fields2}}], true}
+    else
+      {[{:struct, {label1, fields1}}, {:struct, {label2, fields2}}], false}
     end
   end
 
@@ -241,147 +308,4 @@ defmodule Migrator.Approximator do
       [type_hd | rest] -> {:union, {type_hd, rest |> unflatten_to_union_type()}}
     end
   end
-
-  # defp is_subtype?({type1, type2}) do
-  #   [types1, types2] = [type1, type2] |> Enum.map(&flatten_from_union_type/1)
-
-  #   types1 |> Enum.reduce(true, fn t1, acc1 ->
-  #       types2 |> Enum.reduce(acc1, fn t2, acc2 ->
-  #         case {t1, t2} do
-  #           _ when t1 == t2 -> true and acc2
-  #           {_, :term} -> true and acc2
-  #           {{:atom, _}, :atom} -> true and acc2
-  #           {{:interval, _}, :integer} -> true and acc2
-  #           {{:interval, {n1_1, n1_2}}, {:interval, {n2_1, n2_2}}} ->
-  #             {_, subtype?} = {{n1_1, n1_2}, {n2_1, n2_2}} |> compare_intervals()
-  #             subtype? and acc2
-  #           {{:non_empty_list, {t_l1_c, t_l1_t}}, {:non_empty_list, {t_l2_c, t_l2_t}}} ->
-  #             {_, subtype?} = {{t_l1_c, t_l1_t}, {t_l2_c, t_l2_t}} |> compare_non_empty_lists()
-  #             subtype? and acc2
-  #           {{:tuple, els1}, {:tuple, els2}} ->
-  #             {els1, els2} |> compare_tuples()
-  #           {{:fun, {ts1_in, t1_out}}, {:fun, {ts2_in, t2_out}}} ->
-  #             {{ts1_in, t1_out}, {ts2_in, t2_out}} |> compare_functions()
-  #           # {{:map, _}, {:map, _}} ->
-  #           _ -> false
-  #         end
-  #       end)
-  #     end)
-  # end
-
-
-  # defp compare_non_empty_lists({{type_l1_c, type_l1_t}, {type_l2_c, type_l2_t}}) do
-  #   if ({type_l1_c, type_l2_c} |> is_subtype?) and ({type_l1_t, type_l2_t} |> is_subtype?) do
-  #     {nil, true}
-  #   else
-  #     {{{:non_empty_list, {type_l1_c, type_l1_t}}, {:non_empty_list, {type_l2_c, type_l2_t}}}, false}
-  #   end
-  # end
-
-  # defp compare_tuples({elements1, elements2}) do
-  #   if elements1 |> length() == elements2 |> length() do
-  #     elements1 |> Enum.zip(elements2) |> Enum.reduce(true, fn pair, acc -> (pair |> is_subtype?) and acc end)
-  #   else
-  #     false
-  #   end
-  # end
-
-  # defp compare_funs({{ts1_in, t1_out}, {ts2_in, t2_out}}) do
-  #   if ts1_in |> length() == ts2_in |> length() do
-  #     (ts1_in |> Enum.zip(ts2_in) |> Enum.reduce(true, fn pair, acc -> (pair |> is_subtype?) and acc end)) and ({t1_out, t2_out} |> is_subtype?)
-  #   else
-  #     false
-  #   end
-  # end
-
-
-  # defp negate_types(type1, type2) do
-  #   [types1, types2] = [type1, type2] |> Enum.map(&flatten_from_union_type/1)
-
-  #   types2 |> Enum.reduce(types1, fn t2, acc1 ->
-  #       acc1 |> Enum.reduce(acc1, fn t1, acc2 ->
-  #         case {t1, t2} do
-  #           _ when t1 == t2 -> acc2 |> List.delete(t1)
-  #           {_, :term} -> acc2 |> List.delete(t1)
-  #           {{:atom, _}, :atom} -> acc2 |> List.delete(t1)
-  #           {{:interval, _}, :integer} -> acc2 |> List.delete(t1)
-  #           {{:interval, {n1_1, n1_2}}, {:interval, {n2_1, n2_2}}} ->
-  #             case {:interval, {n1_1, n1_2}, {n2_1, n2_2}} |> negate_types() do
-  #               nil -> acc2 |> List.delete(t1)
-  #               {interval} -> (acc2 |> List.delete(t1)) ++ [interval]
-  #               {interval1, interval2} -> (acc2 |> List.delete(t1)) ++ [interval1, interval2]
-  #             end
-  #           {{:non_empty_list, {t_l1_c, t_l1_t}}, {:non_empty_list, {t_l2_c, t_l2_t}}} ->
-  #             {{t_l1_c, t_l1_t}, {t_l2_c, t_l2_t}} |> compare_non_empty_lists()
-  #           # {{:tuple, els1}, {:tuple, els2}} ->
-  #           #   {els1, els2} |> compare_tuples()
-  #           # {{:fun, {ts1_in, t1_out}}, {:fun, {ts2_in, t2_out}}} ->
-  #           #   {{ts1_in, t1_out}, {ts2_in, t2_out}} |> compare_functions()
-  #           # {{:map, _}, {:map, _}} ->
-  #           _ -> false
-  #         end
-  #       end)
-  #     end)
-  # end
-
-  # defp negate_types({:interval, {n1_1, n1_2}, {n2_1, n2_2}}) do # (n1_1..n1_2) \ (n2_1..n2_2)
-  #   min = [n1_1, n1_2, n2_1, n2_2] |> Enum.reduce(:infty, fn n, min -> if n == :infty, do: min, else: (if min == :infty, do: n, else: (if n < min, do: n, else: min)) end)
-  #   max = [n1_1, n1_2, n2_1, n2_2] |> Enum.reduce(:infty, fn n, max -> if n == :infty, do: max, else: (if max == :infty, do: n, else: (if n > max, do: n, else: max)) end)
-  #   {inf_neg, inf_pos} = {min - 1, max + 1}
-  #   [n1_1_new, n2_1_new] = [n1_1, n2_1] |> Enum.map(fn n -> if n == :infty, do: inf_neg, else: n end)
-  #   [n1_2_new, n2_2_new] = [n1_2, n2_2] |> Enum.map(fn n -> if n == :infty, do: inf_pos, else: n end)
-  #   cond do
-  #     n1_1_new..n1_2_new |> Range.disjoint?(n2_1_new..n2_2_new) -> {:interval, {n1_1, n1_2}}
-
-  #     n1_1_new == n2_1_new and n1_2_new == n2_2_new -> nil
-  #     n1_1_new < n2_1_new and n1_2_new == n2_2_new -> {:interval, {n1_1, n2_1}}
-  #     n1_1_new > n2_1_new and n1_2_new == n2_2_new -> nil
-  #     n1_1_new == n2_1_new and n1_2_new < n2_2_new -> nil
-  #     n1_1_new == n2_1_new and n1_2_new > n2_2_new -> {:interval, {n2_2, n1_2}}
-
-  #     n1_1_new < n2_1_new and n1_2_new < n2_2_new -> {:interval, {n1_1, n2_1}}
-  #     n1_1_new < n2_1_new and n1_2_new > n2_2_new -> {{:interval, {n1_1, n2_1}}, {:interval, {n2_2, n1_2}}}
-  #     n1_1_new > n2_1_new and n1_2_new < n2_2_new -> nil
-  #     n1_1_new > n2_1_new and n1_2_new > n2_2_new -> {:interval, {n2_1, n1_2}}
-  #   end
-  # end
-
-
-  # defp unify_subtypes({:integer, {{n1_1, n1_2}, {n2_1, n2_2}}}) do
-  #   cond do
-  #     {n1_1, n1_2} == {n2_1, n2_2} ->
-  #       {[{:interval, {n2_1, n2_2}}], true}
-  #     [n1_1, n1_2, n2_1, n2_2] |> Enum.find_value(false, fn n -> n == :infty end) ->
-  #       case {n1_1, n1_2, n2_1, n2_2} do
-  #         {_, _, :infty, -1} -> if n1_1 < 0 and n1_2 < 0, do: {[{:interval, {n2_1, n2_2}}], true}, else: {[{:interval, {n1_1, n1_2}}, {:interval, {n2_1, n2_2}}], false}
-  #         {1, :infty, 0, :infty} -> {[{:interval, {n2_1, n2_2}}], true}
-  #         {0, :infty, 1, :infty} -> {[{:interval, {n1_1, n1_2}}], false}
-  #         {_, _, 0, :infty} -> if n1_1 > -1 and n1_2 > -1, do: {[{:interval, {n2_1, n2_2}}], true}, else: {[{:interval, {n1_1, n1_2}}, {:interval, {n2_1, n2_2}}], false}
-  #         {_, _, 1, :infty} -> if n1_1 > 0 and n1_2 > 0, do: {[{:interval, {n2_1, n2_2}}], true}, else: {[{:interval, {n1_1, n1_2}}, {:interval, {n2_1, n2_2}}], false}
-  #         {:infty, -1, _, _} -> if n2_1 < 0 and n2_2 < 0, do: {[{:interval, {n1_1, n1_2}}], false}, else: {[{:interval, {n1_1, n1_2}}, {:interval, {n2_1, n2_2}}], false}
-  #         {1, :infty, _, _} -> if n2_1 > 0 and n2_2 > 0, do: {[{:interval, {n1_1, n1_2}}], false}, else: {[{:interval, {n1_1, n1_2}}, {:interval, {n2_1, n2_2}}], false}
-  #         {0, :infty, _, _} -> if n2_1 > -1 and n2_2 > -1, do: {[{:interval, {n1_1, n1_2}}], false}, else: {[{:interval, {n1_1, n1_2}}, {:interval, {n2_1, n2_2}}], false}
-  #       end
-  #     Range.disjoint?(n1_1..n1_2, n2_1..n2_2) ->
-  #       cond do
-  #         n1_2 + 1 == n2_1 -> {[{:interval, {n1_1, n2_2}}], false}
-  #         n2_2 + 1 == n1_1 -> {[{:interval, {n2_1, n1_2}}], false}
-  #         true -> {[{:interval, {n1_1, n1_2}}, {:interval, {n2_1, n2_2}}], false}
-  #       end
-  #     n1_1..n1_2 |> Enum.to_list() |> Enum.reduce(true, fn n, acc -> acc and Enum.member?(n2_1..n2_2, n) end) ->
-  #       {[{:interval, {n2_1, n2_2}}], true}
-  #     true ->
-  #       cond do
-  #         n1_1 <= n2_1 and n1_2 <= n2_2 -> {[{:interval, {n1_1, n2_2}}], false}
-  #         n1_1 <= n2_1 and n1_2 >= n2_2 -> {[{:interval, {n1_1, n1_2}}], false}
-  #         n1_1 >= n2_1 and n1_2 <= n2_2 -> {[{:interval, {n2_1, n2_2}}], false}
-  #         n1_1 >= n2_1 and n1_2 >= n2_2 -> {[{:interval, {n2_1, n1_2}}], false}
-  #       end
-  #   end
-  # end
-
-
-
-
-
 end
