@@ -37,8 +37,8 @@ defmodule Ex2 do
   # @spec record_keytype_lists1(%{list(integer() | atom() | float() | binary()) => atom(), list(identifier()) => integer()}) :: map()
   # def record_keytype_lists1(x), do: x
 
-  @spec record_keytype_atom_others1(%{required(:some) => any(), optional(:a | :b | :c) => atom | any(), binary() => binary(), binary() => atom()}) :: map()
-  def record_keytype_atom_others1(x), do: x
+  # @spec record_keytype_atom_others1(%{required(:some) => any(), optional(:a | :b | :c) => atom | any(), binary() => binary(), binary() => atom()}) :: map()
+  # def record_keytype_atom_others1(x), do: x
 
   # @spec record_keytype_atoms1(%{:a => atom, :b => atom()}) :: map()
   # def record_keytype_atoms1(x), do: x
@@ -79,10 +79,10 @@ defmodule Ex2 do
     # def id1(x) when is_binary(x), do: x
 
     # Guards' type variable merge
-    # @spec fun_t(a) :: b when a: integer(), b: binary()
-    # @spec fun_t(a) :: b when a: float(), b: binary()
-    # def fun_t(x) when is_integer(x), do: Integer.to_string(x)
-    # def fun_t(x) when is_float(x), do: Float.to_string(x)
+    @spec fun_t(a) :: b when a: integer(), b: binary()
+    @spec fun_t(a) :: b when a: float(), b: binary()
+    def fun_t(x) when is_integer(x), do: Integer.to_string(x)
+    def fun_t(x) when is_float(x), do: Float.to_string(x)
 
     # @spec fun_guards(binary(), a) :: binary when a: integer(), binary: binary()
     # @spec fun_guards(binary(), a) :: binary when a: float(), binary: binary()

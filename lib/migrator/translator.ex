@@ -330,16 +330,33 @@ defmodule Migrator.Translator do
                 {acc_notation, found_names}
               else
                 {new_guards, new_found_names} = guards |> Enum.reduce({[], found_names}, fn {name, type}, {acc_guards, acc_found_guards} ->
-                    {renamed_guard, new_found_names} = acc_found_guards |> Map.get_and_update({name, type}, fn cnt -> if cnt == nil, do: {{name, type}, 1}, else: {{String.to_atom("#{name}_#{cnt+1}"), type}, cnt+1} end)
-                    {acc_guards ++ [renamed_guard], new_found_names} |> IO.inspect(label: "BEFORE RENAME")
+                    # {renamed_guard, new_found_names} = acc_found_guards |> Map.get_and_update({name, type}, fn cnt -> if cnt == nil, do: {{name, type}, 1}, else: {{String.to_atom("#{name}_#{cnt+1}"), type}, cnt+1} end)
+                    {renamed_guard, new_found_names} = acc_found_guards |> Map.get_and_update(name, fn t_lst ->
+                        if t_lst == nil do
+                          {{name, type}, [{type, 1}]}
+                        else
+                          new_num = length(t_lst) + 1
+                          if t_lst |> Enum.unzip() |> elem(0) |> Enum.member?(type) do
+                            {:duplicate, t_lst}
+                          else
+                            {{String.to_atom("#{name}_#{new_num}"), type}, t_lst ++ [{type, new_num}]}
+                          end
+                        end
+                      end)
+                    if renamed_guard == :duplicate do
+                      {acc_guards, new_found_names} |> IO.inspect(label: "BEFORE RENAME")
+                    else
+                      {acc_guards ++ [renamed_guard], new_found_names} |> IO.inspect(label: "BEFORE RENAME")
+                    end
                   end)
                 renamer = fn type, renamer_fun ->
                     renamer_fun = &renamer_fun.(&1, renamer_fun)
                     case type do
                       {:var, var} ->
                         type = guards[var]
-                        cnt = new_found_names[{var, type}]
-                        if cnt == 1 or cnt == nil, do: {:var, var}, else: {:var, String.to_atom("#{var}_#{cnt}")}
+                        idx = new_found_names[var] |> Enum.unzip() |> elem(0) |> Enum.find_index(fn t -> t == type end)
+                        num = new_found_names[var] |> Enum.unzip() |> elem(1) |> Enum.at(idx)
+                        if num == 1 or num == nil, do: {:var, var}, else: {:var, String.to_atom("#{var}_#{num}")}
                       {type1, type2} -> {type1 |> renamer_fun.(), type2 |> renamer_fun.()}
                       _ -> type
                     end
