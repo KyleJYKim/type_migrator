@@ -25,15 +25,15 @@ defmodule Migrator.Translator do
       |> File.read!
       |> Code.string_to_quoted!
 
-    IO.puts("QUOTED: \n")
+    IO.puts("\nQUOTED: \n")
     quoted |> IO.inspect()
 
     translated = quoted
       |> extract_spec()         #|> IO.inspect(label: "### EXTRACT SPEC FUNCTION RESULT \n")
-      |> parse_spec()           |> Enum.map(fn x -> x |> IO.inspect(label: "\n ### PARSE SPEC FUNCTION RESULT \n") end)
+      |> parse_spec()           #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### PARSE SPEC FUNCTION RESULT \n") end)
       |> translate_spec()       #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### TRANSLATE SPEC FUNCTION RESULT \n") end)
 
-    IO.puts("TRANSLATED: \n")
+    IO.puts("\nTRANSLATED: \n")
     translated |> Enum.map(fn x -> x |> IO.inspect() end)
 
     assembled = translated
@@ -41,8 +41,8 @@ defmodule Migrator.Translator do
       |> rename_type_variables
       |> assemble_elixir_type() #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### ASSEMBLE SPEC FUNCTION RESULT \n") end)
 
-    IO.puts("ASSEMBLED: \n")
-    assembled |> Enum.map(fn x -> x |> IO.inspect() end)  # document it.
+    IO.puts("\nASSEMBLED: \n")
+    assembled |> Enum.map(fn x -> x |> IO.inspect() end)
   end
 
 
@@ -102,7 +102,7 @@ defmodule Migrator.Translator do
         {:char, _, _} -> {:.., [], [0, 1114111]}
         {:charlist, _, _} -> {:list, [], [{:char, [], []}]} |> parser_fun.()
         {:nonempty_charlist, _, _} -> {:nonempty_list, [], [{:char, [], []}]} |> parser_fun.()
-        {:fun, _, _} -> {:->, [], [[{:..., [], []}], {:any, [], []}]} |> IO.inspect(label: "Optional Value")
+        {:fun, _, _} -> {:->, [], [[{:..., [], []}], {:any, [], []}]}
         {:function, _, _} -> {:fun, [], []} |> parser_fun.()
         {:identifier, _, _} -> {:|, [], [{:pid, [], []}, {:|, [], [{:port, [], []}, {:reference, [], []}]}]}
 
@@ -149,15 +149,13 @@ defmodule Migrator.Translator do
 
         {type1, type2} -> {type1 |> parser_fun.(), type2 |> parser_fun.()}
 
-        {type, _, [type | rest]} -> {type, [], [type | rest] |> Enum.map(parser_fun)} |> IO.inspect(label: "UNKNOWN TYPE IN PARSE FUNCTION: U GOTTA LOOK IT UP")
-        other -> other |> IO.inspect(label: "OTHER IN PARSE FUNCTION")
+        {type, _, [type | rest]} -> {type, [], [type | rest] |> Enum.map(parser_fun)}
+        other -> other
       end
     end
 
     total_parser = fn {line_num, name, inputs, output, guards} -> (
 
-      # walker = &parser_walker.(&1, parser_walker)
-      # macro_walker = &Macro.prewalk(&1, walker)
       parsing = &parser.(&1, parser)
       inputs = inputs |> Enum.map(parsing)
       output = output |> parsing.()
@@ -173,7 +171,7 @@ defmodule Migrator.Translator do
 
     translator = fn {type_node, guards}, translator_fun -> (
       translator_fun = &translator_fun.({&1, guards}, translator_fun)
-      case type_node |> IO.inspect(label: "Type_node in Translation") do
+      case type_node do
         # Remote module type (e.g., String.t())
         {{:., _, [{_, _, modules}, type]}, _, _} -> (
           module = modules |> Enum.reduce("", fn x, acc -> module = Atom.to_string(x)
@@ -214,7 +212,7 @@ defmodule Migrator.Translator do
             end
           case fields do
             [{:__struct__, strt_name} | fields] ->
-              new_fields = fields |> IO.inspect(label: "STRUCT FIELDS") |> Enum.reduce([], fn field, acc_fields ->
+              new_fields = fields |> Enum.reduce([], fn field, acc_fields ->
                 acc_fields ++ (field |> field_translator.() |> Approx.promote()) end) |> Approx.map()
               {:struct, {strt_name, new_fields}}
             _ ->
@@ -284,7 +282,6 @@ defmodule Migrator.Translator do
 
         # Types without "()" at the end: type variables or basic types without "()".
         {type, _, nil} -> if guards[type], do: {:var, type}, else: {type, [], []} |> translator_fun.()  #|> IO.inspect(label: "TYPE VARIABLE")
-        #{type, _, info} -> {type, info}
       end)
     end
 
@@ -330,7 +327,6 @@ defmodule Migrator.Translator do
                 {acc_notation, found_names}
               else
                 {new_guards, new_found_names} = guards |> Enum.reduce({[], found_names}, fn {name, type}, {acc_guards, acc_found_guards} ->
-                    # {renamed_guard, new_found_names} = acc_found_guards |> Map.get_and_update({name, type}, fn cnt -> if cnt == nil, do: {{name, type}, 1}, else: {{String.to_atom("#{name}_#{cnt+1}"), type}, cnt+1} end)
                     {renamed_guard, new_found_names} = acc_found_guards |> Map.get_and_update(name, fn t_lst ->
                         if t_lst == nil do
                           {{name, type}, [{type, 1}]}
@@ -344,9 +340,9 @@ defmodule Migrator.Translator do
                         end
                       end)
                     if renamed_guard == :duplicate do
-                      {acc_guards, new_found_names} |> IO.inspect(label: "BEFORE RENAME")
+                      {acc_guards, new_found_names}
                     else
-                      {acc_guards ++ [renamed_guard], new_found_names} |> IO.inspect(label: "BEFORE RENAME")
+                      {acc_guards ++ [renamed_guard], new_found_names}
                     end
                   end)
                 renamer = fn type, renamer_fun ->
