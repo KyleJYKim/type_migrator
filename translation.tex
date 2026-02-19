@@ -262,23 +262,24 @@ Hence, to rewrite the translation of field types after applying the promotion fu
       \dsb{\texttt{required(\TST) => $\prm{\TST}$}} = 
       \left\{
          \begin{array}{ll}
-            \texttt{[\,:$k$\,\,=>\,\,$\dsb{\prm{\TST}}$\,]}
+            \texttt{[\,:$k^{:k}$\,\,=>\,\,$\dsb{\prm{\TST}}$\,]}
             & \textsl{if}\,\,\,\,\dsb{\TST}\,\approx\,\texttt{:}k
             \nl
-            \texttt{[\,}\bigvee_{\{\ETK\in\Bbb{K}^{+} \,|\,\dsb{\TST} \cap \ETK  \neq \emptyset\}}\ETK^{\dsb{\TST}}\fto\ifset{\dsb{\prm{\TST}}}\texttt{\,]}
-            & \textsl{if}\,\,\,\,\dsb{\TST}\,\not\approx\,\texttt{:}k
+            \texttt{[\,}\bigvee_{i=1}^{n} \SAtom_{i}^{\SAtom_i} \fto \ifset{\dsb{\prm{\TST}}}
+            & \textsl{if}\,\,\,\,\dsb{\TST}\,\not\approx\,\texttt{:}k \textsl{ and } \dsb{\TST} = \bigvee_{i=1}^{n}\SAtom \vee \TST_0
+            \nl
+            \texttt{,\,} \bigvee_{\{\ETK\in\mathbb{K}^{+} \,|\,\dsb{\TST_0} \cap \ETK  \neq \emptyset\}}\ETK^{\dsb{\TST_0}}\fto\ifset{\dsb{\prm{\TST}}}\texttt{\,]}
+            & \textsl{and } \TST_0 \cap \texttt{atom()} = \textsl{( }\emptyset \textsl{ or } \texttt{atom()} \textsl{)} 
+            % \texttt{[\,}\bigvee_{\{\ETK\in\mathbb{K}^{+} \,|\,\dsb{\TST} \cap \ETK  \neq \emptyset\}}\ETK^{\dsb{\TST}}\fto\ifset{\dsb{\prm{\TST}}}\texttt{\,]}
+            % & \textsl{if}\,\,\,\,\dsb{\TST}\,\not\approx\,\texttt{:}k
          \end{array}
       \right.
       \nl \nl
       \dsb{\texttt{optional(\TST) => $\prm{\TST}$}} =  
-         \texttt{[\,}\bigvee_{\{\ETK\in\Bbb{K}^{+} \,|\,\dsb{\TST} \cap \ETK  \neq \emptyset\}}\ETK^{\dsb{\TST}}\fto\ifset{\dsb{\prm{\TST}}}\texttt{\,]}
+         \texttt{[\,}\bigvee_{i=1}^{n} \SAtom_{i}^{\SAtom_i} \fto \ifset{\dsb{\prm{\TST}}}
+         \texttt{,\,} \bigvee_{\{\ETK\in\mathbb{K}^{+} \,|\,\dsb{\TST_0} \cap \ETK  \neq \emptyset\}}\ETK^{\dsb{\TST_0}}\fto\ifset{\dsb{\prm{\TST}}}\texttt{\,]}
    \end{translationfig}
-   \\[4mm] where $\Bbb{K}^{+}$ is a set of all the key types except singleton atom types, i.e., $\Bbb{K}^{+}$ is the set \{\texttt{atom()},
-  \texttt{pid()},\texttt{port()}, \texttt{reference()},
-      \texttt{float()}, \texttt{integer()},
-     \texttt{bitstring()}, \texttt{binary()},
-      \texttt{tuple()}, \texttt{open\_map()}, \texttt{fun()},
-       \texttt{list()}\}
+   \\[4mm] where $\mathbb{K}^{+}$ is a set of all the key types except singleton atom types, i.e., $\mathbb{K}^{+}$ is the set \{\texttt{atom()}, \texttt{pid()}, \texttt{port()}, \texttt{reference()}, \texttt{float()}, \texttt{integer()}, \texttt{bitstring()}, \texttt{binary()}, \texttt{tuple()}, \texttt{open\_map()}, \texttt{fun()}, \texttt{list()}\}
    \caption{Approximated Translation in Field Types}
    \label{app:approximated-translation-in-field-types}
 \end{figure}
@@ -320,7 +321,7 @@ Then we can simply add the new field type to the list.
    \label{app:merge-in-approximated-field-types}
 \end{figure}
 
-At last, we revise the field type translation to $\dsb{\map{\texttt{\TSF$_1$,\,...,\,\TSF$_n$}}} = \textsf{\textsl{erase}(\textsl{map}($\bigoplus_{i=1}^{n}$$\dsb{\TSF_i}$))}$, and by merging \textsf{Empty} to that end of merges, we obtain a saturated map, $\dsb{\map{\texttt{\TSF$_1$,\,...,\,\TSF$_n$}}} =\textsf{\textsl{map}($\bigoplus_{i=1}^{n}$$\dsb{\TSF_i}$$\,\oplus\,\texttt{Empty}$)}$.
+At last, we revise the field type translation to $\dsb{\map{\texttt{\TSF$_1$,\,...,\,\TSF$_n$}}} = \textsf{\textsl{erase}(\textsl{map}($\bigoplus_{i=1}^{n}$$\dsb{\TSF_i}$))}$, where \textsl{erase} eradicates the superscripted original types and only leaves the allowed Elixir key types. Thus, by merging \textsf{Empty} to that end of merges, we obtain a saturated map, $\dsb{\map{\texttt{\TSF$_1$,\,...,\,\TSF$_n$}}} =\textsf{\textsl{erase}(\textsl{map}($\bigoplus_{i=1}^{n}$$\dsb{\TSF_i}$$\,\oplus\,\texttt{Empty}$))}$.
 
 % As you can see, the reason why we distinguish the promoted types from those not is to leave the intention of using the singleton types in TypeSpecs while maintaining the soundness.
 
