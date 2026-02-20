@@ -46,11 +46,11 @@ defmodule Ex2 do
   # @spec record_keytype_integers2(%{neg_integer() => integer() | float() | atom(), optional(-10..-1) => float}) :: map()
   # def record_keytype_integers2(x), do: x
 
-  # @spec record_keytype_integers1(%{optional(20..22) => integer(), neg_integer() => integer(), optional(1..2 | 3..4 | 5..9 | 11..13 | 11..14) => integer()}) :: map()
-  # def record_keytype_integers1(x), do: x
+  @spec record_keytype_integers1(%{optional(20..22) => integer(), neg_integer() => integer(), optional(1..2 | 3..4 | 5..9 | 11..13 | 11..14) => integer()}) :: map()
+  def record_keytype_integers1(x), do: x
 
-  # @spec record_keytype_integers2(%{optional(1..10) => integer(), optional(9..10) => float()}) :: map()
-  # def record_keytype_integers2(x), do: x
+  @spec record_keytype_integers2(%{optional(1..10) => integer(), optional(9..10) => float()}) :: map()
+  def record_keytype_integers2(x), do: x
 
   @spec record_keytype_atom_integer1(%{required(:a | integer()) => atom, 1..2 | 11..12 => integer}) :: map()
   def record_keytype_atom_integer1(x), do: x
@@ -78,10 +78,10 @@ defmodule Ex2 do
   #   @spec id1(<<_::8, _::_*8>>) :: <<_::_*8>>
   #   def id1(x) when is_binary(x), do: x
 
-    # @spec fun_t(a) :: b when a: integer(), b: binary()
-    # @spec fun_t(a) :: b when a: float(), b: binary()
-    # def fun_t(x) when is_integer(x), do: Integer.to_string(x)
-    # def fun_t(x) when is_float(x), do: Float.to_string(x)
+    @spec fun_t(a) :: b when a: integer(), b: binary()
+    @spec fun_t(a) :: b when a: float(), b: binary()
+    def fun_t(x) when is_integer(x), do: Integer.to_string(x)
+    def fun_t(x) when is_float(x), do: Float.to_string(x)
 
   #   @spec fun_guards(binary(), a) :: binary when a: integer(), binary: binary()
   #   @spec fun_guards(binary(), a) :: binary when a: float(), binary: binary()

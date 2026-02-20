@@ -21,8 +21,13 @@ defmodule TypeMigrator do
       #CDuceRepl.close(pid)
 
       #handle_output(result, time)
-      IO.puts(time)
-      IO.puts(result)
+      IO.puts("Total Translation Time Elapsed: #{time}")
+      result |> Enum.map(fn {line_nums, name, full_expression} ->
+          lines = line_nums |> Enum.reduce("", fn num, acc -> if acc == "", do: num |> Integer.to_string(), else: "#{acc}, #{num |> Integer.to_string()}" end)
+          "Line Number: " <> lines |> IO.puts()
+          "Function Name: " <> name |> IO.puts()
+          full_expression |> IO.puts()
+        end)
     catch
       {:CompileError, msg} ->
         #CDuceRepl.close(pid)

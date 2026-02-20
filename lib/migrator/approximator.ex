@@ -1,7 +1,5 @@
 defmodule Migrator.Approximator do
 
-  # key_types = {:atom, :pid, :port, :reference, :float, :integer, :bitstring, :binary, :tuple, :open_map, :fun, :list}
-
   def promote(field_org) do
     promoter = fn left_org ->
       case left_org do
@@ -45,9 +43,9 @@ defmodule Migrator.Approximator do
               atom_type_found_in_list? = left_l1 == :atom
               # If K union s is a subtype of K union s'
               {left_m_org_new, merging_org_type_subtype?} = if key_type_found_in_list? do
-                {left_m_org, left_l1_org} |> IO.inspect(label: "BEFORE UNIFYING TYPES") |> unify_types() |> IO.inspect(label: "AFTER UNIFYING TYPES")
+                {left_m_org, left_l1_org} |> unify_types()
               else
-                {left_m_org, false} |> IO.inspect(label: "AFTER NOT-UNIFYING TYPES")
+                {left_m_org, false}
               end
 
               # key_type_found_in_list? |> IO.inspect(label: "KEY_TYPE_FOUND_IN_LIST?")
@@ -65,7 +63,7 @@ defmodule Migrator.Approximator do
                   # atom_req_in_list? = left_m_org_new |> Enum.reduce(false, fn t, acc -> if is_tuple(t) and t |> elem(0) == :atom_req, do: true, else: acc end)
                   # atom_opt_in_list? = left_m_org_new |> Enum.reduce(false, fn t, acc -> if is_tuple(t) and t |> elem(0) == :atom_opt, do: true, else: acc end)
                   # atom_set_in_list? = left_m_org_new |> Enum.reduce(false, fn t, acc -> if is_atom(t) and t == :atom, do: true, else: acc end)
-                  {field_m_new, [field_l1 | rest_l1_new]} |> IO.inspect(label: "NEW ATOM THING")
+                  {field_m_new, [field_l1 | rest_l1_new]}
                   # cond do
                   #   atom_req_in_list? -> {field_m_new, [field_l1 | rest_l1_new]}
                   #   atom_set_in_list? -> {field_m_new, [field_l1 | rest_l1_new]}
@@ -138,7 +136,7 @@ defmodule Migrator.Approximator do
 
     types1 |> Enum.reduce({types2, true}, fn t1, {acc_types, acc_subtype?} ->
       {new_types, new_subtype?} = acc_types |> Enum.reduce({acc_types, false}, fn t2, {acc_new_types, acc_new_subtype?} ->
-        case {t1, t2} |> IO.inspect(label: "{T1, T2} in Unify TYPES") do
+        case {t1, t2} do
           # Deleting from acc is not necessary but let's fix it later..
 
           _ when t1 == t2 -> {acc_types, true}

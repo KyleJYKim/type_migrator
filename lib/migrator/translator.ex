@@ -17,7 +17,7 @@ defmodule Migrator.Translator do
 
   # alias Structure.TypespecInfo, as: TsInfo
   alias Migrator.Approximator, as: Approx
-  import Module.Types.Descr
+  #import Module.Types.Descr
 
   #def process(path, %{quoted: print_quoted?, translated: print_translated?, assembled: print_assembled?}\\ {true, true, true}) do
   def process(path) do
@@ -25,24 +25,25 @@ defmodule Migrator.Translator do
       |> File.read!
       |> Code.string_to_quoted!
 
-    IO.puts("\nQUOTED: \n")
-    quoted |> IO.inspect()
+    #IO.puts("\nQUOTED \n")
+    #quoted |> IO.inspect()
 
     translated = quoted
       |> extract_spec()         #|> IO.inspect(label: "### EXTRACT SPEC FUNCTION RESULT \n")
       |> parse_spec()           #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### PARSE SPEC FUNCTION RESULT \n") end)
       |> translate_spec()       #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### TRANSLATE SPEC FUNCTION RESULT \n") end)
 
-    IO.puts("\nTRANSLATED: \n")
-    translated |> Enum.map(fn x -> x |> IO.inspect() end)
+    #IO.puts("\nTRANSLATED \n")
+    #translated |> Enum.map(fn x -> x |> IO.inspect() end)
 
-    assembled = translated
+    #assembled = translated
+    translated
       |> group_by_notation
       |> rename_type_variables
       |> assemble_elixir_type() #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### ASSEMBLE SPEC FUNCTION RESULT \n") end)
 
-    IO.puts("\nASSEMBLED: \n")
-    assembled |> Enum.map(fn x -> x |> IO.inspect() end)
+    #IO.puts("\nASSEMBLED \n")
+    #assembled |> Enum.map(fn x -> x |> IO.inspect() end)
   end
 
 
