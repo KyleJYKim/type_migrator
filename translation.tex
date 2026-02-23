@@ -276,8 +276,15 @@ Hence, to rewrite the translation of field types after applying the promotion fu
       \right.
       \nl \nl
       \dsb{\texttt{optional(\TST) => $\prm{\TST}$}} =  
-         \texttt{[\,}\bigvee_{i=1}^{n} \SAtom_{i}^{\SAtom_i} \fto \ifset{\dsb{\prm{\TST}}}
-         \texttt{,\,} \bigvee_{\{\ETK\in\mathbb{K}^{+} \,|\,\dsb{\TST_0} \cap \ETK  \neq \emptyset\}}\ETK^{\dsb{\TST_0}}\fto\ifset{\dsb{\prm{\TST}}}\texttt{\,]}
+      \left.
+         \begin{array}{ll}
+            \texttt{[\,}\bigvee_{i=1}^{n} \SAtom_{i}^{\SAtom_i} \fto \ifset{\dsb{\prm{\TST}}}
+            & \textsl{if}\,\,\,\,\dsb{\TST}\,\not\approx\,\texttt{:}k \textsl{ and } \dsb{\TST} = \bigvee_{i=1}^{n}\SAtom \vee \TST_0
+            \nl
+            \texttt{,\,} \bigvee_{\{\ETK\in\mathbb{K}^{+} \,|\,\dsb{\TST_0} \cap \ETK  \neq \emptyset\}}\ETK^{\dsb{\TST_0}}\fto\ifset{\dsb{\prm{\TST}}}\texttt{\,]}
+            & \textsl{and } \TST_0 \cap \texttt{atom()} = \textsl{( }\emptyset \textsl{ or } \texttt{atom()} \textsl{)}
+         \end{array}
+      \right.
    \end{translationfig}
    \\[4mm] where $\mathbb{K}^{+}$ is a set of all the key types except singleton atom types, i.e., $\mathbb{K}^{+}$ is the set \{\texttt{atom()}, \texttt{pid()}, \texttt{port()}, \texttt{reference()}, \texttt{float()}, \texttt{integer()}, \texttt{bitstring()}, \texttt{binary()}, \texttt{tuple()}, \texttt{open\_map()}, \texttt{fun()}, \texttt{list()}\}
    \caption{Approximated Translation in Field Types}
