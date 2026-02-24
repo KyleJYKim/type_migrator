@@ -58,7 +58,11 @@ defmodule Migrator.Approximator do
                 key_type_found_in_list? and !atom_type_found_in_list? and !merging_org_type_subtype? ->
                   {{{left_m, left_m_org_new}, (right_l1 ++ right_m)}, rest_l1_new}
                 key_type_found_in_list? and atom_type_found_in_list? and merging_org_type_subtype? ->
-                  {nil, [field_l1 | rest_l1_new]}
+                  if left_m_org_new == [] do
+                    {nil, [{{left_m, left_m_org}, (right_l1)} | rest_l1_new]}
+                  else
+                    {nil, [field_l1 | rest_l1_new]}
+                  end
                 key_type_found_in_list? and atom_type_found_in_list? and !merging_org_type_subtype? ->
                   # atom_req_in_list? = left_m_org_new |> Enum.reduce(false, fn t, acc -> if is_tuple(t) and t |> elem(0) == :atom_req, do: true, else: acc end)
                   # atom_opt_in_list? = left_m_org_new |> Enum.reduce(false, fn t, acc -> if is_tuple(t) and t |> elem(0) == :atom_opt, do: true, else: acc end)
@@ -128,7 +132,7 @@ defmodule Migrator.Approximator do
         end)
       end
 
-    fields |> merging_total.() |> removing_extra_information.()
+    fields |> merging_total.() |> removing_extra_information.() |> Enum.reverse()
   end
 
   defp unify_types({type1, type2}) do
@@ -146,6 +150,13 @@ defmodule Migrator.Approximator do
           {{:atom_req, _}, :atom} -> {acc_new_types, true}
           {:atom, {:atom_req, _}} -> {acc_new_types ++ [:atom], false or acc_new_subtype?} # Keep the singleton here
           {{:atom_req, _}, {:atom_req, _}} -> {(acc_new_types |> List.delete(t2)) ++ [t1, t2], false or acc_new_subtype?}
+
+          {{:atom_req, a1}, {:atom_opt, a2}} ->
+            if a1 == a2 do
+              {[], true}
+            else
+              {(acc_new_types |> List.delete(t2)) ++ [t1, t2], false or acc_new_subtype?}
+            end
 
           {{:atom_opt, _}, :atom} -> {acc_new_types, true}
           {:atom, {:atom_opt, _}} -> {acc_new_types ++ [:atom], false or acc_new_subtype?}
