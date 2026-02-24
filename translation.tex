@@ -279,10 +279,11 @@ Hence, to rewrite the translation of field types after applying the promotion fu
       \left.
          \begin{array}{ll}
             \texttt{[\,}\bigvee_{i=1}^{n} \SAtom_{i}^{\SAtom_i} \fto \ifset{\dsb{\prm{\TST}}}
-            & \textsl{if}\,\,\,\,\dsb{\TST}\,\not\approx\,\texttt{:}k \textsl{ and } \dsb{\TST} = \bigvee_{i=1}^{n}\SAtom \vee \TST_0
+            & %\textsl{if}\,\,\,\,\dsb{\TST}\,\not\approx\,\texttt{:}k 
+            \textsl{where } \dsb{\TST} = \bigvee_{i=1}^{n}\SAtom \vee \TST_0
             \nl
             \texttt{,\,} \bigvee_{\{\ETK\in\mathbb{K}^{+} \,|\,\dsb{\TST_0} \cap \ETK  \neq \emptyset\}}\ETK^{\dsb{\TST_0}}\fto\ifset{\dsb{\prm{\TST}}}\texttt{\,]}
-            & \textsl{and } \TST_0 \cap \texttt{atom()} = \textsl{( }\emptyset \textsl{ or } \texttt{atom()} \textsl{)}
+            & \textsl{with } \TST_0 \cap \texttt{atom()} = \textsl{( }\emptyset \textsl{ or } \texttt{atom()} \textsl{)}
          \end{array}
       \right.
    \end{translationfig}
