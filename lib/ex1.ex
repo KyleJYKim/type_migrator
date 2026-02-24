@@ -65,6 +65,23 @@ defmodule Ex1 do
   @spec id_records16(%{list(integer()) => integer()}) :: map()
   def id_records16(x), do: x
 
+  #@spec id_records20(%{required(:b) => integer()}) :: map()
+  @spec id_records20(%{optional(:b) => integer(), :b => binary()}) :: map()
+  def id_records20(x), do: x
+  #@spec id_records21(%{optional(atom()) => integer()}) :: map()
+  @spec id_records21(%{optional(atom()) => integer(), required(:b) => binary()}) :: map()
+  def id_records21(x), do: x
+  @spec id_records22(%{optional(atom()) => integer(), optional(:b) => binary()}) :: map()
+  def id_records22(x), do: x
+  @spec id_records23(%{optional(:b) => integer(), required(:b) => binary()}) :: map()
+  def id_records23(x), do: x
+  @spec id_records24(%{optional(:b) => integer(), optional(atom()) => binary()}) :: map()
+  def id_records24(x), do: x
+  @spec id_records25(%{optional(:a | :b) => integer(), optional(atom()) => binary()}) :: map()
+  def id_records25(x), do: x
+  @spec id_records26(%{required(:a | :b) => integer(), optional(atom()) => binary()}) :: map()
+  def id_records26(x), do: x
+
   # Whatever function return type is, it is taken as ...->any()
   # @spec id_fun((...->atom())) :: fun()
   # def id_fun(x), do: x
@@ -101,7 +118,6 @@ defmodule Ex1 do
     def id_records8(), do: Ex1.id_records8(%{:c => "a"})
     #def id_records9(), do: Ex1.id_records9(%{fn x -> "a" end => :a})
     #def id_records10(), do: Ex1.id_records10(%{nil => 1})
-
     #def id_records11(), do: Ex1.id_records11(%{2 => 1, 6 => 1.0, 5 => "s"})
     def id_records12(), do: Ex1.id_records12(%{2 => 2, 4 => 3.8})
     def id_records13(), do: Ex1.id_records13(%{["a"] => "a"})
@@ -109,10 +125,19 @@ defmodule Ex1 do
     def id_records15(), do: Ex1.id_records15(%{:c => 1.1})
     def id_records16(), do: Ex1.id_records16(%{[1] => 1})
 
+    def id_records20(), do: Ex1.id_records20(%{:b => 1})
+    def id_records21(), do: Ex1.id_records21(%{})
+    def id_records22(), do: Ex1.id_records22(%{})
+    def id_records23(), do: Ex1.id_records23(%{:b => 1})
+    def id_records24(), do: Ex1.id_records24(%{:b => 1})
+    def id_records25(), do: Ex1.id_records25(%{:a => 1, :b => 2, :c => "3"})
+    def id_records26(), do: Ex1.id_records26(%{:a => 1, :b => 2, :c => "3"})
+
     #def id_fun(), do: Ex1.id_fun(fn x -> <<97>> end)
 
     @spec fun(1) :: 2
     def fun(x) when x == 1, do: x+1
+    @spec id_bin() :: <<_::16>>
     def id_bin(), do: Ex1.id_bin(<<97::size(8), 98::size(7)>>)
 
     def id_tuple(), do: Ex1.id_tuple({:a, 1, "q"})
