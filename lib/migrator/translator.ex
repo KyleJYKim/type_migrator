@@ -16,7 +16,7 @@ defmodule Migrator.Translator do
   """
 
   # alias Structure.TypespecInfo, as: TsInfo
-  alias Migrator.Approximator, as: Approx
+  alias Migrator.Translator.Approximator, as: Approx
   #import Module.Types.Descr
 
   #def process(path, %{quoted: print_quoted?, translated: print_translated?, assembled: print_assembled?}\\ {true, true, true}) do

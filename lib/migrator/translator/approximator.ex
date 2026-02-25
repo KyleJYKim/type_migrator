@@ -1,4 +1,4 @@
-defmodule Migrator.Approximator do
+defmodule Migrator.Translator.Approximator do
 
   def promote(field_org) do
     promoter = fn left_org ->
@@ -328,7 +328,7 @@ defmodule Migrator.Approximator do
 
   defp flatten_from_union_type(type) when is_tuple(type) or is_atom(type) do
     case type do
-      {:union, {type_l, type_r}} -> ([type_l |> flatten_from_union_type()] ++ [type_r |> flatten_from_union_type()]) |> Enum.flat_map(fn x -> x end)
+      {:union, {type_l, type_r}} -> ([type_l |> flatten_from_union_type()] ++ [type_r |> flatten_from_union_type()]) |> List.flatten() #Enum.flat_map(fn x -> x end)
       _ -> [type]
     end
   end

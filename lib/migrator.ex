@@ -1,4 +1,4 @@
-defmodule TypeMigrator do
+defmodule Migrator do
   @moduledoc """
     1. Take a file with TypesSpec and parse it into AST.
     2. Translate the AST to Elixir Type.
@@ -6,6 +6,7 @@ defmodule TypeMigrator do
   """
   alias Migrator.Translator, as: Translator
 
+  @spec main(list()) :: :ok | list()
   def main(args) do
     args
     |> List.first()
