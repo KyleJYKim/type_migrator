@@ -82,6 +82,24 @@ defmodule Ex1 do
   @spec id_records26(%{required(:a | :b) => integer(), optional(atom()) => binary()}) :: map()
   def id_records26(x), do: x
 
+  @spec id_records30(%{optional(1) => integer(), 1 => binary()}) :: map()
+  def id_records30(x), do: x
+  @spec id_records31(%{optional(integer()) => integer(), required(1) => binary()}) :: map()
+  def id_records31(x), do: x
+  @spec id_records32(%{optional(integer()) => integer(), optional(1) => binary()}) :: map()
+  def id_records32(x), do: x
+  @spec id_records33(%{optional(1) => integer(), required(1) => binary()}) :: map()
+  def id_records33(x), do: x
+  @spec id_records34(%{optional(1) => integer(), optional(integer()) => binary()}) :: map()
+  def id_records34(x), do: x
+  @spec id_records35(%{optional(1 | 2) => integer(), optional(integer()) => binary()}) :: map()
+  def id_records35(x), do: x
+  @spec id_records36(%{required(1 | 2) => integer(), optional(integer()) => binary()}) :: map()
+  def id_records36(x), do: x
+
+  @spec id_records40(%{optional(1..2) => integer(), <<_::8>> => binary()}) :: map()
+  def id_records40(x), do: x
+
   # Whatever function return type is, it is taken as ...->any()
   # @spec id_fun((...->atom())) :: fun()
   # def id_fun(x), do: x
@@ -132,6 +150,14 @@ defmodule Ex1 do
     def id_records24(), do: Ex1.id_records24(%{:b => 1})
     def id_records25(), do: Ex1.id_records25(%{:a => 1, :b => 2, :c => "3"})
     def id_records26(), do: Ex1.id_records26(%{:a => 1, :b => 2, :c => "3"})
+
+    def id_records30(), do: Ex1.id_records30(%{1 => 1})
+    def id_records31(), do: Ex1.id_records31(%{})
+    def id_records32(), do: Ex1.id_records32(%{})
+    def id_records33(), do: Ex1.id_records33(%{1 => 1})
+    def id_records34(), do: Ex1.id_records34(%{1 => 1})
+    def id_records35(), do: Ex1.id_records35(%{1 => 1, 2 => 2, 3 => "3"})
+    def id_records36(), do: Ex1.id_records36(%{1 => 1, 2 => 2, 3 => "3"})
 
     #def id_fun(), do: Ex1.id_fun(fn x -> <<97>> end)
 
