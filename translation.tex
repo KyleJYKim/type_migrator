@@ -429,50 +429,177 @@ As merge is merging a field type to an accumulated list of field types, every me
 Although the intro is simple and obvious, the rest of Figure~\ref{app:merge-in-approximated-field-types} lists the possible results and conditions of merges that depend on accumulated field types and merging field type.
 Therefore, the purpose of following examples is to demonstrate Figure~\ref{app:merge-in-approximated-field-types} and show the steps we take to approximate the \textit{undefined} key types using promotion.
 
-\subsubsection*{Approximated Key Type in Precedent List of Fields}
+Note that in each Condition Check of the figures below, we only use the form \texttt{\ETK\,\,\,\,$\in$ [\prokey{\ETK}{$\prm{\ETT}$}\fto \ETT]} for checking if the accumulated list conatains a promoted key type from a merging field type. This reduces the verbosity of the formal expression and refelcts the actual implementation of searching.
 
-Let us first look at the merge cases that are available without approximation:
+\subsubsection*{An approximated key type found in the list of precedent fields}
+
+\paragraph{Case 1}
+The following case shows that the original key type of the first field is a super type of the original key type of the second field, i.e., \texttt{atom()} $\le$ \texttt{atom()}:
 
 \begin{lstlisting}[language=Elixir, firstnumber=last]
 @spec fun(%{atom() => binary(), atom() => integer()}) :: binary() (*@\label{ln:map-atom-to-bin-atom-to-int}@*)
+\end{lstlisting}
+
+Although merge is available without approximation, we show how the two fields are merged with the conservative merge with approximation:
+
+\begin{figure}[H]
+   \[\begin{array}{rcl}
+      \text{Map Type} 
+      &=& \texttt{\%\{atom()\fto binary(), atom()\fto integer()\}}
+      \\[0.8ex]
+      \text{Promoted Form}
+      &=& \texttt{\%\{\prokey{atom()}{$\prm{\texttt{atom()}}$}\fto binary(), \prokey{atom()}{atom()}\fto integer()\}}
+      \\[0.8ex]
+      \text{First Merge}
+      &\leadsto& \texttt{[\prokey{atom()}{$\prm{\texttt{atom()}}$}\fto binary()] $\oplus$ [\prokey{atom()}{atom()}\fto integer()]}
+      \\[0.8ex]
+      \text{Condition Check}
+      &:& \texttt{atom() $\in$ [\prokey{atom()}{$\prm{\texttt{atom()}}$}\fto binary()]}
+      \\ && \wedge\,\,\texttt{(atom() $\cap$ atom()) $\le$ (atom() $\cap$ $\prm{\texttt{atom()}}$)}
+      \\[0.8ex]
+      \text{Second Merge}
+      &\leadsto& \texttt{[\prokey{atom()}{$\prm{\texttt{atom()}}$}\fto binary()]}
+      \nl
+   \end{array}\]
+   The superscripted \texttt{$\prm{\texttt{atom()}}$} is the same as \texttt{atom()}; we append a prime in accordance with our merge definition to display that it is from the list.
+   \caption{Merge for Line~\ref{ln:map-atom-to-bin-atom-to-int}}
+\end{figure}
+
+Since the subtype relation is satisfied between the two key types, the former field completely overwrite the latter.
+
+\paragraph{Case 2}
+Despite the clearance, the Case 1 does not show the necessity of promotion.
+In this case, we demonstrate its practicality with literal types that must be approximated to key types in Elixir Types:
+
+\begin{lstlisting}[language=Elixir, firstnumber=last]
+@spec fun(%{1..10 => binary(), 6..15 => integer()}) :: binary()  (*@\label{ln:map-1..10-to-bin-6..15-to-int}@*)
+\end{lstlisting}
+
+By mere approximation, both key types are to be \texttt{integer()}, and that satisfies the condition of Case 1.
+However, that is the wrong translation for the original types do not meet the subtype relationship.
+Therefore, when found the approximated type in the precedent list, we check the subtype relationship by involving the original types.
+
+\begin{figure}[H]
+   \[\begin{array}{rcl}
+      \text{Map Type} 
+      &=& \texttt{\%\{1..10\fto binary(), 6..15\fto integer()\}}
+      \\[0.8ex]
+      \text{Promoted Form}
+      &=& \texttt{\%\{\prokey{integer()}{1..10}\fto if\_set(binary()), \prokey{integer()}{6..15}\fto if\_set(integer())\}}
+      \\[0.8ex]
+      \text{First Merge}
+      &\leadsto& \texttt{[\prokey{integer()}{1..10}\fto if\_set(binary())] $\oplus$ [\prokey{integer()}{6..15}\fto if\_set(integer())]}
+      \\[0.8ex]
+      \text{Condition Check}
+      &:& \texttt{integer() $\in$ [\prokey{integer()}{1..10}\fto if\_set(binary())]}
+      \\ && \wedge\,\,\texttt{(integer() $\cap$ 6..15) $\not\le$ (integer() $\cap$ 1..10)}
+      \\[0.8ex]
+      \text{Second Merge}
+      &\leadsto& \texttt{[\prokey{integer()}{1..15}\fto if\_set(integer() or binary())]}
+      \nl
+   \end{array}\]
+   The superscripted interval types in Second Merge are unified as a single interval type since their ranges overlap.
+   \caption{Merge for Line~\ref{ln:map-1..10-to-bin-6..15-to-int}}
+\end{figure}
+
+By checking the relationship between the key types, we unify the original key types as well as their value types so that the merge does not make loss of information.
+
+\subsubsection*{Merging singleton atom to the list}
+
+\paragraph{Case 3}
+Although marked as an optional field type, a field type with its key type as a singleton atom type can be shifted to a required field type.
+That is the case when a required singleton atom key type comes after a field type with the same key type that is optional.
+
+\begin{lstlisting}[language=Elixir, firstnumber=last]
+@spec fun(%{optional(:a) => binary(), :a => integer()}) :: binary()     (*@\label{ln:map-opt-a-to-bin-a-to-int}@*)
+\end{lstlisting}
+
+Hence, the first field type becomes mandatory while the second field type is overwritten:
+
+\begin{figure}[H]
+   \[\begin{array}{rcl}
+      \text{Map Type} 
+      &=& \texttt{\%\{optional(:a)\fto binary(), :a\fto integer()\}}
+      \\[0.8ex]
+      \text{Promoted Form}
+      &=& \texttt{\%\{\prokey{:a}{$\prm{\texttt{:a}}$}\fto if\_set(binary()), \prokey{:a}{:a}\fto integer()\}}
+      \\[0.8ex]
+      \text{First Merge}
+      &\leadsto& \texttt{[\prokey{:a}{$\prm{\texttt{:a}}$}\fto if\_set(binary())] $\oplus$ [\prokey{:a}{:a}\fto integer()]}
+      \\[0.8ex]
+      \text{Condition Check}
+      &:& \texttt{:a $\in$ [\prokey{:a}{$\prm{\texttt{:a}}$}\fto if\_set(binary())]}
+      \\[0.8ex]
+      \text{Second Merge}
+      &\leadsto& \texttt{[\prokey{:a}{$\prm{\texttt{:a}}$}\fto binary()]}
+      \nl
+   \end{array}\]
+   The superscripted \texttt{$\prm{\texttt{:a}}$} is the same as \texttt{:a}; we append a prime in accordance with our merge definition to display that it is from the list.
+   \caption{Merge for Line~\ref{ln:map-opt-a-to-bin-a-to-int}}
+\end{figure}
+
+\paragraph{Case 4}
+Even though the logic of this case is the same as the Case 1, we make it explicit on grounds of \texttt{:$k$} $\neq$ \texttt{atom()}.
+
+\begin{lstlisting}[language=Elixir, firstnumber=last]
 @spec fun(%{atom() => binary(), :a => integer()}) :: binary()     (*@\label{ln:map-atom-to-bin-a-to-int}@*)
 \end{lstlisting}
 
-By promotion, the input map type in line~\ref{ln:map-atom-to-bin-atom-to-int} is represented as:
-\\ \texttt{\%\{\prokey{atom()}{atom()}\fto binary(), \prokey{atom()}{atom()}\fto integer()\}} \\
-Which trivially meet the subtype condition after merging the left-most field type to an empty list:
-\\ \texttt{\prokey{atom()}{atom()} $\in$ [\prokey{atom()}{atom()} => binary()]} \textsl{ and } \texttt{(atom() $\cap$ atom()) $\leq$ (atom() $\cap$ atom())} \\
+This is a specific case when a field type with \texttt{atom()} as its key type comes before the one with a singleton atom key type.
+Apparently, the former overwrites the latter regardless the latter either optional or required.
+
+\begin{figure}[H]
+   \[\begin{array}{rcl}
+      \text{Map Type} 
+      &=& \texttt{\%\{atom()\fto binary(), :a\fto integer()\}}
+      \\[0.8ex]
+      \text{Promoted Form}
+      &=& \texttt{\%\{\prokey{atom()}{atom()}\fto if\_set(binary()), \prokey{:a}{:a}\fto integer()\}}
+      \\[0.8ex]
+      \text{First Merge}
+      &\leadsto& \texttt{[\prokey{atom()}{atom()}\fto if\_set(binary())] $\oplus$ [\prokey{:a}{:a}\fto integer()]}
+      \\[0.8ex]
+      \text{Condition Check}
+      &:& \texttt{atom() $\in$ [\prokey{atom()}{atom()}\fto if\_set(binary())]}
+      \\[0.8ex]
+      \text{Second Merge}
+      &\leadsto& \texttt{[\prokey{atom()}{atom()}\fto binary()]}
+      \nl
+   \end{array}\]
+   \caption{Merge for Line~\ref{ln:map-atom-to-bin-a-to-int}}
+\end{figure}
+
+\subsubsection*{No subtype relationship}
+
+\paragraph{Case 5}
+Case 1~4 covers all the possible subtype relations in merge.
+Therefore, the rest is for complete disjoint types, which operation is only to append the merging field type.
 
 \begin{lstlisting}[language=Elixir, firstnumber=last]
-@spec fun(%{1..100 => binary(), 1..10 => integer()}) :: binary()  (*@\label{ln:map-1..100-to-bin-1..10-to-int}@*)
-@spec fun(%{list() => binary(), [] => integer()}) :: binary()     (*@\label{ln:map-list-to-bin-[]-to-int}@*)
+@spec fun(%{:a() => binary(), 1..10 => integer()}) :: binary()     (*@\label{ln:map-a-to-bin-1..10-to-int}@*)
 \end{lstlisting}
 
 \begin{figure}[H]
    \[\begin{array}{rcl}
-      \text{Input map type} 
-      &=& \texttt{\%\{atom()\fto binary(), atom()\fto integer()\}}
+      \text{Map Type} 
+      &=& \texttt{\%\{:a\fto binary(), 1..10\fto integer()\}}
       \\[0.8ex]
-
-      \text{Promoted form}
-      &=& \texttt{\%\{\prokey{atom()}{$\prm{\texttt{atom()}}$}\fto binary(), \prokey{atom()}{atom()}\fto integer()\}}
+      \text{Promoted Form}
+      &=& \texttt{\%\{\prokey{:a}{:a}\fto binary(), \prokey{integer()}{1..10}\fto if\_set(integer())\}}
       \\[0.8ex]
-
       \text{First Merge}
-      &\leadsto& \texttt{[\prokey{atom()}{$\prm{\texttt{atom()}}$}\fto binary()] $\oplus$ [\prokey{atom()}{atom()}\fto integer()]}
+      &\leadsto& \texttt{[\prokey{:a}{:a}\fto binary()] $\oplus$ [\prokey{integer()}{1..10}\fto if\_set(integer())]}
       \\[0.8ex]
-
-      \text{Subtype check}
-      &:& \texttt{\prokey{atom()}{$\prm{\texttt{atom()}}$} $\in$ [\prokey{atom()}{$\prm{\texttt{atom()}}$}\fto binary()] $\wedge$ (atom() $\cap$ atom()) $\le$ (atom() $\cap$ $\prm{\texttt{atom()}}$)}
+      \text{Subtype Check}
+      &:& \texttt{integer() $\notin$ [\prokey{:a}{:a}\fto if\_set(binary())]}
       \\[0.8ex]
-
       \text{Second Merge}
-      &\leadsto& \texttt{[\prokey{atom()}{$\prm{\texttt{atom()}}$}\fto binary()]}
-      
-
+      &\leadsto& \texttt{[\prokey{atom()}{atom()}\fto binary()]}
+      \nl
    \end{array}\]
-   \caption{Merge for line~\ref{ln:map-atom-to-bin-atom-to-int}}
+   \caption{Merge for Line~\ref{ln:map-a-to-bin-1..10-to-int}}
 \end{figure}
+
 
 
 % As you can see, the reason why we distinguish the promoted types from those not is to leave the intention of using the singleton types in TypeSpecs while maintaining the soundness.
