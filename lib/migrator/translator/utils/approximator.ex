@@ -1,4 +1,4 @@
-defmodule Migrator.Translator.Approximator do
+defmodule Migrator.Translator.Utils.Approximator do
 
   def promote(field_org) do
     promoter = fn left_org ->

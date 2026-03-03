@@ -1,4 +1,6 @@
 defmodule Ex1 do
+  import Ex2
+
   # TypeSpec multi-clause exhaustiveness: compile warning, dialyzer error
   # @spec id_exhaustive(integer) :: integer()
   # @spec id_exhaustive(float) :: float()
@@ -104,6 +106,9 @@ defmodule Ex1 do
   # @spec id_fun((...->atom())) :: fun()
   # def id_fun(x), do: x
 
+  @spec id_fun2(int :: integer()) :: (integer() -> integer())
+  def id_fun2(f), do: f
+
   @spec id_bin(<<_::15>>)::binary()
   def id_bin(<<a::8, b::7>>), do: <<a, b>>
 
@@ -113,6 +118,9 @@ defmodule Ex1 do
 
   @spec id_list(list(integer())) :: list(integer())
   def id_list(lst) when is_list(lst), do: lst
+
+  @spec id_type(Ex2.value) :: Ex2.Types.t
+  def id_type(x), do: x
 
   defmodule In do
     # @spec id_exhaustive() :: any()

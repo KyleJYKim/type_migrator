@@ -1,0 +1,213 @@
+defmodule Migrator.Translator.Utils do
+
+  alias Migrator.Translator.Utils.Approximator, as: Approx
+
+  def parse(type_node) do
+    case type_node do
+      {:"::", _, [type_var, type]} -> {:"::", [], [type_var, type |> parse]}
+
+      {_, _, nil} -> type_node # Type Variables
+      {:|, _, [type1, type2]} -> {:|, [], [type1, type2] |> Enum.map(&parse/1)}
+      {:term, _, _} -> {:any, [], []}
+      {:arity, _, _} -> {:.., [], [0, 255]}
+      # {:as_boolean, [], [type]} -> type
+      {:binary, _, _} -> {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, {:*, [], [{:_, [], Elixir}, 8]}]}]}
+      {:nonempty_binary, _, _} -> {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, 8]}]}
+      {:bitstring, _, _} -> {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, {:*, [], [{:_, [], Elixir}, 1]}]}]}
+      {:nonempty_bitstring, _, _} -> {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, 1]}, {:"::", [], [{:_, [], Elixir}, {:*, [], [{:_, [], Elixir}, 1]}]}]}
+      {:boolean, _, _} -> {:|, [], [true, false]}
+      {:byte, _, _} -> {:.., [], [0, 255]}
+      {:list, _, []} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:any, [], []}, []]}]}
+      {:list, _, [type]} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [type |> parse, []]}]}
+      {:nonempty_list, _, []} -> {:nonempty_maybe_improper_list, [], [{:any, [], []}, []]}
+      {:nonempty_list, _, [type]} -> {:nonempty_maybe_improper_list, [], [type |> parse, []]}
+      # {:nonempty_improper_list, [], [type1, type2]} -> {:nonempty_maybe_improper_list, [], [type1, type2]}
+      {:maybe_improper_list, _, []} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:any, [], []}, {:any, [], []}]}]}
+      {:maybe_improper_list, _, [type1, type2]} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:|, [], [type1, type2] |> Enum.map(&parse/1)}]}]}
+      {:nonempty_maybe_improper_list, _, []} -> {:nonempty_maybe_improper_list, [], [{:any, [], []}, {:any, [], []}]}
+      {:nonempty_maybe_improper_list, _, [type1, type2]} -> {:nonempty_maybe_improper_list, [], [type1, type2] |> Enum.map(&parse/1)}
+      {:char, _, _} -> {:.., [], [0, 1114111]}
+      {:charlist, _, _} -> {:list, [], [{:char, [], []}]} |> parse
+      {:nonempty_charlist, _, _} -> {:nonempty_list, [], [{:char, [], []}]} |> parse
+      {:fun, _, _} -> {:->, [], [[{:..., [], []}], {:any, [], []}]}
+      {:function, _, _} -> {:fun, [], []} |> parse
+      {:identifier, _, _} -> {:|, [], [{:pid, [], []}, {:|, [], [{:port, [], []}, {:reference, [], []}]}]}
+
+      # iolist will not expand more than once since translation is to only display..., or not even once is necessary.
+      {:iodata, _, _} -> {:|, [], [{:iolist, [], []}, {:binary, [], []}]}
+      {:iolist, _, _} -> {:maybe_improper_list, [], [{:|, [], [{:byte, [], []}, {:|, [], [{:binary, [], []}, {:last_iolist, [], []}]}]}, {:|, [], [{:binary, [], []}, []]}]} |> parse
+      # only to mark the final recursive iolist type
+      {:last_iolist, _, _} -> {:iolist, [], []}
+
+      {:keyword, _, [type]} -> [{{:atom, [], []}, type |> parse}] |> parse
+      {:keyword, _, _} -> [{{:atom, [], []}, {:any, [], []}}] |> parse
+      {:mfa, _, _} -> {:{}, [], [{:atom, [], []}, {:atom, [], []}, {:arity, [], []}]}
+      {:module, _, _} -> {:atom, [], []}
+      {:no_return, _, _} -> {:none, [], []}
+      {:node, _, _} -> {:atom, [], []}
+      {:number, _, _} -> {:|, [], [{:integer, [], []}, {:float, [], []}]}
+      {:struct, _, _} -> {:%, [], [{:struct, [], [:__struct_top__]}, {:%{}, [], [{:__struct__, {:atom, [], []}}, {{:optional, [], [{:atom, [], []}]}, {:any, [], []}}]}]} |> parse
+      {:timeout, _, _} -> {:|, [], [:infinity, {:non_neg_integer, [], []}]}
+      # true -> :true
+      # false -> :false
+      # nil -> :nil
+
+      [{:->, _, [types_in, type_out]}] -> {:->, [], [types_in |> Enum.map(&parse/1), type_out |> parse]}
+      [type, {:..., _, _}] -> {:nonempty_list, [], [type]} |> parse
+      [type] -> {:list, [], [type]} |> parse
+
+      {:map, _, _} -> {:%{}, [], [{{:optional, [], [{:any, [], []}]}, {:any, [], []}}]}
+      {:%{}, _, fields} -> (
+        fields = fields |> Enum.map(fn {left, right} ->
+          right = right |> parse
+          case left do
+            {:required, _, [type]} -> {{:required, [], [type |> parse]}, right}
+            {:optional, _, [type]} -> {{:optional, [], [type |> parse]}, right}
+            type -> if is_atom(type), do: {{:required, [], [type]}, right}, else: {{:optional, [], [type |> parse]}, right}
+          end
+        end)
+        {:%{}, [], fields}
+      )
+      {:%, _, [{_, _, modules}, {:%{}, _, fields}]} -> (
+        strt_name = modules |> Enum.reduce("", fn m, acc -> if acc == "", do: "#{m}", else: "#{acc}.#{m}" end) |> String.to_atom()
+        {:%{}, [], fields} = {:%{}, [], fields} |> parse
+        {:%{}, [], [__struct__: strt_name] ++ fields}
+      )
+
+      {type1, type2} -> {type1 |> parse, type2 |> parse}
+
+      {type, _, [type | rest]} -> {type, [], [type | rest] |> Enum.map(&parse/1)}
+
+      other -> other
+    end
+  end
+
+  def translate(type_node, guards \\ []) do
+    translate_fun = &translate(&1, guards)
+    case type_node do
+      # Remote module type (e.g., String.t())
+      {{:., _, [{_, _, modules}, type]}, _, _} -> (
+        module = modules |> Enum.reduce("", fn x, acc -> module = Atom.to_string(x)
+          if acc == "", do: module, else: acc <> "." <> module end)
+        :"#{module}.#{type}"
+      )
+
+      {:"::", _, [_type_var, type]} -> type |> translate_fun.()
+
+      # Type | Type
+      {:|, _, [left, right]} -> {:union, {left |> translate_fun.(), right |> translate_fun.()}}
+
+      # {Type} (Tuple)
+      {:{}, _, elements} -> {:tuple, elements |> Enum.reduce([], fn elem, acc -> acc ++ [elem |> translate_fun.()] end)}
+
+      # {Tuple} (two-elements}
+      {elem1, elem2} -> {:tuple, [elem1, elem2] |> Enum.reduce([], fn elem, acc -> acc ++ [elem |> translate_fun.()] end)}
+
+      # %{..., F_seq} (Map)
+      {:%{}, _, fields} -> (
+        flatten = fn type, flatten_fun ->
+            flatten_fun = &flatten_fun.(&1, flatten_fun)
+            case type do
+              {:|, _, [type_l, type_r]} -> ([type_l |> flatten_fun.()] ++ [type_r |> flatten_fun.()]) |> Enum.flat_map(fn x -> x end)
+              _ -> [type |> translate_fun.()]
+            end
+          end
+        field_translator = fn {{req_or_opt, _, [left]}, right} ->
+            # [Union of F_i] to [F_1, ..., F_n]
+            if req_or_opt == :required and is_atom(left) do
+              [{{:atom_req, left}, right |> flatten.(flatten)}]
+            else
+              left |> flatten.(flatten) |> Enum.map(fn l ->
+                  case l do
+                    {:atom, singleton} -> {{:atom_opt, singleton}, right |> flatten.(flatten)}
+                    _ -> {l, right |> flatten.(flatten)}
+                  end
+                end)
+            end
+          end
+        case fields do
+          [{:__struct__, strt_name} | fields] ->
+            new_fields = fields |> Enum.reduce([], fn field, acc_fields ->
+              acc_fields ++ (field |> field_translator.() |> Approx.promote()) end) |> Approx.map()
+            {:struct, {strt_name, new_fields}}
+          _ ->
+            new_fields = fields |> Enum.reduce([], fn field, acc_fields ->
+                acc_fields ++ (field |> field_translator.() |> Approx.promote()) end) |> Approx.map()
+            {:open_map, new_fields}
+        end
+      )
+
+      # [] (empty list)
+      [] -> :empty_list
+      # [type] or [type, ...] (non-empty list)
+      # {:nonempty_maybe_improper_list, _, [type, []]} -> {:non_empty_list, {type |> translate_fun.(), :empty_list}}
+      # [type1 | type2] (non-empty list)
+      {:nonempty_maybe_improper_list, _, [type1, type2]} -> {:non_empty_list, {type1 |> translate_fun.(), type2 |> translate_fun.()}}
+
+      # <<_::n, _::_*n>>
+      {:<<>>, _, [{:"::", _, [_, digit1]}, {:"::", _, [_, {:*, _, [_, digit2]}]}]} ->
+        if Integer.mod(digit1, 8) == 0 and Integer.mod(digit2, 8) == 0, do: :binary, else: :bitstring
+
+      # <<_::_*n>>
+      {:<<>>, _, [{:"::", _, [_, {:*, _, [_, digit]}]}]} ->
+        if Integer.mod(digit, 8) == 0, do: :binary, else: :bitstring
+
+      # <<_::n>>
+      {:<<>>, _, [{:"::", _, [_, digit]}]} ->
+        if Integer.mod(digit, 8) == 0, do: :binary, else: :bitstring
+
+      # <<>>
+      {:<<>>, _, _} -> :bitstring
+
+      # (... -> Type)
+      {:->, [], [[{:..., _, []}], type_out]} ->
+        if (type_out |> translate_fun.()) == :term do
+          :fun
+        else # Approx.: {:gradual, :fun}
+          # 0..255 |> Range.to_list()
+          #   |> Enum.reduce([], fn n, acc -> [{:fun, {List.duplicate(:none, n), type_out |> translate_fun.()}} | acc] end)
+          #   |> Enum.reduce(nil, fn t, acc -> if acc == nil, do: t, else: {:union, {t, acc}} end)
+          {:fun, {:all_arity, type_out |> translate_fun.()}}
+          # 0..255 |> Stream.map(&({:fun, {List.duplicate(:none, &1), type_out |> translate_fun.()}}))
+        end
+      # (Type_seq} -> Type)
+      {:->, _, [types_in, type_out]} -> {:fun, {types_in |> Enum.map(translate_fun), type_out |> translate_fun.()}}
+
+      # n..n'
+      {:.., _, [{:-, _, [digit_l]}, {:-, _, [digit_r]}]} -> {:interval, {-digit_l, -digit_r}}
+      # {:.., _, [digit_l, {:-, _, [digit_r]}]} -> {:interval, {digit_l, -digit_r}}
+      {:.., _, [{:-, _, [digit_l]}, digit_r]} -> {:interval, {-digit_l, digit_r}}
+      {:.., _, [digit_l, digit_r]} -> {:interval, {digit_l, digit_r}}
+
+      # n (integer singleton types)
+      digit when is_integer(digit) -> {:interval, {digit, digit}}
+
+      # :k (atom singleton types)
+      atom when is_atom(atom) -> {:atom, atom}
+
+      # Types without "()" at the end: type variables or basic types without "()".
+      {type, _, nil} -> if guards[type], do: {:var, type}, else: {type, [], []} |> translate_fun.()  #|> IO.inspect(label: "TYPE VARIABLE")
+
+      # basic types (any(), none(), atom(), pid(), port(), reference(), float(), integer(), tuple())
+      {:any, _, []} -> :term
+      {:none, _, []} -> :none
+      {:atom, _, []} -> :atom
+      {:pid, _, []} -> :pid
+      {:port, _, []} -> :port
+      {:reference, _, []} -> :reference
+      {:float, _, []} -> :float
+      {:integer, _, []} -> :integer
+      {:tuple, _, []} -> :tuple
+
+      # neg_integer(), non_neg_integer(), pos_integer()
+      {:neg_integer, _, []} -> {:interval, {:infty, -1}}
+      {:non_neg_integer, _, []} -> {:interval, {0, :infty}}
+      {:pos_integer, _, []} -> {:interval, {1, :infty}}
+
+      {type, _, []} -> {:unknown, type}
+
+      other -> other |> dbg()
+    end
+  end
+
+end
