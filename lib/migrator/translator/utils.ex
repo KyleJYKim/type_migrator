@@ -1,12 +1,12 @@
 defmodule Migrator.Translator.Utils do
 
-  alias Migrator.Translator.Utils.Approximator, as: Approx
+  alias Migrator.Translator.Approximator, as: Approx
 
   def parse(type_node) do
-    case type_node do
+    case type_node |> IO.inspect(label: "TYPE_NODE FROM PARSE") do
       {:"::", _, [type_var, type]} -> {:"::", [], [type_var, type |> parse]}
 
-      {_, _, nil} -> type_node # Type Variables
+      {_, _, :__type_variable__} -> type_node # Type Variables
       {:|, _, [type1, type2]} -> {:|, [], [type1, type2] |> Enum.map(&parse/1)}
       {:term, _, _} -> {:any, [], []}
       {:arity, _, _} -> {:.., [], [0, 255]}
@@ -17,7 +17,7 @@ defmodule Migrator.Translator.Utils do
       {:nonempty_bitstring, _, _} -> {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, 1]}, {:"::", [], [{:_, [], Elixir}, {:*, [], [{:_, [], Elixir}, 1]}]}]}
       {:boolean, _, _} -> {:|, [], [true, false]}
       {:byte, _, _} -> {:.., [], [0, 255]}
-      {:list, _, []} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:any, [], []}, []]}]}
+      {:list, _, _} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:any, [], []}, []]}]}
       {:list, _, [type]} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [type |> parse, []]}]}
       {:nonempty_list, _, []} -> {:nonempty_maybe_improper_list, [], [{:any, [], []}, []]}
       {:nonempty_list, _, [type]} -> {:nonempty_maybe_improper_list, [], [type |> parse, []]}
@@ -183,10 +183,10 @@ defmodule Migrator.Translator.Utils do
       digit when is_integer(digit) -> {:interval, {digit, digit}}
 
       # :k (atom singleton types)
-      atom when is_atom(atom) -> {:atom, atom}
+      atom when is_atom(atom) -> {:atom, atom} |> dbg()
 
       # Types without "()" at the end: type variables or basic types without "()".
-      {type, _, nil} -> if guards[type], do: {:var, type}, else: {type, [], []} |> translate_fun.()  #|> IO.inspect(label: "TYPE VARIABLE")
+      {type, _, :__type_variable__} -> if guards[type], do: {:var, type}, else: {type, [], []} |> translate_fun.()  #|> IO.inspect(label: "TYPE VARIABLE")
 
       # basic types (any(), none(), atom(), pid(), port(), reference(), float(), integer(), tuple())
       {:any, _, []} -> :term
@@ -204,10 +204,23 @@ defmodule Migrator.Translator.Utils do
       {:non_neg_integer, _, []} -> {:interval, {0, :infty}}
       {:pos_integer, _, []} -> {:interval, {1, :infty}}
 
-      {type, _, []} -> {:unknown, type}
+      {type, _, _} -> {:unknown, type}
 
       other -> other |> dbg()
     end
   end
 
+  def flatten_from_union_to_list(type) when is_tuple(type) or is_atom(type) do
+    case type do
+      {:union, {type_l, type_r}} -> ([type_l |> flatten_from_union_to_list()] ++ [type_r |> flatten_from_union_to_list()]) |> List.flatten() #Enum.flat_map(fn x -> x end)
+      _ -> [type]
+    end
+  end
+
+  def unflatten_from_list_to_union(types) when is_list(types) do
+    case types do
+      [type_hd | []] -> type_hd
+      [type_hd | rest] -> {:union, {type_hd, rest |> unflatten_from_list_to_union()}}
+    end
+  end
 end

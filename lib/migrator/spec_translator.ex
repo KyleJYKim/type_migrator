@@ -30,6 +30,7 @@ defmodule Migrator.SpecTranslator do
 
     translated = quoted
       |> extract_spec()         #|> IO.inspect(label: "### EXTRACT SPEC FUNCTION RESULT \n")
+      |> mark_type_variable()
       |> parse_spec()           |> Enum.map(fn x -> x |> IO.inspect(label: "\n ### PARSE SPEC FUNCTION RESULT \n") end)
       |> translate_spec()       |> Enum.map(fn x -> x |> IO.inspect(label: "\n ### TRANSLATE SPEC FUNCTION RESULT \n") end)
 
@@ -73,6 +74,35 @@ defmodule Migrator.SpecTranslator do
     end
 
     ast |> spec_extractor.("", [], spec_extractor)
+  end
+
+  defp mark_type_variable(spec_tree) do
+
+    total_parser = fn {line_num, name, inputs, output, guards} -> (
+
+      inputs = inputs |> Enum.map(fn input ->
+        Macro.prewalk(input, fn type ->
+            if guards == nil, do: type, else: guards |> Enum.reduce(type, fn {k, _v}, acc ->
+              case type do
+                {var_name, _, nil} -> if var_name == k, do: {var_name, [], :__type_variable__}, else: acc
+                _ -> acc
+              end
+            end)
+          end)
+        end) |> dbg()
+      output = Macro.prewalk(output, fn type ->
+          if guards == nil, do: type, else: guards |> Enum.reduce(type, fn {k, _v}, acc ->
+            case type do
+              {var_name, _, nil} -> if var_name == k, do: {var_name, [], :__type_variable__}, else: acc
+              _ -> acc
+            end
+          end)
+        end)
+
+      {line_num, name, inputs, output, guards}
+    )end
+
+    spec_tree |> Enum.map(total_parser)
   end
 
   defp parse_spec(spec_tree) do
