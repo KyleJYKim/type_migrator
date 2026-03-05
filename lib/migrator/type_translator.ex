@@ -20,7 +20,10 @@ defmodule Migrator.TypeTranslator do
 
     translated_types = extracted_types
       |> parse_type()           |> Enum.reduce(%{}, fn {k, v}, acc -> Map.merge(acc, %{k => v} |> IO.inspect(label: "\n ### PARSE TYPE FUNCTION RESULT \n")) end)
-      #|> translate_type()       |> Enum.reduce(%{}, fn {k, v}, acc -> Map.merge(acc, %{k => v} |>  IO.inspect(label: "\n ### TRANSLATE TYPE FUNCTION RESULT \n")) end)
+      |> translate_type()
+
+      |> Enum.reduce(%{}, fn {k, v}, acc -> v |> Enum.map(fn x -> %{k => x} |> IO.inspect(label: "\n ### TRANSLATE TYPE FUNCTION RESULT \n") end)
+        Map.merge(acc, %{k => v}) end)
 
     translated_types
   end
@@ -40,14 +43,14 @@ defmodule Migrator.TypeTranslator do
         {:@, _, [{:type, _, [{:"::", _, [user_defined_type, defining_type]}]}]} ->
           {_, new_acc} = acc |> Map.get_and_update(module, fn type_defs ->
               if type_defs == nil do
-                {type_defs, [{user_defined_type, defining_type}]}
+                {type_defs, [{user_defined_type |> dbg, defining_type}]}
               else
-                {type_defs, type_defs ++ [{user_defined_type, defining_type}]}
+                {type_defs, type_defs ++ [{user_defined_type |> dbg, defining_type}]}
               end
             end)
           new_acc
 
-          # also the one with parentheses
+          # also the one with parentheses?
 
         _ -> acc
       end
@@ -61,7 +64,7 @@ defmodule Migrator.TypeTranslator do
     total_parser = fn {module, type_defs} -> (
 
       type_defs = type_defs |> Enum.map(fn {user_defined_type, defining_type} ->
-          {user_defined_type |> parse, defining_type |> parse}
+          {user_defined_type |> parse, defining_type |> parse |> IO.inspect(label: "PARSE")}
         end)
 
       %{module => type_defs}
@@ -70,19 +73,90 @@ defmodule Migrator.TypeTranslator do
     extracted_types |> Enum.reduce(%{}, fn type_definition, acc -> acc |> Map.merge(type_definition |> total_parser.()) end)
   end
 
-  # defp translate_spec(parsed_type_tree) do
+  defp translate_type(parsed_types) do
 
-  #   total_translator = fn {line_num, name, inputs, output, guards} -> (
+    replacing_definition = fn {defining_type, current_type_defs, whole_type_definition}, replacing_fun ->
+        replacing_fun = &replacing_fun.(&1, replacing_fun)
+        case defining_type |> IO.inspect(label: "DEFINING TYPE") do
+          {:union, {type1, type2}} ->
+            found_type1 = {type1, current_type_defs, whole_type_definition} |> replacing_fun.()
+            found_type2 = {type2, current_type_defs, whole_type_definition} |> replacing_fun.()
+            {:union, found_type1, found_type2}
 
-  #     # need to replace the defined types to the org types. Look in the list!
-  #     # AFTER TRANSLATION
-  #     #type_defs = type_defs |>
-  #     inputs = inputs |> Enum.map(fn input -> input |> translation.() end)
+          {:fun, {:all_arity, type_out}} ->
+            {:fun, {:all_arity, {type_out, current_type_defs, whole_type_definition} |> replacing_fun.()}}
+          {:fun, {types_in, type_out}} ->
+            {:fun, {types_in |> Enum.map(fn type_in -> {type_in, current_type_defs, whole_type_definition} |> replacing_fun.() end), {type_out, current_type_defs, whole_type_definition} |> replacing_fun.()}}
+          {:non_empty_list, {type_content, type_termination}} ->
+            {:non_empty_list, {{type_content, current_type_defs, whole_type_definition} |> replacing_fun.(), {type_termination, current_type_defs, whole_type_definition} |> replacing_fun.()}}
+          {:tuple, types} ->
+            {:tuple, types |> Enum.map(fn type -> {type, current_type_defs, whole_type_definition} |> replacing_fun.() end)}
+          {:struct, {strt_name, fields}} ->
+            {:struct, {strt_name, {fields |> Enum.map(fn {type_left, type_right} -> {{type_left, current_type_defs, whole_type_definition} |> replacing_fun.(), {type_right, current_type_defs, whole_type_definition} |> replacing_fun.()} end)}}}
+          {:open_map, fields} ->
+            {:open_map, {fields |> Enum.map(fn {type_left, type_right} -> {{type_left, current_type_defs, whole_type_definition} |> replacing_fun.(), {type_right, current_type_defs, whole_type_definition} |> replacing_fun.()} end)}}
+          {:if_set, type} -> {:if_set, {type, current_type_defs, whole_type_definition} |> replacing_fun.()}
+          {:gradual, type} -> {:gradual, {type, current_type_defs, whole_type_definition} |> replacing_fun.()}
+          # {:interval, {digit1, digit2}} -> "#{digit1}..#{digit2}"
+          # {:atom, nil} -> "nil"
+          # {:atom, true} -> "true"
+          # {:atom, false} -> "false"
+          # {:atom, atom} -> ":" <> "#{atom}"
+          # {:var, type} -> "#{type}"
+          # :... -> "..."
+          # {:user_type, type} -> "#{type}"
+          # {:def_not_found, type} -> "#{type}"
 
-  #     {line_num, name, inputs, output, guards}
-  #   )end
+          {:remote_type, {modules, def_type}} ->
+            module_to_find = modules |> Enum.reduce("", fn m, acc -> if acc == "", do: "#{m}", else: "#{acc}.#{m}" end)
+            type_defs_to_be_searched = whole_type_definition |> Map.get(module_to_find)
+            found_type =
+              if type_defs_to_be_searched do
+                type_defs_to_be_searched |> Enum.find_value(fn {udt, dt} -> if udt == {:user_type, def_type}, do: dt, else: nil end) |> dbg
+              else
+                nil
+              end
 
-  #   parsed_spec_tree |> Enum.map(total_translator)
-  # end
+            case found_type do
+              nil -> {:def_not_found, {modules, def_type}}
+              _ -> {found_type, type_defs_to_be_searched, whole_type_definition} |> replacing_fun.()
+            end
+
+          {:user_type, def_type} ->
+            found_type = current_type_defs |> Enum.find_value(fn {udt, dt} -> if udt == {:user_type, def_type}, do: dt, else: nil end) |> dbg
+
+            case found_type do
+              nil -> {:def_not_found, def_type}
+              _ -> {found_type, current_type_defs, whole_type_definition} |> replacing_fun.()
+            end
+
+          _ -> defining_type |> dbg
+        end
+      end
+
+    total_translator = fn parsed_types ->
+      translated_types = parsed_types
+        |> Enum.reduce(%{}, fn {module, type_defs}, acc ->
+          translated_type_defs = type_defs
+            |> Enum.map(fn {user_defined_type, defining_type} ->
+              {user_defined_type |> translate, defining_type |> translate}
+            end)
+
+          acc |> Map.merge(%{module => translated_type_defs})
+        end)
+
+      translated_types
+        |> Enum.reduce(%{}, fn {module, type_defs}, acc ->
+          replaced_type_defs = type_defs |> IO.inspect(label: "TYPE_DEFS")
+            |> Enum.map(fn {user_defined_type, defining_type} ->
+              {user_defined_type, {defining_type, type_defs, translated_types} |> replacing_definition.(replacing_definition)}
+            end)
+
+          acc |> Map.merge(%{module => replaced_type_defs})
+        end)
+    end
+
+    parsed_types |> total_translator.()
+  end
 
 end

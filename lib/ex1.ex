@@ -194,7 +194,7 @@ defmodule Ex1 do
 
     @type t :: %Some{
       a: integer(),
-      b: term()
+      b: Ex2.t()
     }
 
   end

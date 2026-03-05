@@ -12,26 +12,29 @@ defmodule Ex2 do
   @type key :: any
   @type value :: any
 
-  @type get_fun(data) ::
-          (:get, data, (term -> term) -> new_data :: container)
+  # @type get_fun(data) ::
+  #         (:get, data, (term -> term) -> new_data :: container)
 
-  @type get_and_update_fun(data, current_value) ::
-          (:get_and_update, data, (term -> term) ->
-             {current_value, new_data :: container} | :pop)
+  # @type get_and_update_fun(data, current_value) ::
+  #         (:get_and_update, data, (term -> term) ->
+  #            {current_value, new_data :: container} | :pop)
 
-  @type access_fun(data, current_value) ::
-          get_fun(data) | get_and_update_fun(data, current_value)
+  # @type access_fun(data, current_value) ::
+  #         get_fun(data) | get_and_update_fun(data, current_value)
 
-  @spec get_and_update(data, key, (value | nil -> {current_value, new_value :: value} | :pop)) ::
-        {current_value, new_data :: data}
-      when current_value: var, data: container
-  def get_and_update(x, y, z), do: x
+  # @spec get_and_update(data, key, (value | nil -> {current_value, new_value :: value} | :pop)) ::
+  #       {current_value, new_data :: data}
+  #     when current_value: var, data: container
+  # def get_and_update(x, y, z), do: x
 
-  @spec id(Types.t()) :: Types.t_in_t
-  def id(x), do: x
+  @spec id_tuple({atom(), 1..10, binary()}) :: t when t: tuple()
+  def id_tuple(tpl) when is_tuple(tpl), do: tpl
 
-  @spec record_keytype_structs3(%{struct() => integer(), %Types{integer: integer(), float: float()} => float()}) :: map()
-  def record_keytype_structs3(x), do: x
+  # @spec id(Types.t()) :: Types.t_in_t
+  # def id(x), do: x
+
+  # @spec record_keytype_structs3(%{struct() => integer(), %Types{integer: integer(), float: float()} => float()}) :: map()
+  # def record_keytype_structs3(x), do: x
 
   # @spec record_keytype_structs2(%{%Types{integer: integer(), float: float(), binary: binary()} => integer(), %Types{integer: integer(), float: float()} => float()}) :: map()
   # def record_keytype_structs2(x), do: x
@@ -104,10 +107,10 @@ defmodule Ex2 do
   #   @spec id1(<<_::8, _::_*8>>) :: <<_::_*8>>
   #   def id1(x) when is_binary(x), do: x
 
-    # @spec fun_t(a) :: b when a: integer(), b: binary()
-    # @spec fun_t(a) :: b when a: float(), b: binary()
-    # def fun_t(x) when is_integer(x), do: Integer.to_string(x)
-    # def fun_t(x) when is_float(x), do: Float.to_string(x)
+  #   @spec fun_t(a) :: b when a: integer(), b: binary()
+  #   @spec fun_t(a) :: b when a: float(), b: binary()
+  #   def fun_t(x) when is_integer(x), do: Integer.to_string(x)
+  #   def fun_t(x) when is_float(x), do: Float.to_string(x)
 
   #   @spec fun_guards(binary(), a) :: binary when a: integer(), binary: binary()
   #   @spec fun_guards(binary(), a) :: binary when a: float(), binary: binary()
