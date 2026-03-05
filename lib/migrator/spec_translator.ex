@@ -245,7 +245,12 @@ defmodule Migrator.SpecTranslator do
             {:atom, atom} -> ":" <> "#{atom}"
             {:var, type} -> "#{type}"
             :... -> "..."
-            {:unknown, type} -> "#{type}"
+            {:remote_type, {modules, type}} ->
+              module = modules |> Enum.reduce("", fn x, acc -> module = Atom.to_string(x)
+                if acc == "", do: module, else: acc <> "." <> module end)
+              "#{module}.#{type}"
+            {:user_type, type} -> "#{type}"
+            {:def_not_found, type} -> "#{type}"
             _ -> if type in basic_types, do: "#{type}()", else: "#{type}"
           end
         end
