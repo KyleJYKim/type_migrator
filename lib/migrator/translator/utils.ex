@@ -17,15 +17,15 @@ defmodule Migrator.Translator.Utils do
       {:nonempty_bitstring, _, _} -> {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, 1]}, {:"::", [], [{:_, [], Elixir}, {:*, [], [{:_, [], Elixir}, 1]}]}]}
       {:boolean, _, _} -> {:|, [], [true, false]}
       {:byte, _, _} -> {:.., [], [0, 255]}
-      {:list, _, _} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:any, [], []}, []]}]}
       {:list, _, [type]} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [type |> parse, []]}]}
-      {:nonempty_list, _, []} -> {:nonempty_maybe_improper_list, [], [{:any, [], []}, []]}
+      {:list, _, _} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:any, [], []}, []]}]}
       {:nonempty_list, _, [type]} -> {:nonempty_maybe_improper_list, [], [type |> parse, []]}
+      {:nonempty_list, _, _} -> {:nonempty_maybe_improper_list, [], [{:any, [], []}, []]}
       # {:nonempty_improper_list, [], [type1, type2]} -> {:nonempty_maybe_improper_list, [], [type1, type2]}
-      {:maybe_improper_list, _, []} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:any, [], []}, {:any, [], []}]}]}
       {:maybe_improper_list, _, [type1, type2]} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:|, [], [type1, type2] |> Enum.map(&parse/1)}]}]}
-      {:nonempty_maybe_improper_list, _, []} -> {:nonempty_maybe_improper_list, [], [{:any, [], []}, {:any, [], []}]}
+      {:maybe_improper_list, _, _} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:any, [], []}, {:any, [], []}]}]}
       {:nonempty_maybe_improper_list, _, [type1, type2]} -> {:nonempty_maybe_improper_list, [], [type1, type2] |> Enum.map(&parse/1)}
+      {:nonempty_maybe_improper_list, _, _} -> {:nonempty_maybe_improper_list, [], [{:any, [], []}, {:any, [], []}]}
       {:char, _, _} -> {:.., [], [0, 1114111]}
       {:charlist, _, _} -> {:list, [], [{:char, [], []}]} |> parse
       {:nonempty_charlist, _, _} -> {:nonempty_list, [], [{:char, [], []}]} |> parse
@@ -74,6 +74,8 @@ defmodule Migrator.Translator.Utils do
         {:%{}, [], [__struct__: strt_name] ++ fields}
       )
 
+      {:{}, _, types} when is_list(types) -> {:{}, [], types |> Enum.map(&parse/1)}
+
       {type1, type2} -> {type1 |> parse, type2 |> parse}
 
       {type, _, [type | rest]} -> {type, [], [type | rest] |> Enum.map(&parse/1)}
@@ -85,26 +87,19 @@ defmodule Migrator.Translator.Utils do
   def translate(type_node, guards \\ []) do
     translate_fun = &translate(&1, guards)
     case type_node do
-      # Remote module type (e.g., String.t())
-      {{:., _, [{_, _, modules}, type]}, _, _} -> (
-        module = modules |> Enum.reduce("", fn x, acc -> module = Atom.to_string(x)
-          if acc == "", do: module, else: acc <> "." <> module end)
-        :"#{module}.#{type}"
-      )
-
-      {:"::", _, [_type_var, type]} -> type |> translate_fun.()
-
       # Type | Type
       {:|, _, [left, right]} -> {:union, {left |> translate_fun.(), right |> translate_fun.()}}
 
       # {Type} (Tuple)
-      {:{}, _, elements} -> {:tuple, elements |> Enum.reduce([], fn elem, acc -> acc ++ [elem |> translate_fun.()] end)}
+      #{:{}, _, elements} when is_list(elements) -> {:tuple, elements |> Enum.reduce([], fn elem, acc -> acc ++ [elem |> translate_fun.()] end)}
+      {:{}, _, elements} when is_list(elements) -> {:tuple, elements |> Enum.map(translate_fun)}
 
       # {Tuple} (two-elements}
-      {elem1, elem2} -> {:tuple, [elem1, elem2] |> Enum.reduce([], fn elem, acc -> acc ++ [elem |> translate_fun.()] end)}
+      #{elem1, elem2} -> {:tuple, [elem1, elem2] |> Enum.reduce([], fn elem, acc -> acc ++ [elem |> translate_fun.()] end)}
+      {elem1, elem2} -> {:tuple, [elem1, elem2] |> Enum.map(translate_fun)}
 
       # %{..., F_seq} (Map)
-      {:%{}, _, fields} -> (
+      {:%{}, _, fields} when is_list(fields) -> (
         flatten = fn type, flatten_fun ->
             flatten_fun = &flatten_fun.(&1, flatten_fun)
             case type do
@@ -185,26 +180,37 @@ defmodule Migrator.Translator.Utils do
       # :k (atom singleton types)
       atom when is_atom(atom) -> {:atom, atom} |> dbg()
 
-      # Types without "()" at the end: type variables or basic types without "()".
+      # Type variable from guard
       {type, _, :__type_variable__} -> if guards[type], do: {:var, type}, else: {type, [], []} |> translate_fun.()  #|> IO.inspect(label: "TYPE VARIABLE")
 
       # basic types (any(), none(), atom(), pid(), port(), reference(), float(), integer(), tuple())
-      {:any, _, []} -> :term
-      {:none, _, []} -> :none
-      {:atom, _, []} -> :atom
-      {:pid, _, []} -> :pid
-      {:port, _, []} -> :port
-      {:reference, _, []} -> :reference
-      {:float, _, []} -> :float
-      {:integer, _, []} -> :integer
-      {:tuple, _, []} -> :tuple
+      {:any, _, _} -> :term
+      {:none, _, _} -> :none
+      {:atom, _, _} -> :atom
+      {:pid, _, _} -> :pid
+      {:port, _, _} -> :port
+      {:reference, _, _} -> :reference
+      {:float, _, _} -> :float
+      {:integer, _, _} -> :integer
+      {:tuple, _, _} -> :tuple
 
       # neg_integer(), non_neg_integer(), pos_integer()
-      {:neg_integer, _, []} -> {:interval, {:infty, -1}}
-      {:non_neg_integer, _, []} -> {:interval, {0, :infty}}
-      {:pos_integer, _, []} -> {:interval, {1, :infty}}
+      {:neg_integer, _, _} -> {:interval, {:infty, -1}}
+      {:non_neg_integer, _, _} -> {:interval, {0, :infty}}
+      {:pos_integer, _, _} -> {:interval, {1, :infty}}
 
-      {type, _, _} -> {:unknown, type}
+      # Remote module type (e.g., String.t())
+      {{:., _, [{_, _, modules}, type]}, _, _} -> (
+        # module = modules |> Enum.reduce("", fn x, acc -> module = Atom.to_string(x)
+        #   if acc == "", do: module, else: acc <> "." <> module end)
+        # :"#{module}.#{type}"
+        {:remote_type, {modules, type}}
+      )
+
+      {:"::", _, [_type_var, type]} -> type |> translate_fun.()
+
+      {user_type, _, elements} when is_list(elements)-> {:user_type, {user_type, elements |> Enum.map(translate_fun)}}
+      {user_type, _, _} -> {:user_type, user_type}
 
       other -> other |> dbg()
     end
