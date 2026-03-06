@@ -43,9 +43,9 @@ defmodule Migrator.TypeTranslator do
         {:@, _, [{:type, _, [{:"::", _, [user_defined_type, defining_type]}]}]} ->
           {_, new_acc} = acc |> Map.get_and_update(module, fn type_defs ->
               if type_defs == nil do
-                {type_defs, [{user_defined_type |> dbg, defining_type}]}
+                {type_defs, [{user_defined_type, defining_type}]}
               else
-                {type_defs, type_defs ++ [{user_defined_type |> dbg, defining_type}]}
+                {type_defs, type_defs ++ [{user_defined_type, defining_type}]}
               end
             end)
           new_acc
@@ -64,7 +64,7 @@ defmodule Migrator.TypeTranslator do
     total_parser = fn {module, type_defs} -> (
 
       type_defs = type_defs |> Enum.map(fn {user_defined_type, defining_type} ->
-          {user_defined_type |> parse, defining_type |> parse |> IO.inspect(label: "PARSE")}
+          {user_defined_type |> parse, defining_type |> parse}
         end)
 
       %{module => type_defs}
@@ -77,7 +77,7 @@ defmodule Migrator.TypeTranslator do
 
     replacing_definition = fn {defining_type, current_type_defs, whole_type_definition}, replacing_fun ->
         replacing_fun = &replacing_fun.(&1, replacing_fun)
-        case defining_type |> IO.inspect(label: "DEFINING TYPE") do
+        case defining_type do
           {:union, {type1, type2}} ->
             found_type1 = {type1, current_type_defs, whole_type_definition} |> replacing_fun.()
             found_type2 = {type2, current_type_defs, whole_type_definition} |> replacing_fun.()
@@ -97,40 +97,33 @@ defmodule Migrator.TypeTranslator do
             {:open_map, {fields |> Enum.map(fn {type_left, type_right} -> {{type_left, current_type_defs, whole_type_definition} |> replacing_fun.(), {type_right, current_type_defs, whole_type_definition} |> replacing_fun.()} end)}}
           {:if_set, type} -> {:if_set, {type, current_type_defs, whole_type_definition} |> replacing_fun.()}
           {:gradual, type} -> {:gradual, {type, current_type_defs, whole_type_definition} |> replacing_fun.()}
-          # {:interval, {digit1, digit2}} -> "#{digit1}..#{digit2}"
-          # {:atom, nil} -> "nil"
-          # {:atom, true} -> "true"
-          # {:atom, false} -> "false"
-          # {:atom, atom} -> ":" <> "#{atom}"
-          # {:var, type} -> "#{type}"
-          # :... -> "..."
-          # {:user_type, type} -> "#{type}"
-          # {:def_not_found, type} -> "#{type}"
 
           {:remote_type, {modules, def_type}} ->
             module_to_find = modules |> Enum.reduce("", fn m, acc -> if acc == "", do: "#{m}", else: "#{acc}.#{m}" end)
             type_defs_to_be_searched = whole_type_definition |> Map.get(module_to_find)
             found_type =
               if type_defs_to_be_searched do
-                type_defs_to_be_searched |> Enum.find_value(fn {udt, dt} -> if udt == {:user_type, def_type}, do: dt, else: nil end) |> dbg
+                type_defs_to_be_searched |> Enum.find_value(fn {udt, dt} -> if udt == {:user_type, def_type}, do: dt, else: nil end)
               else
                 nil
               end
 
-            case found_type do
-              nil -> {:def_not_found, {modules, def_type}}
-              _ -> {found_type, type_defs_to_be_searched, whole_type_definition} |> replacing_fun.()
+            if found_type == nil do
+              {:def_not_found, {modules, def_type}}
+            else
+              {found_type, type_defs_to_be_searched, whole_type_definition} |> replacing_fun.()
             end
 
           {:user_type, def_type} ->
-            found_type = current_type_defs |> Enum.find_value(fn {udt, dt} -> if udt == {:user_type, def_type}, do: dt, else: nil end) |> dbg
+            found_type = current_type_defs |> Enum.find_value(fn {udt, dt} -> if udt == {:user_type, def_type}, do: dt, else: nil end)
 
-            case found_type do
-              nil -> {:def_not_found, def_type}
-              _ -> {found_type, current_type_defs, whole_type_definition} |> replacing_fun.()
+            if found_type == nil do
+              {:def_not_found, def_type}
+            else
+              {found_type, current_type_defs, whole_type_definition} |> replacing_fun.()
             end
 
-          _ -> defining_type |> dbg
+          _ -> defining_type
         end
       end
 
@@ -147,7 +140,7 @@ defmodule Migrator.TypeTranslator do
 
       translated_types
         |> Enum.reduce(%{}, fn {module, type_defs}, acc ->
-          replaced_type_defs = type_defs |> IO.inspect(label: "TYPE_DEFS")
+          replaced_type_defs = type_defs
             |> Enum.map(fn {user_defined_type, defining_type} ->
               {user_defined_type, {defining_type, type_defs, translated_types} |> replacing_definition.(replacing_definition)}
             end)

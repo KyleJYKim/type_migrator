@@ -3,7 +3,7 @@ defmodule Migrator.Translator.Utils do
   alias Migrator.Translator.Approximator, as: Approx
 
   def parse(type_node) do
-    case type_node |> IO.inspect(label: "TYPE_NODE FROM PARSE") do
+    case type_node do
       {:"::", _, [type_var, type]} -> {:"::", [], [type_var, type |> parse]}
 
       {_, _, :__type_variable__} -> type_node # Type Variables
@@ -78,7 +78,7 @@ defmodule Migrator.Translator.Utils do
 
       {type1, type2} -> {type1 |> parse, type2 |> parse}
 
-      {type, _, [type | rest]} -> {type, [], [type | rest] |> Enum.map(&parse/1)}
+      {type, _, elements} when is_list(elements) -> {type, [], elements |> Enum.map(&parse/1)}
 
       other -> other
     end
@@ -178,7 +178,7 @@ defmodule Migrator.Translator.Utils do
       digit when is_integer(digit) -> {:interval, {digit, digit}}
 
       # :k (atom singleton types)
-      atom when is_atom(atom) -> {:atom, atom} |> dbg()
+      atom when is_atom(atom) -> {:atom, atom}
 
       # Type variable from guard
       {type, _, :__type_variable__} -> if guards[type], do: {:var, type}, else: {type, [], []} |> translate_fun.()  #|> IO.inspect(label: "TYPE VARIABLE")
@@ -199,20 +199,21 @@ defmodule Migrator.Translator.Utils do
       {:non_neg_integer, _, _} -> {:interval, {0, :infty}}
       {:pos_integer, _, _} -> {:interval, {1, :infty}}
 
-      # Remote module type (e.g., String.t())
-      {{:., _, [{_, _, modules}, type]}, _, _} -> (
-        # module = modules |> Enum.reduce("", fn x, acc -> module = Atom.to_string(x)
-        #   if acc == "", do: module, else: acc <> "." <> module end)
-        # :"#{module}.#{type}"
-        {:remote_type, {modules, type}}
-      )
-
       {:"::", _, [_type_var, type]} -> type |> translate_fun.()
 
-      {user_type, _, elements} when is_list(elements)-> {:user_type, {user_type, elements |> Enum.map(translate_fun)}}
-      {user_type, _, _} -> {:user_type, user_type}
+      # Remote module type (e.g., String.t())
+      {{:., _, [{:__aliases__, _, modules}, type]}, _, elements} when is_list(elements) and elements != [] ->
+        {:remote_type, {{modules, type}, elements |> Enum.map(translate_fun)}}
+      {{:., _, [{:__aliases__, _, modules}, type]}, _, _} ->
+        {:remote_type, {modules, type}}
 
-      other -> other |> dbg()
+      # User-defined type
+      {user_type, _, elements} when is_list(elements) and elements != [] ->
+        {:user_type, {user_type, elements |> Enum.map(translate_fun)}}
+      {user_type, _, _} ->
+        {:user_type, user_type}
+
+      other -> other
     end
   end
 
