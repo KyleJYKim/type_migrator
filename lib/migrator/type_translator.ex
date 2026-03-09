@@ -2,7 +2,7 @@ defmodule Migrator.TypeTranslator do
 
   import Migrator.Translator.Utils
 
-  def process(paths) do
+  def process(paths) when is_list(paths) do
     extracted_types = paths |> Enum.map(fn path ->
       path |> File.read!
       |> Code.string_to_quoted!
@@ -19,6 +19,7 @@ defmodule Migrator.TypeTranslator do
     # quoted |> IO.inspect()
 
     translated_types = extracted_types
+      |> mark_type_variable
       |> parse_type()           |> Enum.reduce(%{}, fn {k, v}, acc -> Map.merge(acc, %{k => v} |> IO.inspect(label: "\n ### PARSE TYPE FUNCTION RESULT \n")) end)
       |> translate_type()
 
@@ -57,6 +58,36 @@ defmodule Migrator.TypeTranslator do
     end
 
     {ast, "", %{}} |> extractor.(extractor)
+  end
+
+  defp mark_type_variable(type_tree) do
+
+    type_var_marker = fn {module, type_defs} -> (
+
+      type_defs = type_defs |> Enum.map(fn {user_defined_type, defining_type} ->
+        case user_defined_type do
+          {user_type, _, elements} when is_list(elements) and length(elements) > 0 ->
+            user_defined_type_new = {user_type, [], elements |> Enum.map(fn {type_var, _,  _} -> {type_var, [],  :__user_type_variable__} end)}
+            defining_type_new = Macro.prewalk(defining_type, fn type ->
+              case type do
+                {type_var, _,  nil_or_empty_list} when nil_or_empty_list == nil or nil_or_empty_list == [] ->
+                  if elements |> Enum.find_value(fn {elem_type_var, _, _} -> elem_type_var == type_var end) do
+                    {type_var, [],  :__user_type_variable__}
+                  else
+                    type
+                  end
+                _ -> type
+              end
+            end)
+            {user_defined_type_new, defining_type_new}
+          _ -> {user_defined_type, defining_type}
+        end
+      end)
+
+      {module, type_defs}
+    )end
+
+    type_tree |> Enum.map(type_var_marker)
   end
 
   defp parse_type(extracted_types) do
@@ -132,7 +163,7 @@ defmodule Migrator.TypeTranslator do
         |> Enum.reduce(%{}, fn {module, type_defs}, acc ->
           translated_type_defs = type_defs
             |> Enum.map(fn {user_defined_type, defining_type} ->
-              {user_defined_type |> translate, defining_type |> translate}
+              {user_defined_type |> translate(), defining_type |> translate}
             end)
 
           acc |> Map.merge(%{module => translated_type_defs})
