@@ -1,6 +1,8 @@
 defmodule Migrator.ElixirTypeStringifier do
 
-  def process(translated_specs) do
+  import Migrator.Translator.Utils
+
+  def process(translated_specs) when is_list(translated_specs) do
     translated_specs
       |> group_by_notation      |> Enum.map(fn x -> x |> IO.inspect(label: "\n ### GROUPBY SPEC FUNCTION RESULT \n") end)
       |> rename_type_variables  |> Enum.map(fn x -> x |> IO.inspect(label: "\n ### RENAME SPEC FUNCTION RESULT \n") end)
@@ -10,9 +12,138 @@ defmodule Migrator.ElixirTypeStringifier do
     # assembled |> Enum.map(fn x -> x |> IO.inspect() end)
   end
 
+  def process(translated_specs, user_types) when is_list(translated_specs) and is_map(user_types) do
+    translated_specs
+      |> replace_user_types(user_types)
+      |> group_by_notation      |> Enum.map(fn x -> x |> IO.inspect(label: "\n ### GROUPBY SPEC FUNCTION RESULT \n") end)
+      |> rename_type_variables  |> Enum.map(fn x -> x |> IO.inspect(label: "\n ### RENAME SPEC FUNCTION RESULT \n") end)
+      |> assemble_elixir_type   |> Enum.map(fn x -> x |> IO.inspect(label: "\n ### ASSEMBLE SPEC FUNCTION RESULT \n") end)
+
+    # IO.puts("\nASSEMBLED \n")
+    # assembled |> Enum.map(fn x -> x |> IO.inspect() end)
+  end
+
+  defp replace_user_type_variables(elements_zipped, definition) do
+    #[{{:user_type_var, :data}, _definition}]
+    elements_zipped |> Enum.reduce(definition, fn {{:user_type_var, user_type_var}, defined_type}, acc ->
+      search_type_var = fn type_node, search_fun ->
+        search_fun = &search_fun.(&1, search_fun)
+        case type_node do
+          {:union, {type_left, type_right}} ->
+            {:union, {type_left |> search_fun.(), type_right |> search_fun.()}}
+          {:fun, {:all_arity, type_out}} ->
+            {:fun, {:all_arity, type_out |> search_fun.()}}
+          {:fun, {types_in, type_out}} ->
+            {:fun, {types_in |> Enum.map(fn type -> type |> search_fun.() end), type_out |> search_fun.()}}
+          {:non_empty_list, {type_content, type_termination}} ->
+            {:non_empty_list, {type_content |> search_fun.(), type_termination |> search_fun.()}}
+          {:tuple, types} ->
+            {:tuple, types |> Enum.map(fn type -> type |> search_fun.() end)}
+          {:struct, {strt_name, fields}} ->
+            {:struct, {strt_name, fields |> Enum.map(fn {type_left, type_right} -> {type_left |> search_fun.(), type_right |> search_fun.()} end)}}
+          {:open_map, fields} ->
+            {:open_map, fields |> Enum.map(fn {type_left, type_right} -> {type_left |> search_fun.(), type_right |> search_fun.()} end)}
+          {:if_set, type} -> {:if_set, type |> search_fun.()}
+          {:gradual, type} -> {:gradual, type |> search_fun.()}
+          {:user_type_var, type} -> if type == user_type_var, do: defined_type, else: type_node
+          _ -> type_node
+        end
+      end
+      acc |> search_type_var.(search_type_var)
+    end)
+  end
+
+  defp replace_user_types(translated_spec_list, user_type_map) do
+
+    replacing = fn {type, current_module_name}, replacing_fun ->
+      replacing_fun = &replacing_fun.({&1, current_module_name}, replacing_fun)
+      case type do
+        {:union, {type_left, type_right}} ->
+          {:union, {type_left |> replacing_fun.(), type_right |> replacing_fun.()}}
+        {:fun, {:all_arity, type_out}} ->
+          {:fun, {:all_arity, type_out |> replacing_fun.()}}
+        {:fun, {types_in, type_out}} ->
+          {:fun, {types_in |> Enum.map(fn type -> type |> replacing_fun.() end), type_out |> replacing_fun.()}}
+        {:non_empty_list, {type_content, type_termination}} ->
+          {:non_empty_list, {type_content |> replacing_fun.(), type_termination |> replacing_fun.()}}
+        {:tuple, types} ->
+          {:tuple, types |> Enum.map(fn type -> type |> replacing_fun.() end)}
+        {:struct, {strt_name, fields}} ->
+          {:struct, {strt_name, fields |> Enum.map(fn {type_left, type_right} -> {type_left |> replacing_fun.(), type_right |> replacing_fun.()} end)}}
+        {:open_map, fields} ->
+          {:open_map, fields |> Enum.map(fn {type_left, type_right} -> {type_left |> replacing_fun.(), type_right |> replacing_fun.()} end)}
+        {:if_set, type} -> {:if_set, type |> replacing_fun.()}
+        {:gradual, type} -> {:gradual, type |> replacing_fun.()}
+        # {:interval, {digit1, digit2}} -> "#{digit1}..#{digit2}"
+        # {:atom, nil} -> "nil"
+        # {:atom, true} -> "true"
+        # {:atom, false} -> "false"
+        # {:atom, atom} -> ":" <> "#{atom}"
+        # {:guard_var, type_var} -> "#{type_var}"
+        # :... -> "..."
+        {:remote_type, {{modules, user_type}, elements}} when is_list(elements) ->
+          module_full = modules |> Enum.reduce("", fn module, acc -> module = Atom.to_string(module)
+            if acc == "", do: module, else: acc <> "." <> module end)
+          case {:__search__, user_type, elements, module_full} |> replacing_fun.() do
+            :__not_found__ -> {:def_not_found, {{modules, user_type}, elements}}
+            definition -> definition
+          end
+        {:remote_type, {modules, user_type}} ->
+          module_full = modules |> Enum.reduce("", fn x, acc -> module = Atom.to_string(x)
+            if acc == "", do: module, else: acc <> "." <> module end)
+          case {:__search__, user_type, module_full} |> replacing_fun.() do
+            :__not_found__ -> {:def_not_found, {modules, user_type}}
+            definition -> definition
+          end
+        {:user_type, {user_type, elements}} when is_list(elements) ->
+          case {:__search__, user_type, elements, current_module_name} |> replacing_fun.() do
+            :__not_found__ -> {:def_not_found, {user_type, elements}}
+            definition -> definition
+          end
+        {:user_type, user_type} ->
+          case {:__search__, user_type, current_module_name} |> replacing_fun.() do
+            :__not_found__ -> {:def_not_found, user_type}
+            definition -> definition
+          end
+        {:__search__, user_type, elements, module_name} ->
+          case user_type_map |> Map.fetch(module_name) do
+            {:ok, defined_types} ->
+              defined_types |> Enum.find_value(:__not_found__, fn {defined_type_from_map, definition} ->
+                case defined_type_from_map do
+                  {:user_type, {user_type_from_map, elements_from_map}} ->
+                    if user_type_from_map == user_type and length(elements) == length(elements_from_map) do
+                      Enum.zip(elements_from_map, elements) |> replace_user_type_variables(definition)
+                    end
+                  _ -> nil
+                end
+              end)
+            :error -> :__not_found__
+          end
+        {:__search__, user_type, module_name} ->
+          case user_type_map |> Map.fetch(module_name) do
+            {:ok, defined_types} ->
+              defined_types |> Enum.find_value(:__not_found__, fn {{:user_type, user_type_from_map}, definition} ->
+                if user_type_from_map == user_type, do: definition
+              end)
+            :error -> :__not_found__
+          end
+        _ -> type
+      end
+    end
+
+    translated_spec_list |> Enum.map(fn {line_num, {module_name, fun_name}, inputs, output, guards} ->
+
+      inputs = inputs |> Enum.map(fn input -> {input, module_name} |> replacing.(replacing)end)
+      output = {output, module_name} |> replacing.(replacing)
+      guards = if guards == nil, do: nil, else: guards |> Enum.map(fn {k, v} -> {k, {v, module_name} |> replacing.(replacing)} end)
+
+      {line_num, {module_name, fun_name}, inputs, output, guards}
+    end)
+  end
+
   defp group_by_notation(translated_spec_list) do
-    translated_spec_list |> Enum.reduce([], fn type, acc ->
-        {_, name, _, _, _} = type
+    translated_spec_list |> Enum.reduce([], fn spec_info, acc ->
+        {_, name, _, _, _} = spec_info
         prev_name = case acc do
           [] -> ""
           [head | _] -> (
@@ -23,9 +154,9 @@ defmodule Migrator.ElixirTypeStringifier do
 
         if prev_name == name do
           [head | tail] = acc
-          [head ++ [type]] ++ tail
+          [head ++ [spec_info]] ++ tail
         else
-          [[type]] ++ acc
+          [[spec_info]] ++ acc
         end
       end) |> Enum.reverse()
   end
@@ -61,11 +192,11 @@ defmodule Migrator.ElixirTypeStringifier do
                 renamer = fn type, renamer_fun ->
                     renamer_fun = &renamer_fun.(&1, renamer_fun)
                     case type do
-                      {:var, var} ->
+                      {:guard_type_var, var} ->
                         type = guards[var]
                         idx = new_found_names[var] |> Enum.unzip() |> elem(0) |> Enum.find_index(fn t -> t == type end)
                         num = new_found_names[var] |> Enum.unzip() |> elem(1) |> Enum.at(idx)
-                        if num == 1 or num == nil, do: {:var, var}, else: {:var, String.to_atom("#{var}_#{num}")}
+                        if num == 1 or num == nil, do: {:guard_type_var, var}, else: {:guard_type_var, String.to_atom("#{var}_#{num}")}
                       {type1, type2} -> {type1 |> renamer_fun.(), type2 |> renamer_fun.()}
                       _ -> type
                     end
@@ -74,13 +205,13 @@ defmodule Migrator.ElixirTypeStringifier do
                 new_output = output |> renamer.(renamer)
                 {acc_notation ++ [{line_num, name, new_inputs, new_output, new_guards}], new_found_names}
               end
-            end) |> dbg |> elem(0)
+            end) |> elem(0)
         end
       end)
   end
 
   defp assemble_elixir_type(renamed_grouped_translated_spec_list) do
-    basic_types = [:term, :none, :empty_list, :atom, :pid, :port, :reference, :float, :integer, :bitstring, :binary, :tuple, :open_map, :fun, :list]
+
     placing = fn type, placing_fun ->
         placing_fun = &placing_fun.(&1, placing_fun)
           case type do
@@ -112,6 +243,7 @@ defmodule Migrator.ElixirTypeStringifier do
                   if acc == "", do: field_str, else: acc <> ", " <> field_str
                 end)
               "%{" <> fields_str <> "}"
+            :... -> "..."
             {:if_set, type} -> "if_set(" <> "#{type |> placing_fun.()}" <> ")"
             {:gradual, type} -> "dynamic(" <> "#{type |> placing_fun.()}" <> ")"
             {:interval, {digit1, digit2}} -> "#{digit1}..#{digit2}"
@@ -119,26 +251,28 @@ defmodule Migrator.ElixirTypeStringifier do
             {:atom, true} -> "true"
             {:atom, false} -> "false"
             {:atom, atom} -> ":" <> "#{atom}"
-            {:var, type} -> "#{type}"
-            :... -> "..."
-            {:remote_type, {{modules, type}, elements}} when is_list(elements) ->
-              module = modules |> Enum.reduce("", fn x, acc -> module = Atom.to_string(x)
+            {:guard_type_var, type_var} -> "#{type_var}"
+            {:user_type_var, user_type_var} -> "#{user_type_var}"
+            {{:user_type_rep, user_type_rep}, type} -> "#{user_type_rep} :: #{type |> placing_fun.()}"
+            {{:user_type_var, user_type_var}, type} -> "#{user_type_var} :: #{type |> placing_fun.()}"
+            {:remote_type, {{modules, user_type}, elements}} when is_list(elements) ->
+              module_full = modules |> Enum.reduce("", fn module, acc -> module = Atom.to_string(module)
                 if acc == "", do: module, else: acc <> "." <> module end)
-              element = elements |> Enum.reduce("", fn x, acc -> elem = x |> placing_fun.()
+              element_full = elements |> Enum.reduce("", fn elem, acc -> elem = elem |> placing_fun.()
                 if acc == "", do: elem, else: acc <> ", " <> elem end)
-              "#{module}.#{type}(#{element})"
-            {:remote_type, {modules, type}} ->
-              module = modules |> Enum.reduce("", fn x, acc -> module = Atom.to_string(x)
+              "#{module_full}.#{user_type |> placing_fun.()}(#{element_full})"
+            {:remote_type, {modules, user_type}} ->
+              module_full = modules |> Enum.reduce("", fn x, acc -> module = Atom.to_string(x)
                 if acc == "", do: module, else: acc <> "." <> module end)
-              "#{module}.#{type |> placing_fun.()}"
-            {:user_type, {type, elements}} when is_list(elements) ->
-              element = elements |> Enum.reduce("", fn x, acc -> elem = x |> placing_fun.()
+              "#{module_full}.#{user_type |> placing_fun.()}"
+            {:user_type, {user_type, elements}} when is_list(elements) ->
+              element_full = elements |> Enum.reduce("", fn elem, acc -> elem = elem |> placing_fun.()
                 if acc == "", do: elem, else: acc <> ", " <> elem end)
-              "#{type}(#{element})"
-            {:user_type, type} ->
-              "#{type |> placing_fun.()}"
-            {:def_not_found, type} -> "#{type}"
-            _ -> if type in basic_types, do: "#{type}()", else: "#{type}"
+              "#{user_type |> placing_fun.()}(#{element_full})"
+            {:user_type, user_type} ->
+              "#{user_type |> placing_fun.()}"
+            {:def_not_found, type} -> "dynamic()"
+            _ -> if type in get_basic_types(), do: "#{type}()", else: "#{type}"
           end
         end
 

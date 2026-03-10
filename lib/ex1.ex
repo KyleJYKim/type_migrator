@@ -1,6 +1,9 @@
 defmodule Ex1 do
   import Ex2
 
+  @type t_atom :: atom()
+  @type t_atom(a) :: {a :: :a, a}
+
   # TypeSpec multi-clause exhaustiveness: compile warning, dialyzer error
   # @spec id_exhaustive(integer) :: integer()
   # @spec id_exhaustive(float) :: float()
@@ -119,8 +122,15 @@ defmodule Ex1 do
   @spec id_list(list(integer())) :: list(integer())
   def id_list(lst) when is_list(lst), do: lst
 
-  @spec id_type(Ex2.value) :: Ex2.Types.t
-  def id_type(x), do: x
+  @spec id_type1(Ex2.value) :: Ex2.Types.t
+  def id_type1(x), do: x
+
+  @spec id_type2(Ex2.access_fun(map, current_value :: term)) :: Ex2.access_fun(data2 :: map, current_value :: term)
+  def id_type2(x), do: x
+
+  # the name of type parameter has no effect whatsoever; only the name of type variable and its arity matter
+  @spec id_type3(t_atom(a :: :b)) :: t_atom(a :: :b)
+  def id_type3(x), do: x
 
   defmodule In do
     # @spec id_exhaustive() :: any()
@@ -177,6 +187,10 @@ defmodule Ex1 do
     def id_tuple(), do: Ex1.id_tuple({:a, 1, "q"})
 
     def id_list(), do: Ex1.id_list([1])
+
+    def id_type2(), do: Ex1.id_type2(fn :get, x, f -> x |> f.() end)
+
+    def id_type3(), do: Ex1.id_type3({:a, :b})
 
   end
 

@@ -76,7 +76,7 @@ defmodule Migrator.SpecTranslator do
         Macro.prewalk(input, fn type ->
             if guards == nil, do: type, else: guards |> Enum.reduce(type, fn {k, _v}, acc ->
               case type do
-                {var_name, _, nil} -> if var_name == k, do: {var_name, [], :__type_variable__}, else: acc
+                {var_name, _, nil} -> if var_name == k, do: {var_name, [], :__guard_type_variable__}, else: acc
                 _ -> acc
               end
             end)
@@ -85,7 +85,7 @@ defmodule Migrator.SpecTranslator do
       output = Macro.prewalk(output, fn type ->
           if guards == nil, do: type, else: guards |> Enum.reduce(type, fn {k, _v}, acc ->
             case type do
-              {var_name, _, nil} -> if var_name == k, do: {var_name, [], :__type_variable__}, else: acc
+              {var_name, _, nil} -> if var_name == k, do: {var_name, [], :__guard_type_variable__}, else: acc
               _ -> acc
             end
           end)

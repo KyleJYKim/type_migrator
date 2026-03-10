@@ -4,13 +4,15 @@ defmodule Migrator.Translator.Utils do
 
   def parse(type_node) do
     case type_node do
-      {:"::", _, [type_var, type]} -> {:"::", [], [type_var, type |> parse]}
+      {:"::", _, [{_user_def_type_var, _, _}, type]} -> type |> parse
 
-      {_, _, :__type_variable__} -> type_node # Type Variables
+      {_, _, :__user_type_variable__} -> type_node  # User-defined Type Variables (pre-described from type_translation.mark_type_variable/1)
+      {_, _, :__guard_type_variable__} -> type_node # Type Variables
+
       {:|, _, [type1, type2]} -> {:|, [], [type1, type2] |> Enum.map(&parse/1)}
       {:term, _, _} -> {:any, [], []}
       {:arity, _, _} -> {:.., [], [0, 255]}
-      # {:as_boolean, [], [type]} -> type
+      {:as_boolean, _, [type]} -> type |> parse
       {:binary, _, _} -> {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, {:*, [], [{:_, [], Elixir}, 8]}]}]}
       {:nonempty_binary, _, _} -> {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, 8]}]}
       {:bitstring, _, _} -> {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, {:*, [], [{:_, [], Elixir}, 1]}]}]}
@@ -21,7 +23,7 @@ defmodule Migrator.Translator.Utils do
       {:list, _, _} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:any, [], []}, []]}]}
       {:nonempty_list, _, [type]} -> {:nonempty_maybe_improper_list, [], [type |> parse, []]}
       {:nonempty_list, _, _} -> {:nonempty_maybe_improper_list, [], [{:any, [], []}, []]}
-      # {:nonempty_improper_list, [], [type1, type2]} -> {:nonempty_maybe_improper_list, [], [type1, type2]}
+      # {:nonempty_improper_list, _, [type1, type2]} -> {:nonempty_maybe_improper_list, [], [type1, type2]}
       {:maybe_improper_list, _, [type1, type2]} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:|, [], [type1, type2] |> Enum.map(&parse/1)}]}]}
       {:maybe_improper_list, _, _} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:any, [], []}, {:any, [], []}]}]}
       {:nonempty_maybe_improper_list, _, [type1, type2]} -> {:nonempty_maybe_improper_list, [], [type1, type2] |> Enum.map(&parse/1)}
@@ -84,8 +86,8 @@ defmodule Migrator.Translator.Utils do
     end
   end
 
-  def translate(type_node, guards \\ []) do
-    translate_fun = &translate(&1, guards)
+  def translate(type_node, type_vars \\ []) do
+    translate_fun = &translate(&1, type_vars)
     case type_node do
       # Type | Type
       {:|, _, [left, right]} -> {:union, {left |> translate_fun.(), right |> translate_fun.()}}
@@ -181,7 +183,10 @@ defmodule Migrator.Translator.Utils do
       atom when is_atom(atom) -> {:atom, atom}
 
       # Type variable from guard
-      {type, _, :__type_variable__} -> if guards[type], do: {:var, type}, else: {type, [], []} |> translate_fun.()  #|> IO.inspect(label: "TYPE VARIABLE")
+      # {type, _, :__type_variable__} -> if type_vars[type], do: {:guard_var, type}, else: {type, [], []} |> translate_fun.()  #|> IO.inspect(label: "TYPE VARIABLE")
+      {type, _, :__guard_type_variable__} -> {:guard_type_var, type}
+      # User-defined Type variable
+      {type, _, :__user_type_variable__} -> {:user_type_var, type}
 
       # basic types (any(), none(), atom(), pid(), port(), reference(), float(), integer(), tuple())
       {:any, _, _} -> :term
@@ -199,22 +204,26 @@ defmodule Migrator.Translator.Utils do
       {:non_neg_integer, _, _} -> {:interval, {0, :infty}}
       {:pos_integer, _, _} -> {:interval, {1, :infty}}
 
-      {:"::", _, [_type_var, type]} -> type |> translate_fun.()
+      {:"::", _, [user_type_var, type]} -> {user_type_var |> translate_fun.(), type |> translate_fun.()}
 
       # Remote module type (e.g., String.t())
       {{:., _, [{:__aliases__, _, modules}, type]}, _, elements} when is_list(elements) and elements != [] ->
-        {:remote_type, {{modules, type}, elements |> Enum.map(translate_fun)}}
+        {:remote_type, {{modules, type}, elements |> Enum.map(fn elem -> elem |> translate_fun.() end)}}
       {{:., _, [{:__aliases__, _, modules}, type]}, _, _} ->
         {:remote_type, {modules, type}}
 
       # User-defined type
       {user_type, _, elements} when is_list(elements) and elements != [] ->
-        {:user_type, {user_type, elements |> Enum.map(translate_fun)}}
+        {:user_type, {user_type, elements |> Enum.map(fn elem -> elem |> translate_fun.() end)}}
       {user_type, _, _} ->
         {:user_type, user_type}
 
       other -> other
     end
+  end
+
+  def get_basic_types() do
+    [:term, :none, :empty_list, :atom, :pid, :port, :reference, :float, :integer, :bitstring, :binary, :tuple, :open_map, :fun, :list]
   end
 
   def flatten_from_union_to_list(type) when is_tuple(type) or is_atom(type) do

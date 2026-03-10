@@ -12,22 +12,22 @@ defmodule Ex2 do
   @type key :: any
   @type value :: any
 
-  # @type get_fun(data) ::
-  #         (:get, data, (term -> term) -> new_data :: container)
+  @type get_fun(data) ::
+          (:get, data, (term -> term) -> new_data :: container)
 
-  # @type get_and_update_fun(data, current_value) ::
-  #         (:get_and_update, data, (term -> term) ->
-  #            {current_value, new_data :: container} | :pop)
+  @type get_and_update_fun(data, current_value) ::
+          (:get_and_update, data, (term -> term) ->
+             {current_value, new_data :: container} | :pop)
 
-  # @type access_fun(data, current_value) ::
-  #         get_fun(data) | get_and_update_fun(data, current_value)
+  @type access_fun(data, current_value) ::
+          get_fun(data) | get_and_update_fun(data, current_value)
 
-  # @spec get_and_update(data, key, (value | nil -> {current_value, new_value :: value} | :pop)) ::
-  #       {current_value, new_data :: data}
-  #     when current_value: var, data: container
-  # def get_and_update(x, y, z), do: x
+  @spec get_and_update(data, key, (value | nil -> {current_value, new_value :: value} | :pop)) ::
+        {current_value, new_data :: data}
+      when current_value: var, data: container
+  def get_and_update(x, y, z), do: x
 
-  @spec id_tuple({atom(), 1..10, binary()}) :: t when t: tuple()
+  @spec id_tuple({atom(), 1..10, binary()}) :: t when t: access_fun(data1 :: struct | map, current_value :: term)
   def id_tuple(tpl) when is_tuple(tpl), do: tpl
 
   # @spec id(Types.t()) :: Types.t_in_t

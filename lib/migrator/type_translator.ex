@@ -65,6 +65,11 @@ defmodule Migrator.TypeTranslator do
     type_var_marker = fn {module, type_defs} -> (
 
       type_defs = type_defs |> Enum.map(fn {user_defined_type, defining_type} ->
+        # user_defined_type_new = case user_defined_type do
+        #   {user_type, _, nil} -> {user_type, [arity: 0], :__user_type_variable__}
+        #   {user_type, _, elements} when is_list(elements) -> {user_type, [arity: length(elements)], :__user_type_variable__}
+        #   _ -> {user_defined_type, defining_type}
+        # end
         case user_defined_type do
           {user_type, _, elements} when is_list(elements) and length(elements) > 0 ->
             user_defined_type_new = {user_type, [], elements |> Enum.map(fn {type_var, _,  _} -> {type_var, [],  :__user_type_variable__} end)}
@@ -80,7 +85,7 @@ defmodule Migrator.TypeTranslator do
               end
             end)
             {user_defined_type_new, defining_type_new}
-          _ -> {user_defined_type, defining_type}
+          {user_type, _, _} -> {{user_type, [], []}, defining_type}
         end
       end)
 
@@ -112,7 +117,7 @@ defmodule Migrator.TypeTranslator do
           {:union, {type1, type2}} ->
             found_type1 = {type1, current_type_defs, whole_type_definition} |> replacing_fun.()
             found_type2 = {type2, current_type_defs, whole_type_definition} |> replacing_fun.()
-            {:union, found_type1, found_type2}
+            {:union, {found_type1, found_type2}}
 
           {:fun, {:all_arity, type_out}} ->
             {:fun, {:all_arity, {type_out, current_type_defs, whole_type_definition} |> replacing_fun.()}}
@@ -123,9 +128,9 @@ defmodule Migrator.TypeTranslator do
           {:tuple, types} ->
             {:tuple, types |> Enum.map(fn type -> {type, current_type_defs, whole_type_definition} |> replacing_fun.() end)}
           {:struct, {strt_name, fields}} ->
-            {:struct, {strt_name, {fields |> Enum.map(fn {type_left, type_right} -> {{type_left, current_type_defs, whole_type_definition} |> replacing_fun.(), {type_right, current_type_defs, whole_type_definition} |> replacing_fun.()} end)}}}
+            {:struct, {strt_name, fields |> Enum.map(fn {type_left, type_right} -> {{type_left, current_type_defs, whole_type_definition} |> replacing_fun.(), {type_right, current_type_defs, whole_type_definition} |> replacing_fun.()} end)}}
           {:open_map, fields} ->
-            {:open_map, {fields |> Enum.map(fn {type_left, type_right} -> {{type_left, current_type_defs, whole_type_definition} |> replacing_fun.(), {type_right, current_type_defs, whole_type_definition} |> replacing_fun.()} end)}}
+            {:open_map, fields |> Enum.map(fn {type_left, type_right} -> {{type_left, current_type_defs, whole_type_definition} |> replacing_fun.(), {type_right, current_type_defs, whole_type_definition} |> replacing_fun.()} end)}
           {:if_set, type} -> {:if_set, {type, current_type_defs, whole_type_definition} |> replacing_fun.()}
           {:gradual, type} -> {:gradual, {type, current_type_defs, whole_type_definition} |> replacing_fun.()}
 
