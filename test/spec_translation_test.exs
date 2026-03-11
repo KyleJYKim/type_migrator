@@ -1,4 +1,4 @@
-defmodule MigratorTest do
+defmodule SpectTranslationTest do
   @moduledoc false
 
   use ExUnit.Case, async: true

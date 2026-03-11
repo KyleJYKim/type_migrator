@@ -3,12 +3,13 @@ defmodule Migrator.TypeTranslator do
   import Migrator.Translator.Utils
 
   def process(paths) when is_list(paths) do
-    extracted_types = paths |> Enum.map(fn path ->
-      path |> File.read!
-      |> Code.string_to_quoted!
-      |> extract_type
-    end)
-    #|> Enum.reduce(%{}, fn elem, acc -> Map.merge(acc, elem |> IO.inspect(label: "### EXTRACT TYPE FUNCTION RESULT \n")) end)
+    extracted_types = paths
+      |> Enum.map(fn path ->
+        path |> File.read!
+        |> Code.string_to_quoted!
+        |> extract_type
+      end)
+      |> Enum.reduce(%{}, fn elem, acc -> Map.merge(acc, elem) end)
 
     translated_types = extracted_types
       |> mark_type_variable
@@ -54,14 +55,8 @@ defmodule Migrator.TypeTranslator do
 
   defp mark_type_variable(type_tree) do
 
-    type_var_marker = fn {module, type_defs} -> (
-
+    type_tree |> Enum.map(fn {module, type_defs} ->
       type_defs = type_defs |> Enum.map(fn {user_defined_type, defining_type} ->
-        # user_defined_type_new = case user_defined_type do
-        #   {user_type, _, nil} -> {user_type, [arity: 0], :__user_type_variable__}
-        #   {user_type, _, elements} when is_list(elements) -> {user_type, [arity: length(elements)], :__user_type_variable__}
-        #   _ -> {user_defined_type, defining_type}
-        # end
         case user_defined_type do
           {user_type, _, elements} when is_list(elements) and length(elements) > 0 ->
             user_defined_type_new = {user_type, [], elements |> Enum.map(fn {type_var, _,  _} -> {type_var, [],  :__user_type_variable__} end)}
@@ -80,11 +75,8 @@ defmodule Migrator.TypeTranslator do
           {user_type, _, _} -> {{user_type, [], []}, defining_type}
         end
       end)
-
       {module, type_defs}
-    )end
-
-    type_tree |> Enum.map(type_var_marker)
+    end)
   end
 
   defp parse_type(extracted_types) do
