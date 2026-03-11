@@ -6,6 +6,10 @@ defmodule Migrator.Translator.Utils do
     case type_node do
       {:"::", _, [{_user_def_type_var, _, _}, type]} -> type |> parse
 
+      {:<<>>, _, [{:"::", _, [_, _]}, {:"::", _, [_, {:*, _, [_, _]}]}]} -> type_node
+      {:<<>>, _, [{:"::", _, [_, {:*, _, [_, _]}]}]} -> type_node
+      {:<<>>, _, [{:"::", _, [_, _]}]} -> type_node
+
       {_, _, :__user_type_variable__} -> type_node  # User-defined Type Variables (pre-described from type_translation.mark_type_variable/1)
       {_, _, :__guard_type_variable__} -> type_node # Type Variables
 
@@ -160,7 +164,7 @@ defmodule Migrator.Translator.Utils do
       {:->, [], [[{:..., _, []}], type_out]} ->
         if (type_out |> translate_fun.()) == :term do
           :fun
-        else # Approx.: {:gradual, :fun}
+        else # Approx.: {:dynamic, :fun}
           # 0..255 |> Range.to_list()
           #   |> Enum.reduce([], fn n, acc -> [{:fun, {List.duplicate(:none, n), type_out |> translate_fun.()}} | acc] end)
           #   |> Enum.reduce(nil, fn t, acc -> if acc == nil, do: t, else: {:union, {t, acc}} end)
@@ -187,6 +191,9 @@ defmodule Migrator.Translator.Utils do
       {type, _, :__guard_type_variable__} -> {:guard_type_var, type}
       # User-defined Type variable
       {type, _, :__user_type_variable__} -> {:user_type_var, type}
+
+      # var
+      {:var, _, _} -> :dynamic
 
       # basic types (any(), none(), atom(), pid(), port(), reference(), float(), integer(), tuple())
       {:any, _, _} -> :term

@@ -15,28 +15,19 @@ defmodule Migrator.SpecTranslator do
 
   """
 
-  # alias Structure.TypespecInfo, as: TsInfo
   import Migrator.Translator.Utils
   #import Module.Types.Descr
 
-  #def process(path, %{quoted: print_quoted?, translated: print_translated?, assembled: print_assembled?}\\ {true, true, true}) do
   def process(path) when is_binary(path) do
     quoted = path
       |> File.read!
       |> Code.string_to_quoted!
 
-    IO.puts("\nQUOTED \n")
-    quoted |> IO.inspect()
-
     quoted
       |> extract_spec()         #|> IO.inspect(label: "### EXTRACT SPEC FUNCTION RESULT \n")
       |> mark_type_variable()
-      |> parse_spec()           |> Enum.map(fn x -> x |> IO.inspect(label: "\n ### PARSE SPEC FUNCTION RESULT \n") end)
-      |> translate_spec()       |> Enum.map(fn x -> x |> IO.inspect(label: "\n ### TRANSLATE SPEC FUNCTION RESULT \n") end)
-
-    # IO.puts("\nTRANSLATED \n")
-    # translated |> Enum.map(fn x -> x |> IO.inspect() end)
-
+      |> parse_spec()           #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### PARSE SPEC FUNCTION RESULT \n") end)
+      |> translate_spec()       #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### TRANSLATE SPEC FUNCTION RESULT \n") end)
   end
 
 

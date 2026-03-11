@@ -7,24 +7,16 @@ defmodule Migrator.TypeTranslator do
       path |> File.read!
       |> Code.string_to_quoted!
       |> extract_type
-
-      # |> Enum.reduce(%{}, fn {x, y}, acc -> # for debugging
-      #   %{x => y} |> IO.inspect(label: "### EXTRACT TYPE FUNCTION RESULT \n")
-      #   acc |> Map.put(x, y)
-      # end)
     end)
-    |> Enum.reduce(%{}, fn elem, acc -> Map.merge(acc, elem |> IO.inspect(label: "### EXTRACT TYPE FUNCTION RESULT \n")) end)
-
-    # IO.puts("\nQUOTED \n")
-    # quoted |> IO.inspect()
+    #|> Enum.reduce(%{}, fn elem, acc -> Map.merge(acc, elem |> IO.inspect(label: "### EXTRACT TYPE FUNCTION RESULT \n")) end)
 
     translated_types = extracted_types
       |> mark_type_variable
-      |> parse_type()           |> Enum.reduce(%{}, fn {k, v}, acc -> Map.merge(acc, %{k => v} |> IO.inspect(label: "\n ### PARSE TYPE FUNCTION RESULT \n")) end)
+      |> parse_type()           #|> Enum.reduce(%{}, fn {k, v}, acc -> Map.merge(acc, %{k => v} |> IO.inspect(label: "\n ### PARSE TYPE FUNCTION RESULT \n")) end)
       |> translate_type()
 
-      |> Enum.reduce(%{}, fn {k, v}, acc -> v |> Enum.map(fn x -> %{k => x} |> IO.inspect(label: "\n ### TRANSLATE TYPE FUNCTION RESULT \n") end)
-        Map.merge(acc, %{k => v}) end)
+      # |> Enum.reduce(%{}, fn {k, v}, acc -> v |> Enum.map(fn x -> %{k => x} |> IO.inspect(label: "\n ### TRANSLATE TYPE FUNCTION RESULT \n") end)
+      #   Map.merge(acc, %{k => v}) end)
 
     translated_types
   end
@@ -132,7 +124,7 @@ defmodule Migrator.TypeTranslator do
           {:open_map, fields} ->
             {:open_map, fields |> Enum.map(fn {type_left, type_right} -> {{type_left, current_type_defs, whole_type_definition} |> replacing_fun.(), {type_right, current_type_defs, whole_type_definition} |> replacing_fun.()} end)}
           {:if_set, type} -> {:if_set, {type, current_type_defs, whole_type_definition} |> replacing_fun.()}
-          {:gradual, type} -> {:gradual, {type, current_type_defs, whole_type_definition} |> replacing_fun.()}
+          {:dynamic, type} -> {:dynamic, {type, current_type_defs, whole_type_definition} |> replacing_fun.()}
 
           {:remote_type, {modules, def_type}} ->
             module_to_find = modules |> Enum.reduce("", fn m, acc -> if acc == "", do: "#{m}", else: "#{acc}.#{m}" end)

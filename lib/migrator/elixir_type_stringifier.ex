@@ -4,23 +4,17 @@ defmodule Migrator.ElixirTypeStringifier do
 
   def process(translated_specs) when is_list(translated_specs) do
     translated_specs
-      |> group_by_notation      |> Enum.map(fn x -> x |> IO.inspect(label: "\n ### GROUPBY SPEC FUNCTION RESULT \n") end)
-      |> rename_type_variables  |> Enum.map(fn x -> x |> IO.inspect(label: "\n ### RENAME SPEC FUNCTION RESULT \n") end)
-      |> assemble_elixir_type   |> Enum.map(fn x -> x |> IO.inspect(label: "\n ### ASSEMBLE SPEC FUNCTION RESULT \n") end)
-
-    # IO.puts("\nASSEMBLED \n")
-    # assembled |> Enum.map(fn x -> x |> IO.inspect() end)
+      |> group_by_notation      #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### GROUPBY SPEC FUNCTION RESULT \n") end)
+      |> rename_type_variables  #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### RENAME SPEC FUNCTION RESULT \n") end)
+      |> assemble_elixir_type   #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### ASSEMBLE SPEC FUNCTION RESULT \n") end)
   end
 
   def process(translated_specs, user_types) when is_list(translated_specs) and is_map(user_types) do
     translated_specs
       |> replace_user_types(user_types)
-      |> group_by_notation      |> Enum.map(fn x -> x |> IO.inspect(label: "\n ### GROUPBY SPEC FUNCTION RESULT \n") end)
-      |> rename_type_variables  |> Enum.map(fn x -> x |> IO.inspect(label: "\n ### RENAME SPEC FUNCTION RESULT \n") end)
-      |> assemble_elixir_type   |> Enum.map(fn x -> x |> IO.inspect(label: "\n ### ASSEMBLE SPEC FUNCTION RESULT \n") end)
-
-    # IO.puts("\nASSEMBLED \n")
-    # assembled |> Enum.map(fn x -> x |> IO.inspect() end)
+      |> group_by_notation      #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### GROUPBY SPEC FUNCTION RESULT \n") end)
+      |> rename_type_variables  #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### RENAME SPEC FUNCTION RESULT \n") end)
+      |> assemble_elixir_type   #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### ASSEMBLE SPEC FUNCTION RESULT \n") end)
   end
 
   defp replace_user_type_variables(elements_zipped, definition) do
@@ -44,7 +38,7 @@ defmodule Migrator.ElixirTypeStringifier do
           {:open_map, fields} ->
             {:open_map, fields |> Enum.map(fn {type_left, type_right} -> {type_left |> search_fun.(), type_right |> search_fun.()} end)}
           {:if_set, type} -> {:if_set, type |> search_fun.()}
-          {:gradual, type} -> {:gradual, type |> search_fun.()}
+          {:dynamic, type} -> {:dynamic, type |> search_fun.()}
           {:user_type_var, type} -> if type == user_type_var, do: defined_type, else: type_node
           _ -> type_node
         end
@@ -73,7 +67,7 @@ defmodule Migrator.ElixirTypeStringifier do
         {:open_map, fields} ->
           {:open_map, fields |> Enum.map(fn {type_left, type_right} -> {type_left |> replacing_fun.(), type_right |> replacing_fun.()} end)}
         {:if_set, type} -> {:if_set, type |> replacing_fun.()}
-        {:gradual, type} -> {:gradual, type |> replacing_fun.()}
+        {:dynamic, type} -> {:dynamic, type |> replacing_fun.()}
         # {:interval, {digit1, digit2}} -> "#{digit1}..#{digit2}"
         # {:atom, nil} -> "nil"
         # {:atom, true} -> "true"
@@ -245,7 +239,6 @@ defmodule Migrator.ElixirTypeStringifier do
               "%{" <> fields_str <> "}"
             :... -> "..."
             {:if_set, type} -> "if_set(" <> "#{type |> placing_fun.()}" <> ")"
-            {:gradual, type} -> "dynamic(" <> "#{type |> placing_fun.()}" <> ")"
             {:interval, {digit1, digit2}} -> "#{digit1}..#{digit2}"
             {:atom, nil} -> "nil"
             {:atom, true} -> "true"
@@ -271,7 +264,9 @@ defmodule Migrator.ElixirTypeStringifier do
               "#{user_type |> placing_fun.()}(#{element_full})"
             {:user_type, user_type} ->
               "#{user_type |> placing_fun.()}"
-            {:def_not_found, type} -> "dynamic()"
+            {:dynamic, type} -> "dynamic(" <> "#{type |> placing_fun.()}" <> ")"
+            :dynamic -> "dynamic()"
+            {:def_not_found, _type} -> "dynamic()"
             _ -> if type in get_basic_types(), do: "#{type}()", else: "#{type}"
           end
         end

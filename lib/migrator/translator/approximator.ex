@@ -13,7 +13,7 @@ defmodule Migrator.Translator.Approximator do
         :empty_list -> {:list, [left_org]}
         {:non_empty_list, _} -> {:list, [left_org]}
         {:fun, _} -> {:fun, [left_org]}
-        {:gradual, :fun} -> {:fun, [left_org]}
+        {:dynamic, :fun} -> {:fun, [left_org]}
         {:interval, _} -> {:integer, [left_org]}
         {:atom, singleton} -> {:atom, [singleton]}
         {:atom_opt, _} -> {:atom, [left_org]}
@@ -185,7 +185,7 @@ defmodule Migrator.Translator.Approximator do
           {:fun, {:fun, _}} -> {(acc_new_types |> List.delete(t2)) ++ [:fun], false or acc_new_subtype?}
           {{:fun, {ts1_in, t1_out}}, {:fun, {ts2_in, t2_out}}} -> {unified_type, subtype?} = {:fun, {{ts1_in, t1_out}, {ts2_in, t2_out}}} |> merge_types()
             {(acc_new_types |> List.delete(t2)) ++ unified_type, subtype? or acc_new_subtype?}
-          #{:gradual, :fun} -> {:fun, [left_org]}
+          #{:dynamic, :fun} -> {:fun, [left_org]}
 
           {{:open_map, fields1}, {:open_map, fields2}} -> {unified_type, subtype?} = {:open_map, {fields1, fields2}} |> merge_types()
             {(acc_new_types |> List.delete(t2)) ++ unified_type, subtype? or acc_new_subtype?}
