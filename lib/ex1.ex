@@ -1,5 +1,6 @@
 defmodule Ex1 do
   import Ex2
+  alias String, as: Str
 
   @type t_atom :: atom()
   @type t_atom(a) :: {a :: :a, a}
@@ -132,6 +133,9 @@ defmodule Ex1 do
   @spec id_type3(t_atom(a :: :b)) :: t_atom(a :: :b)
   def id_type3(x), do: x
 
+  @spec id_type4(Str.t()) :: Str.t()
+  def id_type4(x), do: x
+
   defmodule In do
     # @spec id_exhaustive() :: any()
     # def id_exhaustive(), do: Ex1.id_exhaustive(:a)
@@ -191,6 +195,8 @@ defmodule Ex1 do
     def id_type2(), do: Ex1.id_type2(fn :get, x, f -> x |> f.() end)
 
     def id_type3(), do: Ex1.id_type3({:a, :b})
+
+    def id_type4(), do: Ex1.id_type4(:"string")
 
   end
 

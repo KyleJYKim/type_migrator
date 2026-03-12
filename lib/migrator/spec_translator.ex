@@ -47,7 +47,7 @@ defmodule Migrator.SpecTranslator do
         #   module_block |> Enum.reduce(acc, fn x, acc -> extractor.(x, name, acc, extractor) end)
 
         {:@, [line: line_num], [{:spec, _, [{:"::", _, [{fun_name, _, inputs}, output]}]}]} ->
-          acc ++ [{line_num, {"#{module_name_acc}", "#{fun_name}"}, inputs, output, nil}]
+          acc ++ [{line_num, {"#{module_name_acc}", "#{fun_name}"}, inputs, output, nil} |> dbg]
 
         {:@, [line: line_num], [{:spec, _, [{:when, _, [{:"::", _, [{fun_name, _, inputs}, output]}, guards]}]}]} ->
           acc ++ [{line_num, {"#{module_name_acc}", "#{fun_name}"}, inputs, output, guards}]
