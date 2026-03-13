@@ -10,13 +10,11 @@ defmodule Migrator.SpecTranslator do
   5. Assemble Elixir Types
 
   Example in iex:
-    import Migrator.Translator
     "lib/ex2.ex" |> process
 
   """
 
   import Migrator.Translator.Utils
-  #import Module.Types.Descr
 
   def process(path) when is_binary(path) do
     quoted = path

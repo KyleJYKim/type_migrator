@@ -1,23 +1,23 @@
-defmodule SpectTranslationTypeReplacementTest do
+defmodule SpecTranslationTypeReplacementTest do
 
   use ExUnit.Case, async: true
   doctest Migrator
   alias Migrator.SpecTranslator, as: SpecTr
   alias Migrator.TypeTranslator, as: TypeTr
-  alias Migrator.ElixirTypeStringifier, as: ElixirTypeStr
+  alias Migrator.ElixirTypeConstructor, as: TypeConstr
 
   @user_def_types "example/user-def types/"
 
   defp translate(path) do
     path
       |> SpecTr.process
-      |> ElixirTypeStr.process([path] |> TypeTr.process)
+      |> TypeConstr.stringify([path] |> TypeTr.process)
   end
 
   defp translate(spec_path, type_path) do
     spec_path
       |> SpecTr.process
-      |> ElixirTypeStr.process([type_path] |> TypeTr.process)
+      |> TypeConstr.stringify([type_path] |> TypeTr.process)
   end
 
   describe "Translation with Replacement of User-defined types" do

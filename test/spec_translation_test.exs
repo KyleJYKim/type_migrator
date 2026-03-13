@@ -1,10 +1,10 @@
-defmodule SpectTranslationTest do
+defmodule SpecTranslationTest do
   @moduledoc false
 
   use ExUnit.Case, async: true
   doctest Migrator
   alias Migrator.SpecTranslator, as: SpecTr
-  alias Migrator.ElixirTypeStringifier, as: ElixirTypeStr
+  alias Migrator.ElixirTypeConstructor, as: TypeConstr
 
   @basic_types "example/basic types/"
   @field_types "example/field types/"
@@ -13,7 +13,7 @@ defmodule SpectTranslationTest do
   defp translate(path) do
     path
       |> SpecTr.process
-      |> ElixirTypeStr.process()
+      |> TypeConstr.stringify()
   end
 
   describe "Translation of Basic Types" do

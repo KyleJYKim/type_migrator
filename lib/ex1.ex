@@ -134,7 +134,7 @@ defmodule Ex1 do
   def id_type3(x), do: x
 
   @spec id_type4(Str.t()) :: Str.t()
-  def id_type4(x), do: x
+  defp id_type4(x), do: x
 
   defmodule In do
     # @spec id_exhaustive() :: any()
