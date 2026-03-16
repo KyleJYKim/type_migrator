@@ -134,7 +134,10 @@ defmodule Ex1 do
   def id_type3(x), do: x
 
   @spec id_type4(Str.t()) :: Str.t()
-  defp id_type4(x), do: x
+  def id_type4(x), do: x
+
+  @spec id_type5({atom()}) :: {atom()}
+  def id_type5(x), do: x
 
   defmodule In do
     # @spec id_exhaustive() :: any()
@@ -196,7 +199,9 @@ defmodule Ex1 do
 
     def id_type3(), do: Ex1.id_type3({:a, :b})
 
-    def id_type4(), do: Ex1.id_type4(:"string")
+    def id_type4(), do: Ex1.id_type4("string")
+
+    def id_type5(), do: Ex1.id_type5({:a})
 
   end
 

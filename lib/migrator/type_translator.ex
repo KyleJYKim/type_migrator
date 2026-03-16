@@ -31,7 +31,7 @@ defmodule Migrator.TypeTranslator do
           module = if module == "", do: "#{module_name}", else: "#{module}.#{module_name}"
           {module_ast, module, acc} |> extractor_fun.()
 
-        {:__block__, [], block} ->
+        {:__block__, _, block} ->
           block |> Enum.reduce(acc, fn block_ast, acc -> {block_ast, module, acc} |> extractor_fun.() end)
 
         {:@, _, [{:type, _, [{:"::", _, [user_defined_type, defining_type]}]}]} ->

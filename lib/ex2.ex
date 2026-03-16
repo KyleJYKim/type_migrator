@@ -22,19 +22,16 @@ defmodule Ex2 do
   @type access_fun(data, current_value) ::
           get_fun(data) | get_and_update_fun(data, current_value)
 
-  # @spec get_and_update(data, key, (value | nil -> {current_value, new_value :: value} | :pop)) ::
-  #       {current_value, new_data :: data}
-  #     when current_value: var, data: container
-  # def get_and_update(x, y, z), do: x
+  @spec get_and_update(data, key, (value | nil -> {current_value, new_value :: value} | :pop)) ::
+        {current_value, new_data :: data}
+      when current_value: var, data: container
+  def get_and_update(x, y, z), do: x
 
-  # @spec id_tuple({atom(), 1..10, binary()}) :: t when t: access_fun(data1 :: struct | map, current_value :: term)
-  # def id_tuple(tpl) when is_tuple(tpl), do: tpl
+  @spec id_tuple({atom(), 1..10, binary()}) :: t when t: access_fun(data1 :: struct | map, current_value :: term)
+  def id_tuple(tpl) when is_tuple(tpl), do: tpl
 
-  @spec id(<<_::8>>) :: <<_::8>>
-  def id(a) when is_binary(a), do: a
-
-  # @spec id(Types.t()) :: Types.t_in_t
-  # def id(x), do: x
+  @spec id(Types.t()) :: Types.t_in_t
+  def id(x), do: x
 
   # @spec record_keytype_structs3(%{struct() => integer(), %Types{integer: integer(), float: float()} => float()}) :: map()
   # def record_keytype_structs3(x), do: x
@@ -60,10 +57,10 @@ defmodule Ex2 do
   # @spec record_keytype_functions3(%{fun() => any(), (number() -> number()) => number()}) :: map()
   # def record_keytype_functions3(x), do: x
 
-  # @spec record_keytype_functions2(%{(integer() -> integer()) => integer(), (number() -> integer()) => number()}) :: map()
+  # @spec record_keytype_functions2(%{(integer() -> integer()) => atom(), (number() -> integer()) => binary()}) :: map()
   # def record_keytype_functions2(x), do: x
 
-  # @spec record_keytype_functions1(%{(number() -> integer()) => number(), (integer() -> integer()) => integer()}) :: map()
+  # @spec record_keytype_functions1(%{(number() -> integer()) => atom(), (integer() -> integer()) => binary()}) :: map()
   # def record_keytype_functions1(x), do: x
 
   # @spec record_keytype_lists1(%{list(integer() | atom() | float() | binary()) => atom(), list(identifier()) => integer()}) :: map()
@@ -78,7 +75,7 @@ defmodule Ex2 do
   # @spec record_keytype_integers2(%{neg_integer() => integer() | float() | atom(), optional(-10..-1) => float}) :: map()
   # def record_keytype_integers2(x), do: x
 
-  # @spec record_keytype_integers1(%{optional(20..22) => integer(), neg_integer() => integer(), optional(1..2 | 3..4 | 5..9 | 11..13 | 11..14) => integer()}) :: map()
+  # @spec record_keytype_integers1(%{optional(20..22) => integer(), neg_integer() => float(), optional(1..2 | 3..4 | 5..9 | 11..13 | 11..14) => atom()}) :: map()
   # def record_keytype_integers1(x), do: x
 
   # @spec record_keytype_integers2(%{optional(1..10) => integer(), optional(9..10) => float()}) :: map()
@@ -99,7 +96,8 @@ defmodule Ex2 do
   # @spec id1(:a) :: :a
   # def id1(x), do: x
 
-  # @spec id2(atom()) :: v when v: atom()
+  # @spec id2(integer()) :: list(v) when v: integer()
+  # @spec id2(float()) :: list(v) when v: float()
   # def id2(x), do: x
 
   # @spec id3(%Types{integer: integer(), float: float()}) :: struct()

@@ -4,8 +4,9 @@ defmodule TypeMigrator.MixProject do
   def project do
     [
       app: :type_migrator,
-      version: "0.1.0",
-      elixir: "~> 1.18",
+      #version: "0.1.0",
+      version: System.version(),
+      #elixir: "~> 1.18",
       start_permanent: Mix.env() == :prod,
       deps: deps()
     ]

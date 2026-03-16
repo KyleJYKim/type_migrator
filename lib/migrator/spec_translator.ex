@@ -25,7 +25,7 @@ defmodule Migrator.SpecTranslator do
       |> extract_spec()         #|> IO.inspect(label: "### EXTRACT SPEC FUNCTION RESULT \n")
       |> mark_type_variable()
       |> parse_spec()           #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### PARSE SPEC FUNCTION RESULT \n") end)
-      |> translate_spec()       #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### TRANSLATE SPEC FUNCTION RESULT \n") end)
+      |> translate_spec()      #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### TRANSLATE SPEC FUNCTION RESULT \n") end)
   end
 
 
@@ -37,7 +37,7 @@ defmodule Migrator.SpecTranslator do
           module_name_acc = if module_name_acc == "", do: "#{module_name}", else: "#{module_name_acc}.#{module_name}"
           module_ast |> extractor.(module_name_acc, acc, extractor)
 
-        {:__block__, [], block} ->
+        {:__block__, _, block} ->
           block |> Enum.reduce(acc, fn block_ast, acc -> block_ast |> extractor.(module_name_acc, acc, extractor) end)
 
         # {:defmodule, _, [{:__aliases__, _, [module_name]}, [do: {:__block__, [], module_block}]]} ->
@@ -45,7 +45,7 @@ defmodule Migrator.SpecTranslator do
         #   module_block |> Enum.reduce(acc, fn x, acc -> extractor.(x, name, acc, extractor) end)
 
         {:@, [line: line_num], [{:spec, _, [{:"::", _, [{fun_name, _, inputs}, output]}]}]} ->
-          acc ++ [{line_num, {"#{module_name_acc}", "#{fun_name}"}, inputs, output, nil} |> dbg]
+          acc ++ [{line_num, {"#{module_name_acc}", "#{fun_name}"}, inputs, output, nil}]
 
         {:@, [line: line_num], [{:spec, _, [{:when, _, [{:"::", _, [{fun_name, _, inputs}, output]}, guards]}]}]} ->
           acc ++ [{line_num, {"#{module_name_acc}", "#{fun_name}"}, inputs, output, guards}]
