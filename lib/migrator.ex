@@ -15,48 +15,38 @@ defmodule Migrator do
     |> convert_typespecs_in_string()
   end
 
-  def convert_typespecs_in_string(paths) when is_list(paths) do
+  def convert_typespecs_in_string({spec_path, type_paths}) when is_binary(spec_path) and is_list(type_paths) do
 
     try do
 
-      {_time_type_translation, translated_types} = :timer.tc(&TypeTr.process/1, [paths])
+      {_time_type_translation, translated_types} = :timer.tc(&TypeTr.process/1, [type_paths])
 
-      {_time_spec_translations, translated_specs} = paths
-        |> Enum.map(fn path -> :timer.tc(&SpecTr.process/1, [path]) end)
-        |> Enum.unzip()
+      {_time_spec_translations, translated_spec} = :timer.tc(&SpecTr.process/1, [spec_path])
 
-      {_time_stringification, stringified_elixir_types} = translated_specs
-        |> Enum.map(fn translated_spec -> :timer.tc(&TypeConstr.stringify/1, [translated_spec]) end)
-        |> Enum.unzip()
+      {_time_stringification, stringified_elixir_types} = :timer.tc(&TypeConstr.stringify/1, [translated_spec])
 
-      {_time_stringification_type_replacing, stringified_elixir_types_type_replacing} = translated_specs
-        |> Enum.map(fn translated_spec -> :timer.tc(&TypeConstr.stringify/2, [translated_spec, translated_types]) end)
-        |> Enum.unzip()
+      {_time_stringification_with_replacement, stringified_elixir_types_with_replacement} = :timer.tc(&TypeConstr.stringify/2, [translated_spec, translated_types])
 
       #handle_output(stringified_annotations, time)
       # IO.puts("Translation Time Elapsed: #{time_translation}")
       # IO.puts("Stringification Time Elapsed: #{time_stringification}")
 
       IO.puts("Translation without User-defined Type Replacement")
-      stringified_elixir_types |> Enum.map(fn specs -> specs |>
-        Enum.map(fn {line_nums, {module_name, fun_name}, full_expression} ->
-          lines = line_nums |> Enum.reduce("", fn num, acc -> if acc == "", do: num |> Integer.to_string(), else: "#{acc}, #{num |> Integer.to_string()}" end)
-          name = "#{module_name}.#{fun_name}"
-          "Line Number: " <> lines |> IO.puts()
-          "Function Name: " <> name |> IO.puts()
-          full_expression |> IO.puts()
-        end)
+      stringified_elixir_types |> Enum.map(fn {line_nums, {module_name, fun_name}, full_expression} ->
+        lines = line_nums |> Enum.reduce("", fn num, acc -> if acc == "", do: num |> Integer.to_string(), else: "#{acc}, #{num |> Integer.to_string()}" end)
+        name = "#{module_name}.#{fun_name}"
+        "Line Number: " <> lines |> IO.puts()
+        "Function Name: " <> name |> IO.puts()
+        full_expression |> IO.puts()
       end)
 
       IO.puts("Translation with User-defined Type Replacement")
-      stringified_elixir_types_type_replacing |> Enum.map(fn specs -> specs |>
-        Enum.map(fn {line_nums, {module_name, fun_name}, full_expression} ->
-          lines = line_nums |> Enum.reduce("", fn num, acc -> if acc == "", do: num |> Integer.to_string(), else: "#{acc}, #{num |> Integer.to_string()}" end)
-          name = "#{module_name}.#{fun_name}"
-          "Line Number: " <> lines |> IO.puts()
-          "Function Name: " <> name |> IO.puts()
-          full_expression |> IO.puts()
-        end)
+      stringified_elixir_types_with_replacement |> Enum.map(fn {line_nums, {module_name, fun_name}, full_expression} ->
+        lines = line_nums |> Enum.reduce("", fn num, acc -> if acc == "", do: num |> Integer.to_string(), else: "#{acc}, #{num |> Integer.to_string()}" end)
+        name = "#{module_name}.#{fun_name}"
+        "Line Number: " <> lines |> IO.puts()
+        "Function Name: " <> name |> IO.puts()
+        full_expression |> IO.puts()
       end)
 
     catch
@@ -67,34 +57,29 @@ defmodule Migrator do
     end
   end
 
-  def convert_typespecs_in_descr(paths) when is_list(paths) do
+  def convert_typespecs_in_descr({spec_path, type_paths}) when is_binary(spec_path) and is_list(type_paths) do
 
     try do
 
-      {_time_type_translation, translated_types} = :timer.tc(&TypeTr.process/1, [paths])
+      {_time_type_translation, translated_types} = :timer.tc(&TypeTr.process/1, [type_paths])
 
-      {_time_spec_translations, translated_specs} = paths
-        |> Enum.map(fn path -> :timer.tc(&SpecTr.process/1, [path]) end)
-        |> Enum.unzip()
+      {_time_spec_translations, translated_spec} = :timer.tc(&SpecTr.process/1, [spec_path])
 
-      {_time_stringification_type_replacing, descrized_elixir_types_type_replacing} = translated_specs
-        |> Enum.map(fn translated_spec -> :timer.tc(&TypeConstr.descrize/2, [translated_spec, translated_types]) end)
-        |> Enum.unzip()
+      {_time_stringification_type_replacing, descrized_elixir_types} = :timer.tc(&TypeConstr.descrize/2, [translated_spec, translated_types])
 
       #handle_output(stringified_annotations, time)
       # IO.puts("Translation Time Elapsed: #{time_translation}")
       # IO.puts("Stringification Time Elapsed: #{time_stringification}")
 
       IO.puts("Translation without User-defined Type Replacement")
-      descrized_elixir_types_type_replacing |> Enum.map(fn specs -> specs |>
-        Enum.map(fn {line_nums, {module_name, fun_name}, full_expression} ->
-          lines = line_nums |> Enum.reduce("", fn num, acc -> if acc == "", do: num |> Integer.to_string(), else: "#{acc}, #{num |> Integer.to_string()}" end)
-          name = "#{module_name}.#{fun_name}"
-          "Line Number: " <> lines |> IO.puts()
-          "Function Name: " <> name |> IO.puts()
-          full_expression |> Descr.to_quoted_string |> IO.puts()
-        end)
+      descrized_elixir_types |> Enum.map(fn {line_nums, {module_name, fun_name}, full_expression} ->
+        lines = line_nums |> Enum.reduce("", fn num, acc -> if acc == "", do: num |> Integer.to_string(), else: "#{acc}, #{num |> Integer.to_string()}" end)
+        name = "#{module_name}.#{fun_name}"
+        "Line Number: " <> lines |> IO.puts()
+        "Function Name: " <> name |> IO.puts()
+        full_expression |> Descr.to_quoted_string |> IO.puts()
       end)
+
 
     catch
       {:CompileError, msg} ->

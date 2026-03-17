@@ -22,16 +22,22 @@ defmodule Ex2 do
   @type access_fun(data, current_value) ::
           get_fun(data) | get_and_update_fun(data, current_value)
 
-  @spec get_and_update(data, key, (value | nil -> {current_value, new_value :: value} | :pop)) ::
-        {current_value, new_data :: data}
-      when current_value: var, data: container
-  def get_and_update(x, y, z), do: x
+  # @spec get_and_update(data, key, (value | nil -> {current_value, new_value :: value} | :pop)) ::
+  #       {current_value, new_data :: data}
+  #     when current_value: var, data: container
+  # def get_and_update(x, y, z), do: x
 
-  @spec id_tuple({atom(), 1..10, binary()}) :: t when t: access_fun(data1 :: struct | map, current_value :: term)
-  def id_tuple(tpl) when is_tuple(tpl), do: tpl
+  # @spec id_tuple({atom(), 1..10, binary()}) :: t when t: access_fun(data1 :: struct | map, current_value :: term)
+  # def id_tuple(tpl) when is_tuple(tpl), do: tpl
 
-  @spec id(Types.t()) :: Types.t_in_t
-  def id(x), do: x
+  # @spec id(Types.t()) :: Types.t_in_t
+  # def id(x), do: x
+
+  @spec record_keytype_user_type(%{String.t() => String.t()}) :: any()
+  def record_keytype_user_type(x), do: x
+
+  # @spec record_keytype_map(%{map() => :a}) :: map()
+  # def record_keytype_map(x), do: x
 
   # @spec record_keytype_structs3(%{struct() => integer(), %Types{integer: integer(), float: float()} => float()}) :: map()
   # def record_keytype_structs3(x), do: x
