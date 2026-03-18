@@ -1,19 +1,26 @@
 defmodule Migrator do
   @moduledoc """
-    1. Take a file with TypesSpec and parse it into AST.
-    2. Translate the AST to Elixir Type.
-    3. Rewrite the input file and produce a new file with Elixir Type.
+    Translate TypeSpecs to Elixir Types and produce it in either string form or Descr.
+
+    Input: {spec_file_path, user_type_paths}
+    output: {line_numbers, function_name, full_annotation}
+
+    Example:
+      For stringification:
+        {"lib/ex2.ex", ["../elixir/lib/elixir/lib/string.ex"]} |> Migrator.convert_typespecs_in_string()
+      For descrization:
+        {"lib/ex2.ex", ["../elixir/lib/elixir/lib/string.ex"]} |> Migrator.convert_typespecs_in_descr()
   """
   alias Module.Types.Descr
   alias Migrator.SpecTranslator, as: SpecTr
   alias Migrator.TypeTranslator, as: TypeTr
   alias Migrator.ElixirTypeConstructor, as: TypeConstr
 
-  def main(args) do
-    args
-    |> List.first()
-    |> convert_typespecs_in_string()
-  end
+  # def main(args) do
+  #   args
+  #   |> List.first()
+  #   |> convert_typespecs_in_string()
+  # end
 
   def convert_typespecs_in_string({spec_path, type_paths}) when is_binary(spec_path) and is_list(type_paths) do
 
