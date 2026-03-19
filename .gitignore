@@ -26,6 +26,8 @@ type_migrator-*.tar
 
 /.DS_Store
 
+/elixir
+
 /translation.aux
 /translation.fdb_latexmk
 /translation.fls

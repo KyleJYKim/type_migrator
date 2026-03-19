@@ -1,5 +1,6 @@
 defmodule Ex2 do
 
+
   defmodule Types do
     defstruct [:atom, :binary, integer: 0, float: 0.0]
     @type t :: %Types{integer: integer(), float: float(), atom: atom(), binary: binary()}
@@ -30,8 +31,8 @@ defmodule Ex2 do
   # @spec id_tuple({atom(), 1..10, binary()}) :: t when t: access_fun(data1 :: struct | map, current_value :: term)
   # def id_tuple(tpl) when is_tuple(tpl), do: tpl
 
-  # @spec id(Types.t()) :: Types.t_in_t
-  # def id(x), do: x
+#   @spec id(Types.t()) :: Types.t_in_t
+#   def id(x), do: x
 
   @spec record_keytype_user_type(%{String.t() => String.t()}) :: any()
   def record_keytype_user_type(x), do: x
