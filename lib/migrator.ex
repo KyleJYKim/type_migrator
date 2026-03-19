@@ -70,12 +70,20 @@ defmodule Migrator do
 
       :descr_assert ->
         elixir_types = convert_in_descr(:function_form, spec_path, type_paths)
-        insert_expression(spec_path, spec_path <> ".assert.exs", elixir_types, "@assert_type")
-
+        spec_path_list = spec_path
+          |> String.split(".")
+          |> Enum.reverse()
+          |> tl()
+        output_path = spec_path_list
+          |> List.replace_at(0, hd(spec_path_list) <> "_type_assert_test.exs")
+          |> Enum.reverse()
+          |> Enum.reduce("", fn x, acc -> if acc == "", do: x, else: acc <> "." <> x end)
+        insert_expression(spec_path, output_path, elixir_types, "@assert_type")
+        Enum.at
       _ ->
         IO.puts("Unknown mode: #{mode}")
     end
-  end
+end
 
   def convert_with_direct_translation(spec_path) when is_binary(spec_path) do
     try do
@@ -203,14 +211,34 @@ defmodule Migrator do
     end
   end
 
-  defp insert_expression(input_path, output_path, elixir_types, prefix) do
+  # Comment it until the intersection issue is fixed - 19th March 2026
+  # defp insert_expression(input_path, output_path, elixir_types, prefix \\ "") do
+  #   try do
+  #     content_lines = input_path |> File.read!() |> String.split("\n")
+
+  #     new_content_lines = elixir_types
+  #       # |> Enum.sort_by(fn {line, _} -> -line end)  # insert from bottom to avoid shifting
+  #       |> Enum.reverse() # insert from bottom to avoid shifting
+  #       |> Enum.reduce(content_lines, fn {line_nums, {_module_name, _fun_name}, full_expression}, acc ->
+  #         line_num = List.last(line_nums)
+  #         {padding, _} = acc |> Enum.at(line_num - 1) |> String.to_charlist() |> Enum.reduce({"", true}, fn char, {pad, pad?} -> if pad? and char == 32, do: {pad <> " ", true}, else: {pad, false} end)
+  #         line_content = padding <> if prefix == "", do: full_expression, else: prefix <> " " <> full_expression
+  #         acc |> List.insert_at(line_num, line_content)
+  #       end)
+
+  #     output_path |> File.write(new_content_lines |> Enum.join("\n"))
+  #   catch
+  #     {:CompileError, msg} -> IO.puts("CompileError:\n#{msg}")
+  #   end
+  # end
+
+  defp insert_expression(input_path, output_path, elixir_types, prefix \\ "") do
     try do
       content_lines = input_path |> File.read!() |> String.split("\n")
 
       new_content_lines = elixir_types
-        # |> Enum.sort_by(fn {line, _} -> -line end)  # insert from bottom to avoid shifting
-        |> Enum.reverse() # insert from bottom to avoid shifting
-        |> Enum.reduce(content_lines, fn {line_nums, {_module_name, _fun_name}, full_expression}, acc ->
+        |> Enum.reverse()             # insert from bottom to avoid shifting
+        |> Enum.reduce(content_lines, fn {line_nums, {_module_name, fun_name}, full_expression}, acc ->
           line_num = List.last(line_nums)
           {padding, _} = acc |> Enum.at(line_num - 1) |> String.to_charlist() |> Enum.reduce({"", true}, fn char, {pad, pad?} -> if pad? and char == 32, do: {pad <> " ", true}, else: {pad, false} end)
           line_content = padding <> if prefix == "", do: full_expression, else: prefix <> " " <> full_expression
