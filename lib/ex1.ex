@@ -106,6 +106,9 @@ defmodule Ex1 do
   @spec id_records40(%{optional(1..2) => integer(), <<_::8>> => binary()}) :: map()
   def id_records40(x), do: x
 
+  @spec id_records41(%{optional(any()) => any()}) :: map()
+  def id_records41(x), do: x
+
   # Whatever function return type is, it is taken as ...->any()
   # @spec id_fun((...->atom())) :: fun()
   # def id_fun(x), do: x
@@ -183,6 +186,8 @@ defmodule Ex1 do
     def id_records34(), do: Ex1.id_records34(%{1 => 1})
     def id_records35(), do: Ex1.id_records35(%{1 => 1, 2 => 2, 3 => "3"})
     def id_records36(), do: Ex1.id_records36(%{1 => 1, 2 => 2, 3 => "3"})
+
+    def id_records41(), do: Ex1.id_records41(%{:a => :a})
 
     #def id_fun(), do: Ex1.id_fun(fn x -> <<97>> end)
 

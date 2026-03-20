@@ -36,7 +36,7 @@ defmodule Migrator do
 
   @doc """
     Example:
-      Migrator.main([:descr_assert, "test/descr_test.exs", "../elixir/lib/elixir/lib/string.ex"])
+      Migrator.main([:descr_assert, "test/descr_test.exs", "../elixir/lib/elixir/lib"])
   """
   def main(args) do
     case args do
@@ -58,6 +58,9 @@ defmodule Migrator do
         m when is_binary(m) -> String.to_atom(m)
       end
 
+    # Expand directories in type_paths to file paths before proceeding
+    type_paths = type_paths |> Enum.flat_map(&expand_path/1)
+
     case mode_atom do
       :direct ->
         convert_with_direct_translation(spec_path)
@@ -69,21 +72,40 @@ defmodule Migrator do
         convert_in_descr(:annotation_form, spec_path, type_paths)
 
       :descr_assert ->
+        # ../elixir/lib/elixir/lib/string.ex
         elixir_types = convert_in_descr(:function_form, spec_path, type_paths)
+
         spec_path_list = spec_path
           |> String.split(".")
           |> Enum.reverse()
           |> tl()
         output_path = spec_path_list
-          |> List.replace_at(0, hd(spec_path_list) <> "_type_assert_test.exs")
+          |> List.replace_at(0, hd(spec_path_list) <> "_test.exs")
           |> Enum.reverse()
-          |> Enum.reduce("", fn x, acc -> if acc == "", do: x, else: acc <> "." <> x end)
-        insert_expression(spec_path, output_path, elixir_types, "@assert_type")
-        Enum.at
+          |> Enum.reduce("", fn chunk, acc -> if acc == "", do: chunk, else: acc <> "." <> chunk end)
+        output_path_in_test = "test/type_assert/" <> (output_path |> String.split("/") |> List.last())
+
+        insert_expression(spec_path, output_path_in_test, elixir_types, "@assert_type")
+
       _ ->
         IO.puts("Unknown mode: #{mode}")
     end
-end
+  end
+
+  defp expand_path(path) do
+    cond do
+      File.regular?(path) ->
+        [path]
+
+      File.dir?(path) ->
+        path
+        |> Path.join("**/*.{ex,exs}")
+        |> Path.wildcard()
+
+      true ->
+        []
+    end
+  end
 
   def convert_with_direct_translation(spec_path) when is_binary(spec_path) do
     try do
@@ -182,7 +204,7 @@ end
   def convert_in_descr(:function_form, spec_path, type_paths) when is_binary(spec_path) and is_list(type_paths) do
     try do
 
-      {_time_type_translation, translated_types} = :timer.tc(&TypeTr.process/1, [type_paths])
+      {_time_type_translation, translated_types} = :timer.tc(&TypeTr.process/1, [type_paths]) |> dbg
 
       {_time_spec_translations, translated_spec} = :timer.tc(&SpecTr.process/1, [spec_path])
 
@@ -238,7 +260,7 @@ end
 
       new_content_lines = elixir_types
         |> Enum.reverse()             # insert from bottom to avoid shifting
-        |> Enum.reduce(content_lines, fn {line_nums, {_module_name, fun_name}, full_expression}, acc ->
+        |> Enum.reduce(content_lines, fn {line_nums, {_module_name, _fun_name}, full_expression}, acc ->
           line_num = List.last(line_nums)
           {padding, _} = acc |> Enum.at(line_num - 1) |> String.to_charlist() |> Enum.reduce({"", true}, fn char, {pad, pad?} -> if pad? and char == 32, do: {pad <> " ", true}, else: {pad, false} end)
           line_content = padding <> if prefix == "", do: full_expression, else: prefix <> " " <> full_expression

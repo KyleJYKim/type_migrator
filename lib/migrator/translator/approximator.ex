@@ -7,8 +7,8 @@ defmodule Migrator.Translator.Approximator do
       case left_org do
         # {:union, {left_u, right_u}} -> {:union, {left_u |> promoter_fun.(), right_u |> promoter_fun.()}}
 
-        {:open_map, _} -> {:open_map, [left_org]}
-        {:struct, _} -> {:open_map, [left_org]}
+        {:closed_map, _} -> {:closed_map, [left_org]}
+        {:struct, _} -> {:closed_map, [left_org]}
         {:tuple, _} -> {:tuple, [left_org]}
         :empty_list -> {:list, [left_org]}
         {:non_empty_list, _} -> {:list, [left_org]}
@@ -187,7 +187,7 @@ defmodule Migrator.Translator.Approximator do
             {(acc_new_types |> List.delete(t2)) ++ unified_type, subtype? or acc_new_subtype?}
           #{:dynamic, :fun} -> {:fun, [left_org]}
 
-          {{:open_map, fields1}, {:open_map, fields2}} -> {unified_type, subtype?} = {:open_map, {fields1, fields2}} |> merge_types()
+          {{:closed_map, fields1}, {:closed_map, fields2}} -> {unified_type, subtype?} = {:closed_map, {fields1, fields2}} |> merge_types()
             {(acc_new_types |> List.delete(t2)) ++ unified_type, subtype? or acc_new_subtype?}
 
           {{:struct, _}, {:struct, {:__struct_top__, _}}} -> {acc_new_types, true}
@@ -280,7 +280,7 @@ defmodule Migrator.Translator.Approximator do
     end
   end
 
-  defp merge_types({:open_map, {fields1, fields2}}) when is_list(fields1) and is_list(fields2) do
+  defp merge_types({:closed_map, {fields1, fields2}}) when is_list(fields1) and is_list(fields2) do
     subtype? = fields1 |> Enum.reduce(true, fn f1, acc_subtype? ->
       new_subtype? = fields2 |> Enum.reduce(false, fn f2, acc_new_subtype? ->
         {l1, r1} = f1
@@ -298,9 +298,9 @@ defmodule Migrator.Translator.Approximator do
       new_subtype? and acc_subtype?
     end)
     if subtype? do
-      {[{:open_map, fields2}], true}
+      {[{:closed_map, fields2}], true}
     else
-      {[{:open_map, fields1}, {:open_map, fields2}], false}
+      {[{:closed_map, fields1}, {:closed_map, fields2}], false}
     end
   end
 

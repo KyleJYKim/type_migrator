@@ -52,8 +52,8 @@ defmodule Migrator.ElixirTypeConstructor do
             {:tuple, types |> Enum.map(fn type -> type |> search_fun.() end)}
           {:struct, {strt_name, fields}} ->
             {:struct, {strt_name, fields |> Enum.map(fn {type_left, type_right} -> {type_left |> search_fun.(), type_right |> search_fun.()} end)}}
-          {:open_map, fields} ->
-            {:open_map, fields |> Enum.map(fn {type_left, type_right} -> {type_left |> search_fun.(), type_right |> search_fun.()} end)}
+          {:closed_map, fields} ->
+            {:closed_map, fields |> Enum.map(fn {type_left, type_right} -> {type_left |> search_fun.(), type_right |> search_fun.()} end)}
           {:if_set, type} -> {:if_set, type |> search_fun.()}
           {:dynamic, type} -> {:dynamic, type |> search_fun.()}
           {:user_type_var, type} -> if type == user_type_var, do: defined_type, else: type_node
@@ -81,8 +81,8 @@ defmodule Migrator.ElixirTypeConstructor do
           {:tuple, types |> Enum.map(fn type -> type |> replacing_fun.() end)}
         {:struct, {strt_name, fields}} ->
           {:struct, {strt_name, fields |> Enum.map(fn {type_left, type_right} -> {type_left |> replacing_fun.(), type_right |> replacing_fun.()} end)}}
-        {:open_map, fields} ->
-          {:open_map, fields |> Enum.map(fn {type_left, type_right} -> {type_left |> replacing_fun.(), type_right |> replacing_fun.()} end)}
+        {:closed_map, fields} ->
+          {:closed_map, fields |> Enum.map(fn {type_left, type_right} -> {type_left |> replacing_fun.(), type_right |> replacing_fun.()} end)}
         {:if_set, type} -> {:if_set, type |> replacing_fun.()}
         {:dynamic, type} -> {:dynamic, type |> replacing_fun.()}
         # {:interval, {digit1, digit2}} -> "#{digit1}..#{digit2}"
@@ -154,16 +154,15 @@ defmodule Migrator.ElixirTypeConstructor do
 
   defp group_by_notation(translated_spec_list) do
     translated_spec_list |> Enum.reduce([], fn spec_info, acc ->
-        {_, name, _, _, _} = spec_info
-        prev_name = case acc do
-          [] -> ""
-          [head | _] -> (
-            {_, name, _, _, _} = hd(head)
-            name
-          )
+        {_, name, inputs, _, _} = spec_info
+        {prev_name, prev_arity} = case acc do
+          [] -> {"", nil}
+          [head | _] ->
+            {_, prev_name, prev_inputs, _, _} = hd(head)
+            {prev_name, length(prev_inputs)}
         end
 
-        if prev_name == name do
+        if prev_name == name and prev_arity == length(inputs) do
           [head | tail] = acc
           [head ++ [spec_info]] ++ tail
         else
@@ -248,7 +247,7 @@ defmodule Migrator.ElixirTypeConstructor do
                   if acc == "", do: field_str, else: acc <> ", " <> field_str
                 end)
               "%#{strt_name}{" <> fields_str <> "}"
-            {:open_map, fields} ->
+            {:closed_map, fields} ->
               fields_str = fields |> Enum.reduce("", fn {type_left, type_right}, acc ->
                   field_str = "#{type_left |> placing_fun.()}" <> " => " <> "#{type_right |> placing_fun.()}"
                   if acc == "", do: field_str, else: acc <> ", " <> field_str
@@ -334,7 +333,7 @@ defmodule Migrator.ElixirTypeConstructor do
 
     descrizing = fn type, descrizing_fun ->
         descrizing_fun = &descrizing_fun.(&1, descrizing_fun)
-          case type |> dbg do
+          case type do
             {:union, {type_left, type_right}} ->
               Descr.union(type_left |> descrizing_fun.(), type_right |> descrizing_fun.())
             {:fun, {:all_arity, type_out}} ->
@@ -347,20 +346,20 @@ defmodule Migrator.ElixirTypeConstructor do
             {:tuple, types} ->
               Descr.tuple(types |> Enum.map(descrizing_fun))
             {:struct, {:__struct_top__, _fields}} ->
-              Descr.open_map([{:__struct__, Descr.atom()}, {Descr.atom() |> Descr.to_domain_keys(), {:if_set, :term} |> descrizing_fun.()}])
+              Descr.closed_map([{:__struct__, Descr.atom()}, {Descr.atom() |> Descr.to_domain_keys(), {:if_set, :term} |> descrizing_fun.()}])
             {:struct, {strt_name, fields}} ->
               fields_descr = fields |> Enum.map(fn {{:atom, atom}, type_right} ->
                   {atom, type_right |> descrizing_fun.()}
                 end)
-              Descr.open_map([__struct__: Descr.atom([strt_name])] ++ fields_descr)
-            {:open_map, fields} ->
+              Descr.closed_map([__struct__: Descr.atom([strt_name])] ++ fields_descr)
+            {:closed_map, fields} ->
               fields_descr = fields |> Enum.map(fn {type_left, type_right} ->
                 case type_left do
                   {:atom, atom} -> {atom, type_right |> descrizing_fun.()}
-                  _ ->  {type_left |> descrizing_fun.() |> Descr.to_domain_keys() |> dbg, type_right |> descrizing_fun.()}
+                  _ ->  {type_left |> descrizing_fun.() |> Descr.to_domain_keys(), type_right |> descrizing_fun.()}
                 end
               end)
-              Descr.open_map(fields_descr)
+              Descr.closed_map(fields_descr)
             :... -> "..."
             {:if_set, type} -> Descr.if_set(type |> descrizing_fun.())
             {:interval, {_digit1, _digit2}} -> Descr.dynamic(Descr.integer())
@@ -442,25 +441,26 @@ defmodule Migrator.ElixirTypeConstructor do
               "tuple([#{types}])"
             {:struct, {:__struct_top__, _fields}} ->
               fields = "{:__struct__, atom()}, {to_domain_keys(atom()), if_set(term())}"
-              "open_map([#{fields}])"
+              "closed_map([#{fields}])"
             {:struct, {strt_name, fields}} ->
               fields_descr = fields |> Enum.reduce("", fn {{:atom, atom}, type_right}, acc ->
-                  if acc == "", do: "{#{atom}, #{type_right |> descrizing_fun.()}}", else: acc <> ", " <>  "{#{atom}, #{type_right |> descrizing_fun.()}}"
+                  if acc == "", do: "{:#{atom}, #{type_right |> descrizing_fun.()}}", else: acc <> ", " <>  "{:#{atom}, #{type_right |> descrizing_fun.()}}"
                 end)
-              fields = "{:__struct__, atom([#{strt_name}])}, #{fields_descr}"
-              "open_map([#{fields}])"
-            {:open_map, fields} ->
+              fields = "{:__struct__, atom([:#{strt_name}])}, #{fields_descr}"
+              "closed_map([#{fields}])"
+            {:closed_map, fields} ->
               fields = fields |> Enum.reduce("", fn {type_left, type_right}, acc ->
                 field = case type_left do
-                  {:atom, atom} -> "{#{atom}, #{type_right |> descrizing_fun.()}}"
+                  {:atom, atom} -> "{:#{atom}, #{type_right |> descrizing_fun.()}}"
                   _ ->  "{to_domain_keys(#{type_left |> descrizing_fun.()}), #{type_right |> descrizing_fun.()}}"
                 end
                 if acc == "", do: field, else: acc <> ", " <> field
               end)
-              "open_map([#{fields}])"
+              "closed_map([#{fields}])"
             :... -> "..."
             {:if_set, type} -> "if_set(#{type |> descrizing_fun.()})"
-            {:interval, {_digit1, _digit2}} -> "dynamic(integer())"
+            # {:interval, {_digit1, _digit2}} -> "dynamic(integer())"
+            {:interval, {_digit1, _digit2}} -> "integer()"
             {:atom, nil} -> "atom([:nil])"
             {:atom, true} -> "atom([:true])"
             {:atom, false} -> "atom([:false])"
@@ -487,11 +487,18 @@ defmodule Migrator.ElixirTypeConstructor do
             # def empty_map(), do: %{map: @map_empty}
             # def list(type), do: list_descr(type, @empty_list, true)
 
-            {:dynamic, type} -> "dynamic(#{type |> descrizing_fun.()})"
-            :dynamic -> "dynamic()"
-            {:def_not_found, _type} -> "dynamic()"
+            {:dynamic, _type} -> "term()"
+            :dynamic -> "term()"
+            {:def_not_found, _type} -> "term()"
 
-            _ -> "dynamic()"
+            _ -> "term()"
+
+            # Right now dynamic is not implemented for @assert_type - 20 March 2026
+            # {:dynamic, type} -> "dynamic(#{type |> descrizing_fun.()})"
+            # :dynamic -> "dynamic()"
+            # {:def_not_found, _type} -> "dynamic()"
+
+            # _ -> "dynamic()"
           end
         end
 
@@ -502,7 +509,8 @@ defmodule Migrator.ElixirTypeConstructor do
         body_descr = "fun([#{inputs_descr}], #{output_descr})"
 
         new_acc_line_num = acc_line_nums ++ [line_num]
-        new_acc_body = if acc_body == nil, do: body_descr, else: "intersection(#{acc_body}, #{body_descr})"
+        # new_acc_body = if acc_body == nil, do: body_descr, else: "intersection(#{acc_body}, #{body_descr})"
+        new_acc_body = if acc_body == nil, do: body_descr, else: "#{acc_body}\n#{body_descr})"
 
         {new_acc_line_num, name, new_acc_body}
       end)
