@@ -247,6 +247,8 @@ defmodule Migrator.ElixirTypeConstructor do
                   if acc == "", do: field_str, else: acc <> ", " <> field_str
                 end)
               "%#{strt_name}{" <> fields_str <> "}"
+            {:closed_map, [{:term, {:if_set, :term}}]} -> # the one and only open map from TypeSpecs
+                "map()"
             {:closed_map, fields} ->
               fields_str = fields |> Enum.reduce("", fn {type_left, type_right}, acc ->
                   field_str = "#{type_left |> placing_fun.()}" <> " => " <> "#{type_right |> placing_fun.()}"
@@ -352,6 +354,8 @@ defmodule Migrator.ElixirTypeConstructor do
                   {atom, type_right |> descrizing_fun.()}
                 end)
               Descr.closed_map([__struct__: Descr.atom([strt_name])] ++ fields_descr)
+            {:closed_map, [{:term, {:if_set, :term}}]} -> # the one and only open map from TypeSpecs
+              Descr.open_map()
             {:closed_map, fields} ->
               fields_descr = fields |> Enum.map(fn {type_left, type_right} ->
                 case type_left do

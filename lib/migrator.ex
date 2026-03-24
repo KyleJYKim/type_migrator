@@ -176,7 +176,7 @@ defmodule Migrator do
 
       {_time_spec_translations, translated_spec} = :timer.tc(&SpecTr.process/1, [spec_path])
 
-      {_time_stringification_type_replacing, descrized_elixir_types} = :timer.tc(&TypeConstr.descrize/3, [:in_string, translated_spec, translated_types])
+      {_time_stringification_type_replacing, descrized_elixir_types} = :timer.tc(&TypeConstr.descrize/2, [translated_spec, translated_types])
 
       #handle_output(stringified_annotations, time)
       # IO.puts("Translation Time Elapsed: #{time_translation}")
@@ -254,7 +254,7 @@ defmodule Migrator do
   #   end
   # end
 
-  defp insert_expression(input_path, output_path, elixir_types, prefix \\ "") do
+  defp insert_expression(input_path, output_path, elixir_types, prefix) do
     try do
       content_lines = input_path |> File.read!() |> String.split("\n")
 
@@ -263,7 +263,8 @@ defmodule Migrator do
         |> Enum.reduce(content_lines, fn {line_nums, {_module_name, _fun_name}, full_expression}, acc ->
           line_num = List.last(line_nums)
           {padding, _} = acc |> Enum.at(line_num - 1) |> String.to_charlist() |> Enum.reduce({"", true}, fn char, {pad, pad?} -> if pad? and char == 32, do: {pad <> " ", true}, else: {pad, false} end)
-          line_content = padding <> if prefix == "", do: full_expression, else: prefix <> " " <> full_expression
+          # line_content = padding <> if prefix == "", do: full_expression, else: prefix <> " " <> full_expression
+          line_content = padding <> prefix <> " " <> full_expression
           acc |> List.insert_at(line_num, line_content)
         end)
 
