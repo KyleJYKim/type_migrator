@@ -256,7 +256,12 @@ defmodule Migrator do
 
   defp insert_expression(input_path, output_path, elixir_types, prefix) do
     try do
-      content_lines = input_path |> File.read!() |> String.split("\n")
+      # content_lines = input_path |> File.read!() |> String.split("\n")
+      file = input_path |> File.read!
+
+      content_ast = file |> Code.string_to_quoted!
+
+      content_lines = file |> String.split("\n")
 
       new_content_lines = elixir_types
         |> Enum.reverse()             # insert from bottom to avoid shifting
@@ -268,11 +273,42 @@ defmodule Migrator do
           acc |> List.insert_at(line_num, line_content)
         end)
 
-      output_path |> File.write(new_content_lines |> Enum.join("\n"))
+      if is_descr_imported?(content_ast)  do
+        output_path |> File.write(new_content_lines |> Enum.join("\n"))
+      else
+        module_start_idx = content_lines
+          |> Enum.find_index(fn line -> String.contains?(line, "defmodule #{get_first_module_name(content_ast)}") end)
+        new_content_lines_with_import = new_content_lines
+          |> List.insert_at(module_start_idx + 1, "  import Module.Types.Descr\n")
+
+        output_path |> File.write(new_content_lines_with_import |> Enum.join("\n"))
+      end
     catch
       {:CompileError, msg} -> IO.puts("CompileError:\n#{msg}")
     end
   end
+
+  defp is_descr_imported?(ast) do
+
+    {:defmodule, _, [{:__aliases__, _, _}, [do: module_ast]]} = ast
+    {:__block__, _, block} = module_ast
+    block |> Enum.any?(
+        &case &1 do
+          {:import, _, [{:__aliases__, _, [:Module, :Types, :Descr]}]} -> true
+          _ -> false
+        end
+      )
+  end
+
+  defp get_first_module_name(ast) do
+
+    {:defmodule, _, [{:__aliases__, _, module_name}, [do: _]]} = ast
+    module_name |> Enum.reduce("", fn name, acc -> if acc == "", do: Atom.to_string(name), else: acc <> "." <> Atom.to_string(name) end)
+  end
+
+
+
+
 
   if function_exported?(Migrator, :main, 1) do
     Migrator.main(System.argv())
