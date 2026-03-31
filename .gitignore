@@ -27,6 +27,7 @@ type_migrator-*.tar
 /.DS_Store
 
 /elixir
+/thesis
 
 /translation.aux
 /translation.fdb_latexmk
@@ -37,3 +38,8 @@ type_migrator-*.tar
 
 /.tool-versions
 translation.pdf
+
+/test/direct/
+/test/replacement/
+/test/descr/
+/test/descr_assert/

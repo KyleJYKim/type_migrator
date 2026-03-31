@@ -34,36 +34,6 @@ defmodule Migrator.ElixirTypeConstructor do
       |> descrize_elixir_types_in_string   #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### DESCRIZE ELIXIR TYPE FUNCTION RESULT \n") end)
   end
 
-  defp replace_user_type_variables(elements_zipped, definition) do
-    #[{{:user_type_var, :data}, _definition}]
-    elements_zipped |> Enum.reduce(definition, fn {{:user_type_var, user_type_var}, defined_type}, acc ->
-      search_type_var = fn type_node, search_fun ->
-        search_fun = &search_fun.(&1, search_fun)
-        case type_node do
-          {:union, {type_left, type_right}} ->
-            {:union, {type_left |> search_fun.(), type_right |> search_fun.()}}
-          {:fun, {:all_arity, type_out}} ->
-            {:fun, {:all_arity, type_out |> search_fun.()}}
-          {:fun, {types_in, type_out}} ->
-            {:fun, {types_in |> Enum.map(fn type -> type |> search_fun.() end), type_out |> search_fun.()}}
-          {:non_empty_list, {type_content, type_termination}} ->
-            {:non_empty_list, {type_content |> search_fun.(), type_termination |> search_fun.()}}
-          {:tuple, types} ->
-            {:tuple, types |> Enum.map(fn type -> type |> search_fun.() end)}
-          {:struct, {strt_name, fields}} ->
-            {:struct, {strt_name, fields |> Enum.map(fn {type_left, type_right} -> {type_left |> search_fun.(), type_right |> search_fun.()} end)}}
-          {:closed_map, fields} ->
-            {:closed_map, fields |> Enum.map(fn {type_left, type_right} -> {type_left |> search_fun.(), type_right |> search_fun.()} end)}
-          {:if_set, type} -> {:if_set, type |> search_fun.()}
-          {:dynamic, type} -> {:dynamic, type |> search_fun.()}
-          {:user_type_var, type} -> if type == user_type_var, do: defined_type, else: type_node
-          _ -> type_node
-        end
-      end
-      acc |> search_type_var.(search_type_var)
-    end)
-  end
-
   defp replace_user_types(translated_spec_list, user_type_map) do
 
     replacing = fn {type, current_module_name}, replacing_fun ->
@@ -149,6 +119,36 @@ defmodule Migrator.ElixirTypeConstructor do
       guards = if guards == nil, do: nil, else: guards |> Enum.map(fn {k, v} -> {k, {v, module_name} |> replacing.(replacing)} end)
 
       {line_num, {module_name, fun_name}, inputs, output, guards}
+    end)
+  end
+
+  defp replace_user_type_variables(elements_zipped, definition) do
+    #[{{:user_type_var, :data}, _definition}]
+    elements_zipped |> Enum.reduce(definition, fn {{:user_type_var, user_type_var}, defined_type}, acc ->
+      search_type_var = fn type_node, search_fun ->
+        search_fun = &search_fun.(&1, search_fun)
+        case type_node do
+          {:union, {type_left, type_right}} ->
+            {:union, {type_left |> search_fun.(), type_right |> search_fun.()}}
+          {:fun, {:all_arity, type_out}} ->
+            {:fun, {:all_arity, type_out |> search_fun.()}}
+          {:fun, {types_in, type_out}} ->
+            {:fun, {types_in |> Enum.map(fn type -> type |> search_fun.() end), type_out |> search_fun.()}}
+          {:non_empty_list, {type_content, type_termination}} ->
+            {:non_empty_list, {type_content |> search_fun.(), type_termination |> search_fun.()}}
+          {:tuple, types} ->
+            {:tuple, types |> Enum.map(fn type -> type |> search_fun.() end)}
+          {:struct, {strt_name, fields}} ->
+            {:struct, {strt_name, fields |> Enum.map(fn {type_left, type_right} -> {type_left |> search_fun.(), type_right |> search_fun.()} end)}}
+          {:closed_map, fields} ->
+            {:closed_map, fields |> Enum.map(fn {type_left, type_right} -> {type_left |> search_fun.(), type_right |> search_fun.()} end)}
+          {:if_set, type} -> {:if_set, type |> search_fun.()}
+          {:dynamic, type} -> {:dynamic, type |> search_fun.()}
+          {:user_type_var, type} -> if type == user_type_var, do: defined_type, else: type_node
+          _ -> type_node
+        end
+      end
+      acc |> search_type_var.(search_type_var)
     end)
   end
 

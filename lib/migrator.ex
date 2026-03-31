@@ -76,7 +76,7 @@ defmodule Migrator do
 
       :descr_assert ->
         elixir_types = convert(:descrize_for_assert, spec_path, type_paths)
-        create_new_file_with_insertion(spec_path, "test/descr_assert/", elixir_types, "@assert_type" <> "", true)
+        create_new_file_with_insertion(spec_path, "test/descr_assert/", elixir_types, "@assert_type" <> " ", true)
 
       _ ->
         IO.puts("Unknown mode: #{mode}")
@@ -294,52 +294,6 @@ defmodule Migrator do
 
     {:defmodule, _, [{:__aliases__, _, module_name}, [do: _]]} = ast
     module_name |> Enum.reduce("", fn name, acc -> if acc == "", do: Atom.to_string(name), else: acc <> "." <> Atom.to_string(name) end)
-  end
-
-  defp lookup_type(key) do
-    case :ets.lookup(:types_table, key) do
-      [{^key, value}] -> {:ok, value}
-      [] -> :error
-    end
-  end
-
-  defp load_cache(cache_file) do
-    case File.exists?(cache_file) do
-      true ->
-        :ets.file2tab(String.to_charlist(cache_file))
-        IO.puts("Loaded module-type cache")
-
-      false ->
-        IO.puts("No cache found")
-        :error
-    end
-  end
-
-  defp build_cache(dir, cache_file) do
-    ensure_types_table()
-
-    paths = dir
-      |> Path.join("**/*.{ex,exs}")
-      |> Path.wildcard()
-
-    {_time, types} = :timer.tc(&TypeTr.process/1, [paths])
-
-    # store in ETS
-    Enum.each(types, fn {key, value} -> :ets.insert(:types_table, {key, value}) end)
-
-    # persist to disk
-    :ets.tab2file(:types_table, String.to_charlist(cache_file))
-
-    # IO.puts("Stdlib cache built and saved")
-  end
-
-  defp ensure_types_table() do
-    case :ets.whereis(:types_table) do
-      :undefined ->
-        :ets.new(:types_table, [:set, :named_table, :public])
-      _ ->
-        :types_table
-    end
   end
 
   if function_exported?(Migrator, :main, 1) do

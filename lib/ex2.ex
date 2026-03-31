@@ -85,14 +85,14 @@ defmodule Ex2 do
   @spec record_keytype_integers1(%{optional(20..22) => integer(), neg_integer() => float(), optional(1..2 | 3..4 | 5..9 | 11..13 | 11..14) => atom()}) :: map()
   def record_keytype_integers1(x), do: x
 
-  @spec record_keytype_integers2(%{optional(1..10) => integer(), optional(9..10) => float()}) :: map()
-  def record_keytype_integers2(x), do: x
+  # @spec record_keytype_integers2(%{optional(1..10) => integer(), optional(9..10) => float()}) :: map()
+  # def record_keytype_integers2(x), do: x
 
   @spec record_keytype_atom_integer1(%{required(:a | integer()) => atom, 1..2 | 11..12 => integer}) :: map()
   def record_keytype_atom_integer1(x), do: x
 
-  @spec record_keytype_atoms1(%{:k => 1..2, atom() => binary(), :a => float()}) :: map()
-  def record_keytype_atoms1(x), do: x
+  # @spec record_keytype_atoms1(%{:k => 1..2, atom() => binary(), :a => float()}) :: map()
+  # def record_keytype_atoms1(x), do: x
 
   @spec zero_arity() :: nil
   def zero_arity(), do: nil

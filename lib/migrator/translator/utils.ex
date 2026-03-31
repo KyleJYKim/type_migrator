@@ -27,7 +27,7 @@ defmodule Migrator.Translator.Utils do
       {:list, _, _} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:any, [], []}, []]}]}
       {:nonempty_list, _, [type]} -> {:nonempty_maybe_improper_list, [], [type |> parse(current_module), []]}
       {:nonempty_list, _, _} -> {:nonempty_maybe_improper_list, [], [{:any, [], []}, []]}
-      # {:nonempty_improper_list, _, [type1, type2]} -> {:nonempty_maybe_improper_list, [], [type1, type2]}
+      {:nonempty_improper_list, _, [type1, type2]} -> {:nonempty_maybe_improper_list, [], [type1, type2] |> Enum.map(fn type -> type |> parse(current_module) end)}
       {:maybe_improper_list, _, [type1, type2]} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:|, [], [type1, type2] |> Enum.map(fn type -> type |> parse(current_module) end)}]}]}
       {:maybe_improper_list, _, _} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:any, [], []}, {:any, [], []}]}]}
       {:nonempty_maybe_improper_list, _, [type1, type2]} -> {:nonempty_maybe_improper_list, [], [type1, type2] |> Enum.map(fn type -> type |> parse(current_module) end)}
@@ -82,7 +82,7 @@ defmodule Migrator.Translator.Utils do
             modules |> Enum.reduce("", fn m, acc -> if acc == "", do: "#{m}", else: "#{acc}.#{m}" end) |> String.to_atom()
           end
         {:%{}, [], fields} = {:%{}, [], fields} |> parse(current_module)
-        {:%{}, [], [__struct__: strt_name] ++ fields} |> dbg
+        {:%{}, [], [__struct__: strt_name] ++ fields}
       )
 
       {:{}, _, types} when is_list(types) -> {:{}, [], types |> Enum.map(fn type -> type |> parse(current_module) end)}

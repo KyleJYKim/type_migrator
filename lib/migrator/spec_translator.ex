@@ -22,10 +22,10 @@ defmodule Migrator.SpecTranslator do
       |> Code.string_to_quoted!
 
     quoted
-      |> extract_spec()         #|> IO.inspect(label: "### EXTRACT SPEC FUNCTION RESULT \n")
+      |> extract_spec()
       |> mark_type_variable()
-      |> parse_spec()           #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### PARSE SPEC FUNCTION RESULT \n") end)
-      |> translate_spec()       #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### TRANSLATE SPEC FUNCTION RESULT \n") end)
+      |> parse_spec()
+      |> translate_spec()
   end
 
   defp extract_spec(ast) do

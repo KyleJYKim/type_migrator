@@ -28,7 +28,7 @@ defmodule Migrator.Translator.Approximator do
   def map(fields) do
     merging = fn {list1, field_m}, merging_fun ->
         merging_fun = &merging_fun.(&1, merging_fun)
-        case list1 |> dbg do
+        case list1 do
           [] -> {field_m, []}
           [field_l1 | rest_l1] ->
             {field_m_new, rest_l1_new} = {rest_l1, field_m} |> merging_fun.()
@@ -142,7 +142,7 @@ defmodule Migrator.Translator.Approximator do
 
     types1 |> Enum.reduce({types2, true}, fn t1, {acc_types, acc_subtype?} ->
       {new_types, new_subtype?} = acc_types |> Enum.reduce({acc_types, false}, fn t2, {acc_new_types, acc_new_subtype?} ->
-        case {t1, t2} |> dbg do
+        case {t1, t2} do
 
           _ when t1 == t2 -> {acc_types, true}
           {_, :term} -> {acc_types, true}
