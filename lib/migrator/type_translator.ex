@@ -45,7 +45,27 @@ defmodule Migrator.TypeTranslator do
             end)
           new_acc
 
-        _ -> acc
+        {:@, _, [{:opaque, _, [{:"::", _, [user_defined_type, defining_type]}]}]} ->
+          {_, new_acc} = acc |> Map.get_and_update(module_name_acc, fn type_defs ->
+              if type_defs == nil do
+                {type_defs, [{user_defined_type, defining_type}]}
+              else
+                {type_defs, type_defs ++ [{user_defined_type, defining_type}]}
+              end
+            end)
+          new_acc
+
+        {:@, _, [{:typep, _, [{:"::", _, [user_defined_type, defining_type]}]}]} ->
+          {_, new_acc} = acc |> Map.get_and_update(module_name_acc, fn type_defs ->
+              if type_defs == nil do
+                {type_defs, [{user_defined_type, defining_type}]}
+              else
+                {type_defs, type_defs ++ [{user_defined_type, defining_type}]}
+              end
+            end)
+          new_acc
+
+        _ -> acc |> dbg
       end
     end
 
