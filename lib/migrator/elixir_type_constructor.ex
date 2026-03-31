@@ -3,14 +3,14 @@ defmodule Migrator.ElixirTypeConstructor do
   alias Module.Types.Descr
   import Migrator.Translator.Utils
 
-  def stringify(translated_specs) when is_list(translated_specs) do
+  def process(:stringify_direct, translated_specs) when is_list(translated_specs) do
     translated_specs
       |> group_by_notation      #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### GROUPBY SPEC FUNCTION RESULT \n") end)
       |> rename_type_variables  #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### RENAME SPEC FUNCTION RESULT \n") end)
       |> stringify_elixir_types   #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### STRINGIFY ELIXIR TYPE FUNCTION RESULT \n") end)
   end
 
-  def stringify(translated_specs, user_types) when is_list(translated_specs) and is_map(user_types) do
+  def process(:stringify_with_replacement, translated_specs, user_types) when is_list(translated_specs) and is_map(user_types) do
     translated_specs
       |> replace_user_types(user_types)
       |> group_by_notation      #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### GROUPBY SPEC FUNCTION RESULT \n") end)
@@ -18,7 +18,7 @@ defmodule Migrator.ElixirTypeConstructor do
       |> stringify_elixir_types   #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### STRINGIFY ELIXIR TYPE FUNCTION RESULT \n") end)
   end
 
-  def descrize(translated_specs, user_types) when is_list(translated_specs) and is_map(user_types) do
+  def process(:descrize_for_annotation, translated_specs, user_types) when is_list(translated_specs) and is_map(user_types) do
     translated_specs
       |> replace_user_types(user_types)
       |> group_by_notation      #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### GROUPBY SPEC FUNCTION RESULT \n") end)
@@ -26,7 +26,7 @@ defmodule Migrator.ElixirTypeConstructor do
       |> descrize_elixir_types   #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### DESCRIZE ELIXIR TYPE FUNCTION RESULT \n") end)
   end
 
-  def descrize(:in_string, translated_specs, user_types) when is_list(translated_specs) and is_map(user_types) do
+  def process(:descrize_for_assert, translated_specs, user_types) when is_list(translated_specs) and is_map(user_types) do
     translated_specs
       |> replace_user_types(user_types)
       |> group_by_notation      #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### GROUPBY SPEC FUNCTION RESULT \n") end)
@@ -248,10 +248,15 @@ defmodule Migrator.ElixirTypeConstructor do
                 end)
               "%#{strt_name}{" <> fields_str <> "}"
             {:closed_map, [{:term, {:if_set, :term}}]} -> # the one and only open map from TypeSpecs
-                "map()"
+                "%{...}"
             {:closed_map, fields} ->
               fields_str = fields |> Enum.reduce("", fn {type_left, type_right}, acc ->
-                  field_str = "#{type_left |> placing_fun.()}" <> " => " <> "#{type_right |> placing_fun.()}"
+                  field_str =
+                    if {type_left, type_right} == {:term, {:if_set, :term}} do
+                      "..."
+                    else
+                      "#{type_left |> placing_fun.()}" <> " => " <> "#{type_right |> placing_fun.()}"
+                    end
                   if acc == "", do: field_str, else: acc <> ", " <> field_str
                 end)
               "%{" <> fields_str <> "}"

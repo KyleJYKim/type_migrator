@@ -52,7 +52,7 @@ defmodule Migrator do
   end
 
   defp run(mode, spec_path, type_paths \\ []) do
-    mode_atom =
+    mode =
       case mode do
         m when is_atom(m) -> m
         m when is_binary(m) -> String.to_atom(m)
@@ -61,31 +61,22 @@ defmodule Migrator do
     # Expand directories in type_paths to file paths before proceeding
     type_paths = type_paths |> Enum.flat_map(&expand_path/1)
 
-    case mode_atom do
+    case mode do
       :direct ->
-        convert_with_direct_translation(spec_path)
+        elixir_types = convert(:stringify_direct, spec_path)
+        create_new_file_with_insertion(spec_path, "test/direct/", elixir_types, "#" <> " ")
 
-      :direct_replacement ->
-        convert_with_direct_translation(spec_path, type_paths)
+      :replacement ->
+        elixir_types = convert(:stringify_with_replacement, spec_path, type_paths)
+        create_new_file_with_insertion(spec_path, "test/replacement/", elixir_types, "#" <> " ")
 
       :descr ->
-        convert_in_descr(:annotation_form, spec_path, type_paths)
+        elixir_types = convert(:descrize_for_annotation, spec_path, type_paths)
+        create_new_file_with_insertion(spec_path, "test/descr/", elixir_types, "#" <> " ")
 
       :descr_assert ->
-        # ../elixir/lib/elixir/lib/string.ex
-        elixir_types = convert_in_descr(:function_form, spec_path, type_paths)
-
-        spec_path_list = spec_path
-          |> String.split(".")
-          |> Enum.reverse()
-          |> tl()
-        output_path = spec_path_list
-          |> List.replace_at(0, hd(spec_path_list) <> "_test.exs")
-          |> Enum.reverse()
-          |> Enum.reduce("", fn chunk, acc -> if acc == "", do: chunk, else: acc <> "." <> chunk end)
-        output_path_in_test = "test/type_assert/" <> (output_path |> String.split("/") |> List.last())
-
-        insert_expression(spec_path, output_path_in_test, elixir_types, "@assert_type")
+        elixir_types = convert(:descrize_for_assert, spec_path, type_paths)
+        create_new_file_with_insertion(spec_path, "test/descr_assert/", elixir_types, "@assert_type" <> "", true)
 
       _ ->
         IO.puts("Unknown mode: #{mode}")
@@ -107,12 +98,12 @@ defmodule Migrator do
     end
   end
 
-  def convert_with_direct_translation(spec_path) when is_binary(spec_path) do
+  defp convert(:stringify_direct, spec_path) when is_binary(spec_path) do
     try do
 
       {_time_spec_translations, translated_spec} = :timer.tc(&SpecTr.process/1, [spec_path])
 
-      {_time_stringification, stringified_elixir_types} = :timer.tc(&TypeConstr.stringify/1, [translated_spec])
+      {_time_stringification, stringified_elixir_types} = :timer.tc(&TypeConstr.process/2, [:stringify_direct, translated_spec])
 
       #handle_output(stringified_annotations, time)
       # IO.puts("Translation Time Elapsed: #{time_translation}")
@@ -137,14 +128,16 @@ defmodule Migrator do
     end
   end
 
-  def convert_with_direct_translation(spec_path, type_paths) when is_binary(spec_path) and is_list(type_paths) do
+  defp convert(:stringify_with_replacement, spec_path, type_paths) when is_binary(spec_path) and is_list(type_paths) do
     try do
 
       {_time_type_translation, translated_types} = :timer.tc(&TypeTr.process/1, [type_paths])
 
+      # translated_types ++ elixir_module_types
+
       {_time_spec_translations, translated_spec} = :timer.tc(&SpecTr.process/1, [spec_path])
 
-      {_time_stringification, stringified_elixir_types} = :timer.tc(&TypeConstr.stringify/2, [translated_spec, translated_types])
+      {_time_stringification, stringified_elixir_types} = :timer.tc(&TypeConstr.process/3, [:stringify_with_replacement, translated_spec, translated_types])
 
       #handle_output(stringified_annotations, time)
       # IO.puts("Translation Time Elapsed: #{time_translation}")
@@ -169,14 +162,14 @@ defmodule Migrator do
     end
   end
 
-  def convert_in_descr(:annotation_form, spec_path, type_paths) when is_binary(spec_path) and is_list(type_paths) do
+  defp convert(:descrize_for_annotation, spec_path, type_paths) when is_binary(spec_path) and is_list(type_paths) do
     try do
 
       {_time_type_translation, translated_types} = :timer.tc(&TypeTr.process/1, [type_paths])
 
       {_time_spec_translations, translated_spec} = :timer.tc(&SpecTr.process/1, [spec_path])
 
-      {_time_stringification_type_replacing, descrized_elixir_types} = :timer.tc(&TypeConstr.descrize/2, [translated_spec, translated_types])
+      {_time_stringification_type_replacing, descrized_elixir_types} = :timer.tc(&TypeConstr.process/3, [:descrize_for_annotation, translated_spec, translated_types])
 
       #handle_output(stringified_annotations, time)
       # IO.puts("Translation Time Elapsed: #{time_translation}")
@@ -191,7 +184,8 @@ defmodule Migrator do
         full_expression |> Descr.to_quoted_string |> IO.puts()
       end)
 
-      descrized_elixir_types
+      # return after converting Descr to string for insertion.
+      descrized_elixir_types |> Enum.map(fn {line_nums, {module_name, fun_name}, full_expression} -> {line_nums, {module_name, fun_name}, full_expression |> Descr.to_quoted_string} end)
 
     catch
       {:CompileError, msg} ->
@@ -201,14 +195,14 @@ defmodule Migrator do
     end
   end
 
-  def convert_in_descr(:function_form, spec_path, type_paths) when is_binary(spec_path) and is_list(type_paths) do
+  defp convert(:descrize_for_assert, spec_path, type_paths) when is_binary(spec_path) and is_list(type_paths) do
     try do
 
-      {_time_type_translation, translated_types} = :timer.tc(&TypeTr.process/1, [type_paths]) |> dbg
+      {_time_type_translation, translated_types} = :timer.tc(&TypeTr.process/1, [type_paths])
 
       {_time_spec_translations, translated_spec} = :timer.tc(&SpecTr.process/1, [spec_path])
 
-      {_time_stringification_type_replacing, descrized_elixir_types} = :timer.tc(&TypeConstr.descrize/3, [:in_string, translated_spec, translated_types])
+      {_time_stringification_type_replacing, descrized_elixir_types} = :timer.tc(&TypeConstr.process/3, [:descrize_for_assert, translated_spec, translated_types])
 
       #handle_output(stringified_annotations, time)
       # IO.puts("Translation Time Elapsed: #{time_translation}")
@@ -233,28 +227,25 @@ defmodule Migrator do
     end
   end
 
-  # Comment it until the intersection issue is fixed - 19th March 2026
-  # defp insert_expression(input_path, output_path, elixir_types, prefix \\ "") do
-  #   try do
-  #     content_lines = input_path |> File.read!() |> String.split("\n")
+  defp create_new_file_with_insertion(spec_path, save_path, elixir_types, prefix, import_descr? \\ false) do
+    spec_path_list = spec_path
+      |> String.split(".")
+      |> Enum.reverse()
+      |> tl()
+    output_name = spec_path_list
+      |> List.replace_at(0, hd(spec_path_list) <> "_test.exs")
+      |> Enum.reverse()
+      |> Enum.reduce("", fn chunk, acc -> if acc == "", do: chunk, else: acc <> "." <> chunk end)
+    output_path = save_path <> (output_name |> String.split("/") |> List.last())
 
-  #     new_content_lines = elixir_types
-  #       # |> Enum.sort_by(fn {line, _} -> -line end)  # insert from bottom to avoid shifting
-  #       |> Enum.reverse() # insert from bottom to avoid shifting
-  #       |> Enum.reduce(content_lines, fn {line_nums, {_module_name, _fun_name}, full_expression}, acc ->
-  #         line_num = List.last(line_nums)
-  #         {padding, _} = acc |> Enum.at(line_num - 1) |> String.to_charlist() |> Enum.reduce({"", true}, fn char, {pad, pad?} -> if pad? and char == 32, do: {pad <> " ", true}, else: {pad, false} end)
-  #         line_content = padding <> if prefix == "", do: full_expression, else: prefix <> " " <> full_expression
-  #         acc |> List.insert_at(line_num, line_content)
-  #       end)
+    if !File.exists?(save_path) do
+      File.mkdir_p!(save_path)
+    end
 
-  #     output_path |> File.write(new_content_lines |> Enum.join("\n"))
-  #   catch
-  #     {:CompileError, msg} -> IO.puts("CompileError:\n#{msg}")
-  #   end
-  # end
+    insert_expression(spec_path, output_path, elixir_types, prefix, import_descr?)
+  end
 
-  defp insert_expression(input_path, output_path, elixir_types, prefix) do
+  defp insert_expression(input_path, output_path, elixir_types, prefix, import_descr?) do
     try do
       # content_lines = input_path |> File.read!() |> String.split("\n")
       file = input_path |> File.read!
@@ -268,20 +259,19 @@ defmodule Migrator do
         |> Enum.reduce(content_lines, fn {line_nums, {_module_name, _fun_name}, full_expression}, acc ->
           line_num = List.last(line_nums)
           {padding, _} = acc |> Enum.at(line_num - 1) |> String.to_charlist() |> Enum.reduce({"", true}, fn char, {pad, pad?} -> if pad? and char == 32, do: {pad <> " ", true}, else: {pad, false} end)
-          # line_content = padding <> if prefix == "", do: full_expression, else: prefix <> " " <> full_expression
-          line_content = padding <> prefix <> " " <> full_expression
+          line_content = padding <> prefix <> (full_expression |> String.replace("\n", " "))
           acc |> List.insert_at(line_num, line_content)
         end)
 
-      if is_descr_imported?(content_ast)  do
-        output_path |> File.write(new_content_lines |> Enum.join("\n"))
-      else
+      if import_descr? and !is_descr_imported?(content_ast)  do
         module_start_idx = content_lines
           |> Enum.find_index(fn line -> String.contains?(line, "defmodule #{get_first_module_name(content_ast)}") end)
         new_content_lines_with_import = new_content_lines
           |> List.insert_at(module_start_idx + 1, "  import Module.Types.Descr\n")
 
         output_path |> File.write(new_content_lines_with_import |> Enum.join("\n"))
+      else
+        output_path |> File.write(new_content_lines |> Enum.join("\n"))
       end
     catch
       {:CompileError, msg} -> IO.puts("CompileError:\n#{msg}")
@@ -306,9 +296,51 @@ defmodule Migrator do
     module_name |> Enum.reduce("", fn name, acc -> if acc == "", do: Atom.to_string(name), else: acc <> "." <> Atom.to_string(name) end)
   end
 
+  defp lookup_type(key) do
+    case :ets.lookup(:types_table, key) do
+      [{^key, value}] -> {:ok, value}
+      [] -> :error
+    end
+  end
 
+  defp load_cache(cache_file) do
+    case File.exists?(cache_file) do
+      true ->
+        :ets.file2tab(String.to_charlist(cache_file))
+        IO.puts("Loaded module-type cache")
 
+      false ->
+        IO.puts("No cache found")
+        :error
+    end
+  end
 
+  defp build_cache(dir, cache_file) do
+    ensure_types_table()
+
+    paths = dir
+      |> Path.join("**/*.{ex,exs}")
+      |> Path.wildcard()
+
+    {_time, types} = :timer.tc(&TypeTr.process/1, [paths])
+
+    # store in ETS
+    Enum.each(types, fn {key, value} -> :ets.insert(:types_table, {key, value}) end)
+
+    # persist to disk
+    :ets.tab2file(:types_table, String.to_charlist(cache_file))
+
+    # IO.puts("Stdlib cache built and saved")
+  end
+
+  defp ensure_types_table() do
+    case :ets.whereis(:types_table) do
+      :undefined ->
+        :ets.new(:types_table, [:set, :named_table, :public])
+      _ ->
+        :types_table
+    end
+  end
 
   if function_exported?(Migrator, :main, 1) do
     Migrator.main(System.argv())
