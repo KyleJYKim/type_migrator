@@ -1,7 +1,11 @@
 defmodule Migrator.ElixirTypeConstructor do
 
   alias Module.Types.Descr
+  import Migrator.TypeTableHandler
   import Migrator.Translator.Utils
+
+  @std_rmt_type_cache_file "cache/std_rmt_types.cache"
+  @std_rmt_type_table :std_rmt_types
 
   def process(:stringify_direct, translated_specs) when is_list(translated_specs) do
     translated_specs
@@ -87,7 +91,12 @@ defmodule Migrator.ElixirTypeConstructor do
             definition -> definition
           end
         {:__search__, user_type, elements, module_name} ->
-          case user_type_map |> Map.fetch(module_name) do
+          result =
+            case Map.fetch(user_type_map, module_name) do
+              :error -> lookup_type(:std_rmt_types, module_name)
+              fetched_val -> fetched_val
+            end
+          case result do
             {:ok, defined_types} ->
               defined_types |> Enum.find_value(:__not_found__, fn {defined_type_from_map, definition} ->
                 case defined_type_from_map do
@@ -101,7 +110,12 @@ defmodule Migrator.ElixirTypeConstructor do
             :error -> :__not_found__
           end
         {:__search__, user_type, module_name} ->
-          case user_type_map |> Map.fetch(module_name) do
+          result =
+            case Map.fetch(user_type_map, module_name) do
+              :error -> lookup_type(:std_rmt_types, module_name)
+              fetched_val -> fetched_val
+            end
+          case result do
             {:ok, defined_types} ->
               defined_types |> Enum.find_value(:__not_found__, fn {{:user_type, user_type_from_map}, definition} ->
                 if user_type_from_map == user_type, do: definition
@@ -114,9 +128,13 @@ defmodule Migrator.ElixirTypeConstructor do
 
     translated_spec_list |> Enum.map(fn {line_num, {module_name, fun_name}, inputs, output, guards} ->
 
+      load_cache(@std_rmt_type_cache_file)
+
       inputs = inputs |> Enum.map(fn input -> {input, module_name} |> replacing.(replacing)end)
       output = {output, module_name} |> replacing.(replacing)
       guards = if guards == nil, do: nil, else: guards |> Enum.map(fn {k, v} -> {k, {v, module_name} |> replacing.(replacing)} end)
+
+      :ets.delete(@std_rmt_type_table)
 
       {line_num, {module_name, fun_name}, inputs, output, guards}
     end)

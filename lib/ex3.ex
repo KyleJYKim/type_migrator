@@ -1,5 +1,4 @@
 defmodule Ex3 do
-  import Module.Types.Descr
 
   @type my_type :: map()
   @opaque my_opaque :: map()
