@@ -13,7 +13,11 @@ defmodule Ex3 do
   @spec map_id3(%{optional(any()) => any(), :a => integer()}) :: map()
   def map_id3(x) when is_map(x), do: x
 
+  @spec map_id4(%{optional(atom()) => binary(), :a => integer()}) :: map()
+  def map_id4(x) when is_map(x), do: x
+
   defmodule Some do
-    def id(x), do: x
+    defstruct a: 0, b: 0
+    @type t :: %Some{a: integer(), b: integer()}
   end
 end

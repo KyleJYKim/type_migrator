@@ -14,7 +14,7 @@ defmodule Migrator.ElixirTypeConstructor do
       |> stringify_elixir_types   #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### STRINGIFY ELIXIR TYPE FUNCTION RESULT \n") end)
   end
 
-  def process(:stringify_with_replacement, translated_specs, user_types) when is_list(translated_specs) and is_map(user_types) do
+  def process(:stringify_replace, translated_specs, user_types) when is_list(translated_specs) and is_map(user_types) do
     translated_specs
       |> replace_user_types(user_types)
       |> group_by_notation      #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### GROUPBY SPEC FUNCTION RESULT \n") end)
@@ -22,7 +22,7 @@ defmodule Migrator.ElixirTypeConstructor do
       |> stringify_elixir_types   #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### STRINGIFY ELIXIR TYPE FUNCTION RESULT \n") end)
   end
 
-  def process(:descrize_for_annotation, translated_specs, user_types) when is_list(translated_specs) and is_map(user_types) do
+  def process(:descrize_annotation, translated_specs, user_types) when is_list(translated_specs) and is_map(user_types) do
     translated_specs
       |> replace_user_types(user_types)
       |> group_by_notation      #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### GROUPBY SPEC FUNCTION RESULT \n") end)
@@ -30,7 +30,7 @@ defmodule Migrator.ElixirTypeConstructor do
       |> descrize_elixir_types   #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### DESCRIZE ELIXIR TYPE FUNCTION RESULT \n") end)
   end
 
-  def process(:descrize_for_assert, translated_specs, user_types) when is_list(translated_specs) and is_map(user_types) do
+  def process(:descrize_assert, translated_specs, user_types) when is_list(translated_specs) and is_map(user_types) do
     translated_specs
       |> replace_user_types(user_types)
       |> group_by_notation      #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### GROUPBY SPEC FUNCTION RESULT \n") end)
@@ -447,7 +447,7 @@ defmodule Migrator.ElixirTypeConstructor do
             {:union, {type_left, type_right}} ->
               type_l = type_left |> descrizing_fun.()
               type_r = type_right |> descrizing_fun.()
-              "union(#{type_l}, #{type_r})"
+              "#{type_l} or #{type_r}"
             {:fun, {:all_arity, type_out}} ->
               0..255 |> Stream.map(&({:fun, {List.duplicate(:none, &1), type_out}})) |> Enum.reverse()
                      |> Enum.reduce(nil, fn t, acc -> if acc == nil, do: t, else: {:union, {t, acc}} end) |> descrizing_fun.()
@@ -456,7 +456,7 @@ defmodule Migrator.ElixirTypeConstructor do
                 if acc == "", do: "#{type_in |> descrizing_fun.()}", else: acc <> ", " <> "#{type_in |> descrizing_fun.()}"
               end)
               type_o = type_out |> descrizing_fun.()
-              "fun([#{types_i}], #{type_o})"
+              "(#{types_i} -> #{type_o})"
             {:non_empty_list, {type_content, type_termination}} ->
               type_c = type_content |> descrizing_fun.()
               type_t = type_termination |> descrizing_fun.()
@@ -465,33 +465,39 @@ defmodule Migrator.ElixirTypeConstructor do
               types = types |> Enum.reduce("", fn type, acc ->
                 if acc == "", do: "#{type |> descrizing_fun.()}", else: acc <> ", " <> "#{type |> descrizing_fun.()}"
               end)
-              "tuple([#{types}])"
+              "{#{types}}"  #"tuple([#{types}])"
             {:struct, {:__struct_top__, _fields}} ->
-              fields = "{:__struct__, atom()}, {to_domain_keys(atom()), if_set(term())}"
-              "closed_map([#{fields}])"
+              fields = "atom() => if_set(term()), :__struct__ => atom()"
+              "%{#{fields}}"
             {:struct, {strt_name, fields}} ->
               fields_descr = fields |> Enum.reduce("", fn {{:atom, atom}, type_right}, acc ->
-                  if acc == "", do: "{:#{atom}, #{type_right |> descrizing_fun.()}}", else: acc <> ", " <>  "{:#{atom}, #{type_right |> descrizing_fun.()}}"
+                  if acc == "", do: ":#{atom} => #{type_right |> descrizing_fun.()}", else: acc <> ", " <>  ":#{atom} => #{type_right |> descrizing_fun.()}"
+                  # if acc == "", do: "{:#{atom}, #{type_right |> descrizing_fun.()}}", else: acc <> ", " <>  "{:#{atom}, #{type_right |> descrizing_fun.()}}"
                 end)
-              fields = "{:__struct__, atom([:#{strt_name}])}, #{fields_descr}"
-              "closed_map([#{fields}])"
+              fields = "#{fields_descr}, :__struct__ => :#{strt_name}"
+              "%{#{fields}}"  # "closed_map([#{fields}])"
             {:closed_map, fields} ->
-              fields = fields |> Enum.reduce("", fn {type_left, type_right}, acc ->
+              fields = fields |> Enum.reverse() |> Enum.reduce("", fn {type_left, type_right}, acc ->
                 field = case type_left do
-                  {:atom, atom} -> "{:#{atom}, #{type_right |> descrizing_fun.()}}"
-                  _ ->  "{to_domain_keys(#{type_left |> descrizing_fun.()}), #{type_right |> descrizing_fun.()}}"
+                  {:atom, atom} -> ":#{atom} => #{type_right |> descrizing_fun.()}"
+                  _ ->  "#{type_left |> descrizing_fun.()} => #{type_right |> descrizing_fun.()}"
+                  # _ ->  "{to_domain_keys(#{type_left |> descrizing_fun.()}), #{type_right |> descrizing_fun.()}}"
                 end
                 if acc == "", do: field, else: acc <> ", " <> field
               end)
-              "closed_map([#{fields}])"
+              "%{#{fields}}"  # "closed_map([#{fields}])"
             :... -> "..."
             {:if_set, type} -> "if_set(#{type |> descrizing_fun.()})"
             # {:interval, {_digit1, _digit2}} -> "dynamic(integer())"
             {:interval, {_digit1, _digit2}} -> "integer()"
-            {:atom, nil} -> "atom([:nil])"
-            {:atom, true} -> "atom([:true])"
-            {:atom, false} -> "atom([:false])"
-            {:atom, atom} -> "atom([:#{atom}])"
+            # {:atom, nil} -> "atom([:nil])"
+            # {:atom, true} -> "atom([:true])"
+            # {:atom, false} -> "atom([:false])"
+            # {:atom, atom} -> "atom([:#{atom}])"
+            {:atom, nil} -> ":nil"
+            {:atom, true} -> ":true"
+            {:atom, false} -> ":false"
+            {:atom, atom} -> ":#{atom}"
             # {:guard_type_var, type_var} -> NOT DEFINED IN DESCR
 
             :none -> "none()"
@@ -507,25 +513,25 @@ defmodule Migrator.ElixirTypeConstructor do
             :bitstring -> "bitstring_no_binary()"
             :empty_list -> "empty_list()"
             :tuple -> "tuple()"
-            :open_map -> "open_map()"
+            :open_map -> "%{...}" # "open_map()"
             :fun -> "fun()"
             :list -> "list(:term)"
 
             # def empty_map(), do: %{map: @map_empty}
             # def list(type), do: list_descr(type, @empty_list, true)
 
-            {:dynamic, _type} -> "term()"
-            :dynamic -> "term()"
-            {:def_not_found, _type} -> "term()"
+            # {:dynamic, _type} -> "term()"
+            # :dynamic -> "term()"
+            # {:def_not_found, _type} -> "term()"
 
-            _ -> "term()"
+            # _ -> "term()"
 
             # Right now dynamic is not implemented for @assert_type - 20 March 2026
-            # {:dynamic, type} -> "dynamic(#{type |> descrizing_fun.()})"
-            # :dynamic -> "dynamic()"
-            # {:def_not_found, _type} -> "dynamic()"
+            {:dynamic, type} -> "dynamic(#{type |> descrizing_fun.()})"
+            :dynamic -> "dynamic()"
+            {:def_not_found, _type} -> "dynamic()"
 
-            # _ -> "dynamic()"
+            _ -> "dynamic()"
           end
         end
 
@@ -533,11 +539,10 @@ defmodule Migrator.ElixirTypeConstructor do
       group |> Enum.reduce({[], nil, nil}, fn {line_num, name, inputs, output}, {acc_line_nums, _acc_name, acc_body} ->
         inputs_descr = inputs |> Enum.reduce("", fn input, acc -> if acc == "", do: input |> descrizing.(descrizing), else: acc <> ", " <> descrizing.(input, descrizing) end)
         output_descr = output |> descrizing.(descrizing)
-        body_descr = "fun([#{inputs_descr}], #{output_descr})"
+        body_descr = "(#{inputs_descr} -> #{output_descr})"
 
         new_acc_line_num = acc_line_nums ++ [line_num]
-        # new_acc_body = if acc_body == nil, do: body_descr, else: "intersection(#{acc_body}, #{body_descr})"
-        new_acc_body = if acc_body == nil, do: body_descr, else: "#{acc_body}\n#{body_descr})"
+        new_acc_body = if acc_body == nil, do: body_descr, else: "#{acc_body} and #{body_descr}"
 
         {new_acc_line_num, name, new_acc_body}
       end)

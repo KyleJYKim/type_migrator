@@ -34,6 +34,8 @@ defmodule Migrator do
   alias Migrator.TypeTranslator, as: TypeTr
   alias Migrator.ElixirTypeConstructor, as: TypeConstr
 
+  @descr_prefix "@assert_type_form"
+
   @doc """
     Example:
       Migrator.main([:descr_assert, "test/descr_test.exs", "../elixir/lib/elixir/lib"])
@@ -66,17 +68,17 @@ defmodule Migrator do
         elixir_types = convert(:stringify_direct, spec_path)
         create_new_file_with_insertion(spec_path, "test/direct/", elixir_types, "#" <> " ")
 
-      :replacement ->
-        elixir_types = convert(:stringify_with_replacement, spec_path, type_paths)
-        create_new_file_with_insertion(spec_path, "test/replacement/", elixir_types, "#" <> " ")
+      :replace ->
+        elixir_types = convert(:stringify_replace, spec_path, type_paths)
+        create_new_file_with_insertion(spec_path, "test/replace/", elixir_types, "#" <> " ")
 
       :descr ->
-        elixir_types = convert(:descrize_for_annotation, spec_path, type_paths)
+        elixir_types = convert(:descrize_annotation, spec_path, type_paths)
         create_new_file_with_insertion(spec_path, "test/descr/", elixir_types, "#" <> " ")
 
       :descr_assert ->
-        elixir_types = convert(:descrize_for_assert, spec_path, type_paths)
-        create_new_file_with_insertion(spec_path, "test/descr_assert/", elixir_types, "@assert_type" <> " ", true)
+        elixir_types = convert(:descrize_assert, spec_path, type_paths)
+        create_new_file_with_insertion(spec_path, "test/descr_assert/", elixir_types, @descr_prefix <> " ", true)
 
       _ ->
         IO.puts("Unknown mode: #{mode}")
@@ -128,16 +130,14 @@ defmodule Migrator do
     end
   end
 
-  defp convert(:stringify_with_replacement, spec_path, type_paths) when is_binary(spec_path) and is_list(type_paths) do
+  defp convert(:stringify_replace, spec_path, type_paths) when is_binary(spec_path) and is_list(type_paths) do
     try do
 
       {_time_type_translation, translated_types} = :timer.tc(&TypeTr.process/1, [type_paths])
 
-      # translated_types ++ elixir_module_types
-
       {_time_spec_translations, translated_spec} = :timer.tc(&SpecTr.process/1, [spec_path])
 
-      {_time_stringification, stringified_elixir_types} = :timer.tc(&TypeConstr.process/3, [:stringify_with_replacement, translated_spec, translated_types])
+      {_time_stringification, stringified_elixir_types} = :timer.tc(&TypeConstr.process/3, [:stringify_replace, translated_spec, translated_types])
 
       #handle_output(stringified_annotations, time)
       # IO.puts("Translation Time Elapsed: #{time_translation}")
@@ -162,14 +162,14 @@ defmodule Migrator do
     end
   end
 
-  defp convert(:descrize_for_annotation, spec_path, type_paths) when is_binary(spec_path) and is_list(type_paths) do
+  defp convert(:descrize_annotation, spec_path, type_paths) when is_binary(spec_path) and is_list(type_paths) do
     try do
 
       {_time_type_translation, translated_types} = :timer.tc(&TypeTr.process/1, [type_paths])
 
       {_time_spec_translations, translated_spec} = :timer.tc(&SpecTr.process/1, [spec_path])
 
-      {_time_stringification_type_replacing, descrized_elixir_types} = :timer.tc(&TypeConstr.process/3, [:descrize_for_annotation, translated_spec, translated_types])
+      {_time_stringification_type_replacing, descrized_elixir_types} = :timer.tc(&TypeConstr.process/3, [:descrize_annotation, translated_spec, translated_types])
 
       #handle_output(stringified_annotations, time)
       # IO.puts("Translation Time Elapsed: #{time_translation}")
@@ -195,14 +195,14 @@ defmodule Migrator do
     end
   end
 
-  defp convert(:descrize_for_assert, spec_path, type_paths) when is_binary(spec_path) and is_list(type_paths) do
+  defp convert(:descrize_assert, spec_path, type_paths) when is_binary(spec_path) and is_list(type_paths) do
     try do
 
       {_time_type_translation, translated_types} = :timer.tc(&TypeTr.process/1, [type_paths])
 
       {_time_spec_translations, translated_spec} = :timer.tc(&SpecTr.process/1, [spec_path])
 
-      {_time_stringification_type_replacing, descrized_elixir_types} = :timer.tc(&TypeConstr.process/3, [:descrize_for_assert, translated_spec, translated_types])
+      {_time_stringification_type_replacing, descrized_elixir_types} = :timer.tc(&TypeConstr.process/3, [:descrize_assert, translated_spec, translated_types])
 
       #handle_output(stringified_annotations, time)
       # IO.puts("Translation Time Elapsed: #{time_translation}")
@@ -227,7 +227,7 @@ defmodule Migrator do
     end
   end
 
-  defp create_new_file_with_insertion(spec_path, save_path, elixir_types, prefix, import_descr? \\ false) do
+  defp create_new_file_with_insertion(spec_path, save_path, elixir_types, prefix) do
     spec_path_list = spec_path
       |> String.split(".")
       |> Enum.reverse()
@@ -242,17 +242,12 @@ defmodule Migrator do
       File.mkdir_p!(save_path)
     end
 
-    insert_expression(spec_path, output_path, elixir_types, prefix, import_descr?)
+    insert_expression(spec_path, output_path, elixir_types, prefix)
   end
 
-  defp insert_expression(input_path, output_path, elixir_types, prefix, import_descr?) do
+  defp insert_expression(input_path, output_path, elixir_types, prefix) do
     try do
-      # content_lines = input_path |> File.read!() |> String.split("\n")
-      file = input_path |> File.read!
-
-      content_ast = file |> Code.string_to_quoted!
-
-      content_lines = file |> String.split("\n")
+      content_lines = input_path |> File.read!() |> String.split("\n")
 
       new_content_lines = elixir_types
         |> Enum.reverse()             # insert from bottom to avoid shifting
@@ -263,37 +258,11 @@ defmodule Migrator do
           acc |> List.insert_at(line_num, line_content)
         end)
 
-      if import_descr? and !is_descr_imported?(content_ast)  do
-        module_start_idx = content_lines
-          |> Enum.find_index(fn line -> String.contains?(line, "defmodule #{get_first_module_name(content_ast)}") end)
-        new_content_lines_with_import = new_content_lines
-          |> List.insert_at(module_start_idx + 1, "  import Module.Types.Descr\n")
+      output_path |> File.write(new_content_lines |> Enum.join("\n"))
 
-        output_path |> File.write(new_content_lines_with_import |> Enum.join("\n"))
-      else
-        output_path |> File.write(new_content_lines |> Enum.join("\n"))
-      end
     catch
       {:CompileError, msg} -> IO.puts("CompileError:\n#{msg}")
     end
-  end
-
-  defp is_descr_imported?(ast) do
-
-    {:defmodule, _, [{:__aliases__, _, _}, [do: module_ast]]} = ast
-    {:__block__, _, block} = module_ast
-    block |> Enum.any?(
-        &case &1 do
-          {:import, _, [{:__aliases__, _, [:Module, :Types, :Descr]}]} -> true
-          _ -> false
-        end
-      )
-  end
-
-  defp get_first_module_name(ast) do
-
-    {:defmodule, _, [{:__aliases__, _, module_name}, [do: _]]} = ast
-    module_name |> Enum.reduce("", fn name, acc -> if acc == "", do: Atom.to_string(name), else: acc <> "." <> Atom.to_string(name) end)
   end
 
   if function_exported?(Migrator, :main, 1) do
