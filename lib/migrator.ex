@@ -78,7 +78,7 @@ defmodule Migrator do
 
       :descr_assert ->
         elixir_types = convert(:descrize_assert, spec_path, type_paths)
-        create_new_file_with_insertion(spec_path, "test/descr_assert/", elixir_types, @descr_prefix <> " ", true)
+        create_new_file_with_insertion(spec_path, "test/descr_assert/", elixir_types, @descr_prefix <> " ")
 
       _ ->
         IO.puts("Unknown mode: #{mode}")
@@ -252,10 +252,10 @@ defmodule Migrator do
       new_content_lines = elixir_types
         |> Enum.reverse()             # insert from bottom to avoid shifting
         |> Enum.reduce(content_lines, fn {line_nums, {_module_name, _fun_name}, full_expression}, acc ->
-          line_num = List.last(line_nums)
-          {padding, _} = acc |> Enum.at(line_num - 1) |> String.to_charlist() |> Enum.reduce({"", true}, fn char, {pad, pad?} -> if pad? and char == 32, do: {pad <> " ", true}, else: {pad, false} end)
+          line_idx = List.first(line_nums) - 1
+          {padding, _} = acc |> Enum.at(line_idx) |> String.to_charlist() |> Enum.reduce({"", true}, fn char, {pad, pad?} -> if pad? and char == 32, do: {pad <> " ", true}, else: {pad, false} end)
           line_content = padding <> prefix <> (full_expression |> String.replace("\n", " "))
-          acc |> List.insert_at(line_num, line_content)
+          acc |> List.insert_at(line_idx, line_content)
         end)
 
       output_path |> File.write(new_content_lines |> Enum.join("\n"))
