@@ -30,31 +30,35 @@ defmodule Migrator.SpecTranslator do
 
   defp extract_spec(ast) do
     # Note: Patterns are matched only when tried with elixir codes written on files (not from prompt).
-    extractor = fn {ast, module_name_acc, acc}, extractor_fun ->
+    extractor = fn {ast, alias_acc, module_name_acc, spec_acc}, extractor_fun ->
       extractor_fun = &extractor_fun.(&1, extractor_fun)
       case ast do
         {:defmodule, _, [{:__aliases__, _, module_name}, [do: module_ast]]} ->
           module_name_new = module_name |> Enum.reduce("", fn name, acc -> if acc == "", do: Atom.to_string(name), else: acc <> "." <> Atom.to_string(name) end)
           module_name_acc = if module_name_acc == "", do: module_name_new, else: module_name_acc <> "." <> module_name_new
-          {module_ast, module_name_acc, acc} |> extractor_fun.()
+          {module_ast, alias_acc, module_name_acc, spec_acc} |> extractor_fun.()
 
         {:__block__, _, block} ->
-          block |> Enum.reduce(acc, fn block_ast, acc -> {block_ast, module_name_acc, acc} |> extractor_fun.() end)
+          block |> Enum.reduce({alias_acc, spec_acc}, fn block_ast, {alias_acc, spec_acc} -> {block_ast, alias_acc, module_name_acc, spec_acc} |> extractor_fun.() end)
+
+        {:alias, _, [{:__aliases__, _, alias_module}, [as: {:__aliases__, _, [aliased_name]}]]} ->
+          alias_module_new = alias_module |> dbg |> Enum.reduce("", fn name, acc -> if acc == "", do: Atom.to_string(name), else: acc <> "." <> Atom.to_string(name) end)
+          {alias_acc ++ [{Atom.to_string(aliased_name), alias_module_new} |> dbg], spec_acc}
 
         {:@, [line: line_num], [{:spec, _, [{:"::", _, [{fun_name, _, inputs}, output]}]}]} ->
-          acc ++ [{line_num, {"#{module_name_acc}", "#{fun_name}"}, inputs, output, nil}]
+          {alias_acc, spec_acc ++ [{line_num, {"#{module_name_acc}", "#{fun_name}"}, inputs, output, nil}]}
 
         {:@, [line: line_num], [{:spec, _, [{:when, _, [{:"::", _, [{fun_name, _, inputs}, output]}, guards]}]}]} ->
-          acc ++ [{line_num, {"#{module_name_acc}", "#{fun_name}"}, inputs, output, guards}]
+          {alias_acc, spec_acc ++ [{line_num, {"#{module_name_acc}", "#{fun_name}"}, inputs, output, guards}]}
 
-        _ -> acc
+        _ -> {alias_acc, spec_acc}
       end
     end
 
-    {ast, "", []} |> extractor.(extractor)
+    {ast, [], "", []} |> extractor.(extractor)
   end
 
-  defp mark_type_variable(spec_tree) do
+  defp mark_type_variable({alias_info, spec_tree}) do
 
     type_var_marker = fn {line_num, name, inputs, output, guards} -> (
 
@@ -80,10 +84,10 @@ defmodule Migrator.SpecTranslator do
       {line_num, name, inputs, output, guards}
     )end
 
-    spec_tree |> Enum.map(type_var_marker)
+    {alias_info, spec_tree |> Enum.map(type_var_marker)}
   end
 
-  defp parse_spec(spec_tree) do
+  defp parse_spec({alias_info, spec_tree}) do
 
     total_parser = fn {line_num, {module_name, fun_name}, inputs, output, guards} -> (
 
@@ -94,10 +98,10 @@ defmodule Migrator.SpecTranslator do
       {line_num, {module_name, fun_name}, inputs, output, guards}
     )end
 
-    spec_tree |> Enum.map(total_parser)
+    {alias_info, spec_tree |> Enum.map(total_parser)}
   end
 
-  defp translate_spec(parsed_spec_tree) do
+  defp translate_spec({alias_info, parsed_spec_tree}) do
 
     total_translator = fn {line_num, name, inputs, output, guards} -> (
 
@@ -109,6 +113,6 @@ defmodule Migrator.SpecTranslator do
       {line_num, name, inputs, output, guards}
     )end
 
-    parsed_spec_tree |> Enum.map(total_translator)
+    {alias_info, parsed_spec_tree |> Enum.map(total_translator)}
   end
 end

@@ -7,42 +7,42 @@ defmodule Migrator.ElixirTypeConstructor do
   @std_rmt_type_cache_file "cache/std_rmt_types.cache"
   @std_rmt_type_table :std_rmt_types
 
-  def process(:stringify_direct, translated_specs) when is_list(translated_specs) do
+  def process(:stringify_direct, {_alias_info, translated_specs}) when is_list(translated_specs) do
     translated_specs
       |> group_by_notation      #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### GROUPBY SPEC FUNCTION RESULT \n") end)
       |> rename_type_variables  #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### RENAME SPEC FUNCTION RESULT \n") end)
       |> stringify_elixir_types   #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### STRINGIFY ELIXIR TYPE FUNCTION RESULT \n") end)
   end
 
-  def process(:stringify_replace, translated_specs, user_types) when is_list(translated_specs) and is_map(user_types) do
+  def process(:stringify_replace, {alias_info, translated_specs}, user_types) when is_list(alias_info) and is_list(translated_specs) and is_map(user_types) do
     translated_specs
-      |> replace_user_types(user_types)
+      |> replace_user_types(alias_info, user_types)
       |> group_by_notation      #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### GROUPBY SPEC FUNCTION RESULT \n") end)
       |> rename_type_variables  #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### RENAME SPEC FUNCTION RESULT \n") end)
       |> stringify_elixir_types   #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### STRINGIFY ELIXIR TYPE FUNCTION RESULT \n") end)
   end
 
-  def process(:descrize_annotation, translated_specs, user_types) when is_list(translated_specs) and is_map(user_types) do
+  def process(:descrize_annotation, {alias_info, translated_specs}, user_types) when is_list(alias_info) and is_list(translated_specs) and is_map(user_types) do
     translated_specs
-      |> replace_user_types(user_types)
+      |> replace_user_types(alias_info, user_types)
       |> group_by_notation      #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### GROUPBY SPEC FUNCTION RESULT \n") end)
       |> replace_type_variables  #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### RENAME SPEC FUNCTION RESULT \n") end)
       |> descrize_elixir_types   #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### DESCRIZE ELIXIR TYPE FUNCTION RESULT \n") end)
   end
 
-  def process(:descrize_assert, translated_specs, user_types) when is_list(translated_specs) and is_map(user_types) do
+  def process(:descrize_assert, {alias_info, translated_specs}, user_types) when is_list(alias_info) and is_list(translated_specs) and is_map(user_types) do
     translated_specs
-      |> replace_user_types(user_types)
+      |> replace_user_types(alias_info, user_types)
       |> group_by_notation      #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### GROUPBY SPEC FUNCTION RESULT \n") end)
       |> replace_type_variables  #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### RENAME SPEC FUNCTION RESULT \n") end)
       |> descrize_elixir_types_in_string   #|> Enum.map(fn x -> x |> IO.inspect(label: "\n ### DESCRIZE ELIXIR TYPE FUNCTION RESULT \n") end)
   end
 
-  defp replace_user_types(translated_spec_list, user_type_map) do
+  defp replace_user_types(translated_spec_list, alias_info, user_type_map) do
 
     replacing = fn {type, current_module_name}, replacing_fun ->
       replacing_fun = &replacing_fun.({&1, current_module_name}, replacing_fun)
-      case type |> dbg do
+      case type do
         {:union, {type_left, type_right}} ->
           {:union, {type_left |> replacing_fun.(), type_right |> replacing_fun.()}}
         {:fun, {:all_arity, type_out}} ->
@@ -72,7 +72,18 @@ defmodule Migrator.ElixirTypeConstructor do
           case {:__search__, user_type, elements, current_module_name <> "." <> module_full} |> replacing_fun.() do
             :__not_found__ ->
               case {:__search__, user_type, elements, module_full} |> replacing_fun.() do
-                :__not_found__ -> {:def_not_found, {{modules, user_type}, elements}}
+                :__not_found__ ->
+                  alias_module_full = alias_info |> Enum.find_value(nil, fn {aliased_name, alias_module} ->
+                    if aliased_name == module_full, do: alias_module, else: nil
+                  end)
+                  if alias_module_full != nil do
+                    case {:__search__, user_type, elements, alias_module_full} |> replacing_fun.() do
+                      :__not_found__ -> {:def_not_found, {modules, user_type}}
+                      definition -> definition
+                    end
+                  else
+                    {:def_not_found, {modules, user_type}}
+                  end
                 definition -> definition
               end
             definition -> definition
@@ -80,10 +91,22 @@ defmodule Migrator.ElixirTypeConstructor do
         {:remote_type, {modules, user_type}} ->
           module_full = modules |> Enum.reduce("", fn x, acc -> module = Atom.to_string(x)
             if acc == "", do: module, else: acc <> "." <> module end)
+          # Search module: given module, current module + given module, and aliased module
           case {:__search__, user_type, current_module_name <> "." <> module_full} |> replacing_fun.() do
             :__not_found__ ->
               case {:__search__, user_type, module_full} |> replacing_fun.() do
-                :__not_found__ -> {:def_not_found, {modules, user_type}}
+                :__not_found__ ->
+                  alias_module_full = alias_info |> dbg |> Enum.find_value(nil, fn {aliased_name, alias_module} ->
+                    if aliased_name == module_full, do: alias_module, else: nil
+                  end)
+                  if alias_module_full != nil do
+                    case {:__search__, user_type, alias_module_full} |> replacing_fun.() |> dbg do
+                      :__not_found__ -> {:def_not_found, {modules, user_type}}
+                      definition -> definition
+                    end
+                  else
+                    {:def_not_found, {modules, user_type}}
+                  end
                 definition -> definition
               end
             definition -> definition
