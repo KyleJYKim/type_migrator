@@ -42,9 +42,6 @@ defmodule Migrator do
   """
   def main(args) do
     case args do
-      [mode, spec_path] ->
-        run(mode, spec_path)
-
       [mode, spec_path | type_paths] ->
         run(mode, spec_path, type_paths)
 
@@ -53,7 +50,7 @@ defmodule Migrator do
     end
   end
 
-  defp run(mode, spec_path, type_paths \\ []) do
+  defp run(mode, spec_path, type_paths) do
     mode =
       case mode do
         m when is_atom(m) -> m
@@ -61,7 +58,11 @@ defmodule Migrator do
       end
 
     # Expand directories in type_paths to file paths before proceeding
-    type_paths = type_paths |> Enum.flat_map(&expand_path/1)
+    type_paths =
+      case type_paths do
+        [] -> [spec_path]
+        _ -> Enum.flat_map(type_paths, &expand_path/1) |> Enum.concat([spec_path]) |> Enum.uniq()
+      end
 
     case mode do
       :direct ->

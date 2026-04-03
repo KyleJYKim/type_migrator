@@ -35,7 +35,7 @@ defmodule Migrator.SpecTranslator do
       case ast do
         {:defmodule, _, [{:__aliases__, _, module_name}, [do: module_ast]]} ->
           module_name_new = module_name |> Enum.reduce("", fn name, acc -> if acc == "", do: Atom.to_string(name), else: acc <> "." <> Atom.to_string(name) end)
-          module_name_acc = if module_name_acc == "", do: "#{module_name_new}", else: "#{module_name_acc}.#{module_name_new}"
+          module_name_acc = if module_name_acc == "", do: module_name_new, else: module_name_acc <> "." <> module_name_new
           {module_ast, module_name_acc, acc} |> extractor_fun.()
 
         {:__block__, _, block} ->

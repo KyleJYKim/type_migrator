@@ -42,7 +42,7 @@ defmodule Migrator.ElixirTypeConstructor do
 
     replacing = fn {type, current_module_name}, replacing_fun ->
       replacing_fun = &replacing_fun.({&1, current_module_name}, replacing_fun)
-      case type do
+      case type |> dbg do
         {:union, {type_left, type_right}} ->
           {:union, {type_left |> replacing_fun.(), type_right |> replacing_fun.()}}
         {:fun, {:all_arity, type_out}} ->
@@ -69,15 +69,23 @@ defmodule Migrator.ElixirTypeConstructor do
         {:remote_type, {{modules, user_type}, elements}} when is_list(elements) ->
           module_full = modules |> Enum.reduce("", fn module, acc -> module = Atom.to_string(module)
             if acc == "", do: module, else: acc <> "." <> module end)
-          case {:__search__, user_type, elements, module_full} |> replacing_fun.() do
-            :__not_found__ -> {:def_not_found, {{modules, user_type}, elements}}
+          case {:__search__, user_type, elements, current_module_name <> "." <> module_full} |> replacing_fun.() do
+            :__not_found__ ->
+              case {:__search__, user_type, elements, module_full} |> replacing_fun.() do
+                :__not_found__ -> {:def_not_found, {{modules, user_type}, elements}}
+                definition -> definition
+              end
             definition -> definition
           end
         {:remote_type, {modules, user_type}} ->
           module_full = modules |> Enum.reduce("", fn x, acc -> module = Atom.to_string(x)
             if acc == "", do: module, else: acc <> "." <> module end)
-          case {:__search__, user_type, module_full} |> replacing_fun.() do
-            :__not_found__ -> {:def_not_found, {modules, user_type}}
+          case {:__search__, user_type, current_module_name <> "." <> module_full} |> replacing_fun.() do
+            :__not_found__ ->
+              case {:__search__, user_type, module_full} |> replacing_fun.() do
+                :__not_found__ -> {:def_not_found, {modules, user_type}}
+                definition -> definition
+              end
             definition -> definition
           end
         {:user_type, {user_type, elements}} when is_list(elements) ->
@@ -93,7 +101,7 @@ defmodule Migrator.ElixirTypeConstructor do
         {:__search__, user_type, elements, module_name} ->
           result =
             case Map.fetch(user_type_map, module_name) do
-              :error -> lookup_type(:std_rmt_types, module_name)
+              :error -> lookup_type(@std_rmt_type_table, module_name)
               fetched_val -> fetched_val
             end
           case result do
@@ -112,7 +120,7 @@ defmodule Migrator.ElixirTypeConstructor do
         {:__search__, user_type, module_name} ->
           result =
             case Map.fetch(user_type_map, module_name) do
-              :error -> lookup_type(:std_rmt_types, module_name)
+              :error -> lookup_type(@std_rmt_type_table, module_name)
               fetched_val -> fetched_val
             end
           case result do
