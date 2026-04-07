@@ -34,6 +34,12 @@ defmodule Migrator do
   alias Migrator.TypeTranslator, as: TypeTr
   alias Migrator.ElixirTypeConstructor, as: TypeConstr
 
+  @root_path "lib/test/"
+  @path_direct @root_path <> "direct/"
+  @path_replacement @root_path <> "replace/"
+  @path_descr @root_path <> "descr/"
+  @path_descr_assert @root_path <> "descr_assert/"
+
   @descr_prefix "@assert_type_form"
 
   @doc """
@@ -67,19 +73,19 @@ defmodule Migrator do
     case mode do
       :direct ->
         elixir_types = convert(:stringify_direct, spec_path)
-        create_new_file_with_insertion(spec_path, "test/direct/", elixir_types, "#" <> " ")
+        create_new_file_with_insertion(spec_path, @path_direct, elixir_types, "#" <> " ")
 
       :replace ->
         elixir_types = convert(:stringify_replace, spec_path, type_paths)
-        create_new_file_with_insertion(spec_path, "test/replace/", elixir_types, "#" <> " ")
+        create_new_file_with_insertion(spec_path, @path_replacement, elixir_types, "#" <> " ")
 
       :descr ->
         elixir_types = convert(:descrize_annotation, spec_path, type_paths)
-        create_new_file_with_insertion(spec_path, "test/descr/", elixir_types, "#" <> " ")
+        create_new_file_with_insertion(spec_path, @path_descr, elixir_types, "#" <> " ")
 
       :descr_assert ->
         elixir_types = convert(:descrize_assert, spec_path, type_paths)
-        create_new_file_with_insertion(spec_path, "test/descr_assert/", elixir_types, @descr_prefix <> " ")
+        create_new_file_with_insertion(spec_path, @path_descr_assert, elixir_types, @descr_prefix <> " ")
 
       _ ->
         IO.puts("Unknown mode: #{mode}")
@@ -210,13 +216,13 @@ defmodule Migrator do
       # IO.puts("Stringification Time Elapsed: #{time_stringification}")
 
       IO.puts("Translation in Descr functions")
-      descrized_elixir_types |> Enum.map(fn {line_nums, {module_name, fun_name}, full_expression} ->
-        lines = line_nums |> Enum.reduce("", fn num, acc -> if acc == "", do: num |> Integer.to_string(), else: "#{acc}, #{num |> Integer.to_string()}" end)
-        name = "#{module_name}.#{fun_name}"
-        "Line Number: " <> lines |> IO.puts()
-        "Function Name: " <> name |> IO.puts()
-        full_expression |> IO.puts()
-      end)
+      # descrized_elixir_types |> Enum.map(fn {line_nums, {module_name, fun_name}, full_expression} ->
+      #   lines = line_nums |> Enum.reduce("", fn num, acc -> if acc == "", do: num |> Integer.to_string(), else: "#{acc}, #{num |> Integer.to_string()}" end)
+      #   name = "#{module_name}.#{fun_name}"
+      #   "Line Number: " <> lines |> IO.puts()
+      #   "Function Name: " <> name |> IO.puts()
+      #   full_expression |> IO.puts()
+      # end)
 
       descrized_elixir_types
 

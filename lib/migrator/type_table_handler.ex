@@ -52,7 +52,7 @@ defmodule Migrator.TypeTableHandler do
     case File.exists?(cache_file) do
       true ->
         :ets.file2tab(String.to_charlist(cache_file))
-        IO.puts("Loaded cache at #{cache_file}")
+        # IO.puts("Loaded cache at #{cache_file}")
 
       false ->
         IO.puts("No cache found")

@@ -42,13 +42,15 @@ defmodule Migrator.SpecTranslator do
           block |> Enum.reduce({alias_acc, spec_acc}, fn block_ast, {alias_acc, spec_acc} -> {block_ast, alias_acc, module_name_acc, spec_acc} |> extractor_fun.() end)
 
         {:alias, _, [{:__aliases__, _, alias_module}, [as: {:__aliases__, _, [aliased_name]}]]} ->
-          alias_module_new = alias_module |> dbg |> Enum.reduce("", fn name, acc -> if acc == "", do: Atom.to_string(name), else: acc <> "." <> Atom.to_string(name) end)
-          {alias_acc ++ [{Atom.to_string(aliased_name), alias_module_new} |> dbg], spec_acc}
+          alias_module_new = alias_module |> Enum.reduce("", fn name, acc -> if acc == "", do: Atom.to_string(name), else: acc <> "." <> Atom.to_string(name) end)
+          {alias_acc ++ [{Atom.to_string(aliased_name), alias_module_new}], spec_acc}
 
         {:@, [line: line_num], [{:spec, _, [{:"::", _, [{fun_name, _, inputs}, output]}]}]} ->
+          inputs = if inputs == nil, do: [], else: inputs
           {alias_acc, spec_acc ++ [{line_num, {"#{module_name_acc}", "#{fun_name}"}, inputs, output, nil}]}
 
         {:@, [line: line_num], [{:spec, _, [{:when, _, [{:"::", _, [{fun_name, _, inputs}, output]}, guards]}]}]} ->
+          inputs = if inputs == nil, do: [], else: inputs
           {alias_acc, spec_acc ++ [{line_num, {"#{module_name_acc}", "#{fun_name}"}, inputs, output, guards}]}
 
         _ -> {alias_acc, spec_acc}
@@ -72,6 +74,7 @@ defmodule Migrator.SpecTranslator do
             end)
           end)
         end)
+
       output = Macro.prewalk(output, fn type ->
           if guards == nil, do: type, else: guards |> Enum.reduce(type, fn {k, _v}, acc ->
             case type do

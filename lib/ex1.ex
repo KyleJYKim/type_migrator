@@ -1,5 +1,4 @@
 defmodule Ex1 do
-  import Ex2
   alias String, as: Str
 
   @type t_atom :: atom()

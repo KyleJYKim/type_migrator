@@ -96,11 +96,11 @@ defmodule Migrator.ElixirTypeConstructor do
             :__not_found__ ->
               case {:__search__, user_type, module_full} |> replacing_fun.() do
                 :__not_found__ ->
-                  alias_module_full = alias_info |> dbg |> Enum.find_value(nil, fn {aliased_name, alias_module} ->
+                  alias_module_full = alias_info |> Enum.find_value(nil, fn {aliased_name, alias_module} ->
                     if aliased_name == module_full, do: alias_module, else: nil
                   end)
                   if alias_module_full != nil do
-                    case {:__search__, user_type, alias_module_full} |> replacing_fun.() |> dbg do
+                    case {:__search__, user_type, alias_module_full} |> replacing_fun.() do
                       :__not_found__ -> {:def_not_found, {modules, user_type}}
                       definition -> definition
                     end
@@ -166,6 +166,8 @@ defmodule Migrator.ElixirTypeConstructor do
       guards = if guards == nil, do: nil, else: guards |> Enum.map(fn {k, v} -> {k, {v, module_name} |> replacing.(replacing)} end)
 
       :ets.delete(@std_rmt_type_table)
+      # IO.puts("Deleted cache table at #{@std_rmt_type_table}")
+
 
       {line_num, {module_name, fun_name}, inputs, output, guards}
     end)
