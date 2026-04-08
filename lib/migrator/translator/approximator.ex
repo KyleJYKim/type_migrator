@@ -7,8 +7,8 @@ defmodule Migrator.Translator.Approximator do
       case left_org do
         # {:union, {left_u, right_u}} -> {:union, {left_u |> promoter_fun.(), right_u |> promoter_fun.()}}
 
-        {:closed_map, _} -> {:closed_map, [left_org]}
-        {:struct, _} -> {:closed_map, [left_org]}
+        {:closed_map, _} -> {:open_map, [left_org]}
+        {:struct, _} -> {:open_map, [left_org]}
         {:tuple, _} -> {:tuple, [left_org]}
         :empty_list -> {:list, [left_org]}
         {:non_empty_list, _} -> {:list, [left_org]}
@@ -261,7 +261,7 @@ defmodule Migrator.Translator.Approximator do
       {:all_arity, _} ->
         {[{:fun, {ts1_in, t1_out}}, {:fun, {ts2_in, t2_out}}], false}
       _ ->
-        if length(ts1_in) == length(ts1_in) do
+        if length(ts1_in) == length(ts2_in) do
           {_, subtype_out?} = {t1_out, t2_out} |> unify_types()
           # input type of function: contra-variant
           subtype_in? = ts2_in |> Enum.zip(ts1_in) |> Enum.reduce(true, fn {t2, t1}, acc_subtype? ->

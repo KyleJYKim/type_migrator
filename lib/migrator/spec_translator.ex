@@ -109,7 +109,7 @@ defmodule Migrator.SpecTranslator do
     total_translator = fn {line_num, name, inputs, output, guards} -> (
 
       translation = &translate(&1, guards)
-      inputs = inputs |> Enum.map(fn input -> input |> translation.() end)
+      inputs = inputs |> Enum.map(fn input -> input |> translation.()end)
       output = output |> translation.()
       guards = if guards == nil, do: nil, else: guards |> Enum.map(fn {var, type} -> {var, type |> translation.()} end)
 
