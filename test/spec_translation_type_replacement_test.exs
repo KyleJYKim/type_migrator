@@ -9,15 +9,11 @@ defmodule SpecTranslationTypeReplacementTest do
   @user_def_types "example/user-def types/"
 
   defp translate(path) do
-    path
-      |> SpecTr.process
-      |> TypeConstr.stringify([path] |> TypeTr.process)
+    TypeConstr.process(:stringify_replace, SpecTr.process(path), TypeTr.process([path]))
   end
 
   defp translate(spec_path, type_path) do
-    spec_path
-      |> SpecTr.process
-      |> TypeConstr.stringify([type_path] |> TypeTr.process)
+    TypeConstr.process(:stringify_replace, SpecTr.process(spec_path), TypeTr.process([type_path]))
   end
 
   describe "Translation with Replacement of User-defined types" do

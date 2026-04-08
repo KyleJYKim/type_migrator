@@ -11,9 +11,7 @@ defmodule SpecTranslationTest do
   @field_merge "example/field types/merge/"
 
   defp translate(path) do
-    path
-      |> SpecTr.process
-      |> TypeConstr.stringify()
+    TypeConstr.process(:stringify_direct, SpecTr.process(path))
   end
 
   describe "Translation of Basic Types" do
@@ -141,16 +139,16 @@ defmodule SpecTranslationTest do
 
   describe "Translation of Field Types" do
     test "key type without required or optional" do
-      assert [{_, _, "$ %{:a => integer()} -> %{term() => if_set(term())}"}] |> match?(translate("#{@field_types}field_types_1-1.ex"))
-      assert [{_, _, "$ %{atom() => if_set(integer())} -> %{term() => if_set(term())}"}] |> match?(translate("#{@field_types}field_types_1-2.ex"))
+      assert [{_, _, "$ %{:a => integer()} -> open_map()"}] |> match?(translate("#{@field_types}field_types_1-1.ex"))
+      assert [{_, _, "$ %{atom() => if_set(integer())} -> open_map()"}] |> match?(translate("#{@field_types}field_types_1-2.ex"))
     end
     test "key type with required" do
-      assert [{_, _, "$ %{:a => integer()} -> %{term() => if_set(term())}"}] |> match?(translate("#{@field_types}field_types_2-1.ex"))
-      assert [{_, _, "$ %{atom() => if_set(integer())} -> %{term() => if_set(term())}"}] |> match?(translate("#{@field_types}field_types_2-2.ex"))
+      assert [{_, _, "$ %{:a => integer()} -> open_map()"}] |> match?(translate("#{@field_types}field_types_2-1.ex"))
+      assert [{_, _, "$ %{atom() => if_set(integer())} -> open_map()"}] |> match?(translate("#{@field_types}field_types_2-2.ex"))
     end
     test "key type with optional" do
-      assert [{_, _, "$ %{:a => if_set(integer())} -> %{term() => if_set(term())}"}] |> match?(translate("#{@field_types}field_types_3-1.ex"))
-      assert [{_, _, "$ %{atom() => if_set(integer())} -> %{term() => if_set(term())}"}] |> match?(translate("#{@field_types}field_types_3-2.ex"))
+      assert [{_, _, "$ %{:a => if_set(integer())} -> open_map()"}] |> match?(translate("#{@field_types}field_types_3-1.ex"))
+      assert [{_, _, "$ %{atom() => if_set(integer())} -> open_map()"}] |> match?(translate("#{@field_types}field_types_3-2.ex"))
     end
 
     test "field type with merging" do
