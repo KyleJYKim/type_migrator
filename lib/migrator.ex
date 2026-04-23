@@ -12,7 +12,7 @@ defmodule Migrator do
       descr_assert
 
     Example:
-                              <mode>              <spec_path>     [type_paths]
+                              <mode>              <spec_path>     [type_paths] (optional)
       mix run lib/migrator.ex direct              spec_file_path
       mix run lib/migrator.ex direct_replacement  spec_file_path  type_file_path1 type_file_path2 ...
       mix run lib/migrator.ex descr               spec_file_path  type_file_path1 type_file_path2 ...

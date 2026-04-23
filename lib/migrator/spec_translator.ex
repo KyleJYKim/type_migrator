@@ -22,10 +22,10 @@ defmodule Migrator.SpecTranslator do
       |> Code.string_to_quoted!
 
     quoted
-      |> extract_spec()
-      |> mark_type_variable()
-      |> parse_spec()
-      |> translate_spec()
+      |> extract_spec
+      |> mark_type_variable
+      |> parse_spec
+      |> translate_spec
   end
 
   defp extract_spec(ast) do

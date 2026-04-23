@@ -39,9 +39,4 @@ type_migrator-*.tar
 /.tool-versions
 translation.pdf
 
-/test/direct/
-/test/replacement/
-/test/descr/
-/test/descr_assert/
-
-/lib/test/
+/lib/test
