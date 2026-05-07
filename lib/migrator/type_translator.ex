@@ -140,7 +140,7 @@ defmodule Migrator.TypeTranslator do
           {:remote_type, {{modules, def_type}, elements}} ->
             recursive? = root_user_defined_types |> Enum.find_value(fn udt ->
               case udt do
-                {:user_type, {{udt_type, udt_elements}}} ->
+                {:user_type, {udt_type, udt_elements}} ->
                   udt_type == def_type and length(udt_elements) == length(elements)
                 _ -> false
               end
@@ -204,7 +204,7 @@ defmodule Migrator.TypeTranslator do
           {:user_type, {{modules, def_type}, elements}} ->
             recursive? = root_user_defined_types |> Enum.find_value(fn udt ->
               case udt do
-                {:user_type, {{udt_type, udt_elements}}} ->
+                {:user_type, {udt_type, udt_elements}} ->
                   udt_type == def_type and length(udt_elements) == length(elements)
                 _ -> false
               end
@@ -278,6 +278,11 @@ defmodule Migrator.TypeTranslator do
         |> Enum.reduce(%{}, fn {module, type_defs}, acc ->
           replaced_type_defs = type_defs
             |> Enum.map(fn {user_defined_type, defining_type} ->
+              user_defined_type = case user_defined_type do
+                {:user_type, {_udt_type, _udt_elements}} -> user_defined_type
+                {:user_type, _udt_type} ->user_defined_type
+                no_user_type_tag -> {:user_type, no_user_type_tag}
+              end
               {user_defined_type, {{[user_defined_type], defining_type}, type_defs, current_translated_types} |> replacing_definition.(replacing_definition)}
             end)
 
