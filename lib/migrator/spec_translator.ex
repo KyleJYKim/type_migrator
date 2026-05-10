@@ -41,9 +41,38 @@ defmodule Migrator.SpecTranslator do
         {:__block__, _, block} ->
           block |> Enum.reduce({alias_acc, spec_acc}, fn block_ast, {alias_acc, spec_acc} -> {block_ast, alias_acc, module_name_acc, spec_acc} |> extractor_fun.() end)
 
-        {:alias, _, [{:__aliases__, _, alias_module}, [as: {:__aliases__, _, [aliased_name]}]]} ->
-          alias_module_new = alias_module |> Enum.reduce("", fn name, acc -> if acc == "", do: Atom.to_string(name), else: acc <> "." <> Atom.to_string(name) end)
+
+        {:alias, _,[{{:., _, alias_module_paths}, _, alias_modules}]} ->
+          alias_module_path = case alias_module_paths do
+            [{:__MODULE__, _, nil}, :{}] ->
+              module_name_acc
+            [{:__aliases__, _, alias_module_paths}, :{}] ->
+              alias_module_paths |> Enum.reduce("", fn name, acc -> if acc == "", do: Atom.to_string(name), else: acc <> "." <> Atom.to_string(name) end)
+          end
+          alias_modules_new = alias_modules |> Enum.map(fn {:__aliases__, _, modules} ->
+            alias_module = modules |> Enum.reverse |> hd
+            end_module = modules |> Enum.reduce("", fn name, acc -> if acc == "", do: Atom.to_string(name), else: acc <> "." <> Atom.to_string(name) end)
+            {alias_module, alias_module_path <> "." <> end_module}
+          end)
+          {alias_acc ++ alias_modules_new, spec_acc}
+
+        {:alias, _, [{:__aliases__, _, alias_modules}, [as: {:__aliases__, _, [aliased_name]}]]} ->
+          alias_module_new = case alias_modules do
+            [{:__MODULE__, _, nil} | alias_modules] ->
+              alias_modules |> Enum.reduce(module_name_acc, fn name, acc -> acc <> "." <> Atom.to_string(name) end)
+            _ ->
+              alias_modules |> Enum.reduce("", fn name, acc -> if acc == "", do: Atom.to_string(name), else: acc <> "." <> Atom.to_string(name) end)
+          end
           {alias_acc ++ [{Atom.to_string(aliased_name), alias_module_new}], spec_acc}
+
+        {:alias, _, [{:__aliases__, _, alias_modules}]} ->
+          alias_module_new = case alias_modules do
+            [{:__MODULE__, _, nil} | alias_modules] ->
+              alias_modules |> Enum.reduce(module_name_acc, fn name, acc -> acc <> "." <> Atom.to_string(name) end)
+            _ ->
+              alias_modules |> Enum.reduce("", fn name, acc -> if acc == "", do: Atom.to_string(name), else: acc <> "." <> Atom.to_string(name) end)
+          end
+          {alias_acc ++ [{Atom.to_string(alias_modules |> Enum.reverse |> hd), alias_module_new}], spec_acc}
 
         {:@, [line: line_num], [{:spec, _, [{:"::", _, [{fun_name, _, inputs}, output]}]}]} ->
           inputs = if inputs == nil, do: [], else: inputs

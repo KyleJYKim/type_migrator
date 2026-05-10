@@ -39,4 +39,5 @@ type_migrator-*.tar
 /.tool-versions
 translation.pdf
 
+/lib/experiments
 /lib/test

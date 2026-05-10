@@ -13,47 +13,64 @@ defmodule Migrator.Translator.Utils do
       {_, _, :__user_type_variable__} -> type_node  # User-defined Type Variables (pre-described from type_translation.mark_type_variable/1)
       {_, _, :__guard_type_variable__} -> type_node # Type Variables
 
+      {{:., _, [{:__aliases__, _, modules}, type]}, _, elements} when is_list(elements) and elements != [] ->
+        modules = modules |> Enum.map(fn module ->
+          case module do
+            {:__MODULE__, _, nil} -> current_module |> String.to_atom
+            other -> other
+          end
+        end)
+        {{:., [], [{:__aliases__, [], modules}, type]}, [], elements}
+      {{:., _, [{:__aliases__, _, modules}, type]}, _, _} ->
+        modules = modules |> Enum.map(fn module ->
+          case module do
+            {:__MODULE__, _, nil} -> current_module |> String.to_atom
+            other -> other
+          end
+        end)
+        {{:., [], [{:__aliases__, [], modules}, type]}, [], []}
+
       {:|, _, [type1, type2]} -> {:|, [], [type1, type2] |> Enum.map(fn type -> type |> parse(current_module) end)}
-      {:term, _, _} -> {:any, [], []}
-      {:arity, _, _} -> {:.., [], [0, 255]}
+      {:term, _, param} when param == [] or param == nil -> {:any, [], []}
+      {:arity, _, param} when param == [] or param == nil -> {:.., [], [0, 255]}
       {:as_boolean, _, [type]} -> type |> parse(current_module)
-      {:binary, _, _} -> {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, {:*, [], [{:_, [], Elixir}, 8]}]}]}
-      {:nonempty_binary, _, _} -> {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, 8]}]}
-      {:bitstring, _, _} -> {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, {:*, [], [{:_, [], Elixir}, 1]}]}]}
-      {:nonempty_bitstring, _, _} -> {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, 1]}, {:"::", [], [{:_, [], Elixir}, {:*, [], [{:_, [], Elixir}, 1]}]}]}
-      {:boolean, _, _} -> {:|, [], [true, false]}
-      {:byte, _, _} -> {:.., [], [0, 255]}
+      {:binary, _, param} when param == [] or param == nil -> {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, {:*, [], [{:_, [], Elixir}, 8]}]}]}
+      {:nonempty_binary, _, param} when param == [] or param == nil -> {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, 8]}]}
+      {:bitstring, _, param} when param == [] or param == nil -> {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, {:*, [], [{:_, [], Elixir}, 1]}]}]}
+      {:nonempty_bitstring, _, param} when param == [] or param == nil -> {:<<>>, [], [{:"::", [], [{:_, [], Elixir}, 1]}, {:"::", [], [{:_, [], Elixir}, {:*, [], [{:_, [], Elixir}, 1]}]}]}
+      {:boolean, _, param} when param == [] or param == nil -> {:|, [], [true, false]}
+      {:byte, _, param} when param == [] or param == nil -> {:.., [], [0, 255]}
       {:list, _, [type]} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [type |> parse(current_module), []]}]}
-      {:list, _, _} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:any, [], []}, []]}]}
+      {:list, _, param} when param == [] or param == nil -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:any, [], []}, []]}]}
       {:nonempty_list, _, [type]} -> {:nonempty_maybe_improper_list, [], [type |> parse(current_module), []]}
-      {:nonempty_list, _, _} -> {:nonempty_maybe_improper_list, [], [{:any, [], []}, []]}
+      {:nonempty_list, _, param} when param == [] or param == nil -> {:nonempty_maybe_improper_list, [], [{:any, [], []}, []]}
       {:nonempty_improper_list, _, [type1, type2]} -> {:nonempty_maybe_improper_list, [], [type1, type2] |> Enum.map(fn type -> type |> parse(current_module) end)}
       {:maybe_improper_list, _, [type1, type2]} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:|, [], [type1, type2] |> Enum.map(fn type -> type |> parse(current_module) end)}]}]}
-      {:maybe_improper_list, _, _} -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:any, [], []}, {:any, [], []}]}]}
+      {:maybe_improper_list, _, param} when param == [] or param == nil -> {:|, [], [[], {:nonempty_maybe_improper_list, [], [{:any, [], []}, {:any, [], []}]}]}
       {:nonempty_maybe_improper_list, _, [type1, type2]} -> {:nonempty_maybe_improper_list, [], [type1, type2] |> Enum.map(fn type -> type |> parse(current_module) end)}
-      {:nonempty_maybe_improper_list, _, _} -> {:nonempty_maybe_improper_list, [], [{:any, [], []}, {:any, [], []}]}
-      {:char, _, _} -> {:.., [], [0, 1114111]}
-      {:charlist, _, _} -> {:list, [], [{:char, [], []}]} |> parse(current_module)
-      {:nonempty_charlist, _, _} -> {:nonempty_list, [], [{:char, [], []}]} |> parse(current_module)
-      {:fun, _, _} -> {:->, [], [[{:..., [], []}], {:any, [], []}]}
-      {:function, _, _} -> {:fun, [], []} |> parse(current_module)
-      {:identifier, _, _} -> {:|, [], [{:pid, [], []}, {:|, [], [{:port, [], []}, {:reference, [], []}]}]}
+      {:nonempty_maybe_improper_list, _, param} when param == [] or param == nil -> {:nonempty_maybe_improper_list, [], [{:any, [], []}, {:any, [], []}]}
+      {:char, _, param} when param == [] or param == nil -> {:.., [], [0, 1114111]}
+      {:charlist, _, param} when param == [] or param == nil -> {:list, [], [{:char, [], []}]} |> parse(current_module)
+      {:nonempty_charlist, _, param} when param == [] or param == nil -> {:nonempty_list, [], [{:char, [], []}]} |> parse(current_module)
+      {:fun, _, param} when param == [] or param == nil -> {:->, [], [[{:..., [], []}], {:any, [], []}]}
+      {:function, _, param} when param == [] or param == nil -> {:fun, [], []} |> parse(current_module)
+      {:identifier, _, param} when param == [] or param == nil -> {:|, [], [{:pid, [], []}, {:|, [], [{:port, [], []}, {:reference, [], []}]}]}
 
       # iolist will not expand more than once since translation is to only display..., or not even once is necessary.
-      {:iodata, _, _} -> {:|, [], [{:iolist, [], []}, {:binary, [], []}]}
-      {:iolist, _, _} -> {:maybe_improper_list, [], [{:|, [], [{:byte, [], []}, {:|, [], [{:binary, [], []}, {:last_iolist, [], []}]}]}, {:|, [], [{:binary, [], []}, []]}]} |> parse(current_module)
+      {:iodata, _, param} when param == [] or param == nil -> {:|, [], [{:iolist, [], []}, {:binary, [], []}]}
+      {:iolist, _, param} when param == [] or param == nil -> {:maybe_improper_list, [], [{:|, [], [{:byte, [], []}, {:|, [], [{:binary, [], []}, {:__last_iolist__, [], []}]}]}, {:|, [], [{:binary, [], []}, []]}]} |> parse(current_module)
       # only to mark the final recursive iolist type
-      {:last_iolist, _, _} -> {:iolist, [], []}
+      {:__last_iolist__, _, param} when param == [] or param == nil -> {:iolist, [], []}
 
       {:keyword, _, [type]} -> [{{:atom, [], []}, type |> parse(current_module)}] |> parse(current_module)
-      {:keyword, _, _} -> [{{:atom, [], []}, {:any, [], []}}] |> parse(current_module)
-      {:mfa, _, _} -> {:{}, [], [{:atom, [], []}, {:atom, [], []}, {:.., [], [0, 255]}]}
-      {:module, _, _} -> {:atom, [], []}
-      {:no_return, _, _} -> {:none, [], []}
-      {:node, _, _} -> {:atom, [], []}
-      {:number, _, _} -> {:|, [], [{:integer, [], []}, {:float, [], []}]}
-      {:struct, _, _} -> {:%, [], [{:struct, [], [:__struct_top__]}, {:%{}, [], [{:__struct__, {:atom, [], []}}, {{:optional, [], [{:atom, [], []}]}, {:any, [], []}}]}]} |> parse(current_module)
-      {:timeout, _, _} -> {:|, [], [:infinity, {:non_neg_integer, [], []}]}
+      {:keyword, _, param} when param == [] or param == nil -> [{{:atom, [], []}, {:any, [], []}}] |> parse(current_module)
+      {:mfa, _, param} when param == [] or param == nil -> {:{}, [], [{:atom, [], []}, {:atom, [], []}, {:.., [], [0, 255]}]}
+      {:module, _, param} when param == [] or param == nil -> {:atom, [], []}
+      {:no_return, _, param} when param == [] or param == nil -> {:none, [], []}
+      {:node, _, param} when param == [] or param == nil -> {:atom, [], []}
+      {:number, _, param} when param == [] or param == nil -> {:|, [], [{:integer, [], []}, {:float, [], []}]}
+      {:struct, _, param} when param == [] or param == nil -> {:%, [], [{:struct, [], [:__struct_top__]}, {:%{}, [], [{:__struct__, {:atom, [], []}}, {{:optional, [], [{:atom, [], []}]}, {:any, [], []}}]}]} |> parse(current_module)
+      {:timeout, _, param} when param == [] or param == nil -> {:|, [], [:infinity, {:non_neg_integer, [], []}]}
       # true -> :true
       # false -> :false
       # nil -> :nil
@@ -62,14 +79,19 @@ defmodule Migrator.Translator.Utils do
       [type, {:..., _, _}] -> {:nonempty_list, [], [type]} |> parse(current_module)
       [type] -> {:list, [], [type]} |> parse(current_module)
 
-      {:map, _, _} -> {:%{}, [], [{{:optional, [], [{:any, [], []}]}, {:any, [], []}}]}
+      {:map, _, param} when param == [] or param == nil -> {:%{}, [], [{{:optional, [], [{:any, [], []}]}, {:any, [], []}}]}
       {:%{}, _, fields} -> (
-        fields = fields |> Enum.map(fn {left, right} ->
-          right = right |> parse(current_module)
-          case left do
-            {:required, _, [type]} -> {{:required, [], [type |> parse(current_module)]}, right}
-            {:optional, _, [type]} -> {{:optional, [], [type |> parse(current_module)]}, right}
-            type -> if is_atom(type), do: {{:required, [], [type]}, right}, else: {{:optional, [], [type |> parse(current_module)]}, right}
+        fields = fields |> Enum.map(fn field ->
+          case field do
+            {left, right} ->
+              right = right |> parse(current_module)
+              case left do
+                {:required, _, [type]} -> {{:required, [], [type |> parse(current_module)]}, right}
+                {:optional, _, [type]} -> {{:optional, [], [type |> parse(current_module)]}, right}
+                type -> if is_atom(type), do: {{:required, [], [type]}, right}, else: {{:optional, [], [type |> parse(current_module)]}, right}
+              end
+            _ ->  # could be a macro like: {:unquote_splicing, _, [{:something, _, nil}]}
+              {{:optional, [], [:dynamic]}, :dynamic}
           end
         end)
         {:%{}, [], fields}

@@ -42,7 +42,7 @@ defmodule Migrator.TypeTableHandler do
     case :ets.lookup(table_name, key) do
       [{^key, value}] -> {:ok, value}
       [] ->
-        IO.puts("No table found")
+        # IO.puts("No table found")
         :error
     end
   end

@@ -141,7 +141,7 @@ defmodule Ex1 do
   @spec id_type4(Str.t()) :: Str.t()
   def id_type4(x), do: x
 
-  @spec id_type5({atom()}) :: {atom()}
+  @spec id_type5({atom(), atom()}) :: {atom(), atom()}
   def id_type5(x), do: x
 
   defmodule In do
@@ -210,7 +210,7 @@ defmodule Ex1 do
 
     def id_type4(), do: Ex1.id_type4("string")
 
-    def id_type5(), do: Ex1.id_type5({:a})
+    def id_type5(), do: Ex1.id_type5({1,2})
 
   end
 

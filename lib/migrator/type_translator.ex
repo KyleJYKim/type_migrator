@@ -116,7 +116,7 @@ defmodule Migrator.TypeTranslator do
 
     replacing_definition = fn {{root_user_defined_types, defining_type}, current_type_defs, whole_type_definition}, replacing_fun ->
         replacing_fun = &replacing_fun.(&1, replacing_fun)
-        case defining_type |> dbg do
+        case defining_type do
           {:union, {type1, type2}} ->
             found_type1 = {{root_user_defined_types, type1}, current_type_defs, whole_type_definition} |> replacing_fun.()
             found_type2 = {{root_user_defined_types, type2}, current_type_defs, whole_type_definition} |> replacing_fun.()

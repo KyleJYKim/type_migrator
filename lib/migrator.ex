@@ -87,6 +87,8 @@ defmodule Migrator do
         elixir_types = convert(:descrize_assert, spec_path, type_paths)
         create_new_file_with_insertion(spec_path, @path_descr_assert, elixir_types, @descr_prefix <> " ")
 
+        elixir_types
+
       _ ->
         IO.puts("Unknown mode: #{mode}")
     end

@@ -507,7 +507,7 @@ defmodule Migrator.ElixirTypeConstructor do
                   if acc == "", do: ":#{atom} => #{type_right |> descrizing_fun.()}", else: acc <> ", " <>  ":#{atom} => #{type_right |> descrizing_fun.()}"
                   # if acc == "", do: "{:#{atom}, #{type_right |> descrizing_fun.()}}", else: acc <> ", " <>  "{:#{atom}, #{type_right |> descrizing_fun.()}}"
                 end)
-              fields = "#{fields_descr}, :__struct__ => :#{strt_name}"
+              fields = "#{fields_descr}, :__struct__ => :\"#{strt_name}\""
               "%{#{fields}}"  # "closed_map([#{fields}])"
             {:closed_map, fields} ->
               fields = fields |> Enum.reverse() |> Enum.reduce("", fn {type_left, type_right}, acc ->
