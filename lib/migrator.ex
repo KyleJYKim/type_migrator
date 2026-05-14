@@ -48,15 +48,19 @@ defmodule Migrator do
   """
   def main(args) do
     case args do
+      [mode, spec_path, save_path | type_paths] ->
+        run(mode, spec_path, save_path, type_paths)
+
       [mode, spec_path | type_paths] ->
-        run(mode, spec_path, type_paths)
+        save_path = Regex.replace(~r"\w+(?*(?i))\.ex", spec_path, "")
+        run(mode, spec_path, save_path, type_paths)
 
       _ ->
         IO.puts("Error: wrong arguments")
     end
   end
 
-  defp run(mode, spec_path, type_paths) do
+  defp run(mode, spec_path, save_path, type_paths) do
     mode =
       case mode do
         m when is_atom(m) -> m
@@ -73,19 +77,19 @@ defmodule Migrator do
     case mode do
       :direct ->
         elixir_types = convert(:stringify_direct, spec_path)
-        create_new_file_with_insertion(spec_path, @path_direct, elixir_types, "#" <> " ")
+        create_new_file_with_insertion(spec_path, save_path, elixir_types, "# $" <> " ")
 
       :replace ->
         elixir_types = convert(:stringify_replace, spec_path, type_paths)
-        create_new_file_with_insertion(spec_path, @path_replacement, elixir_types, "#" <> " ")
+        create_new_file_with_insertion(spec_path, save_path, elixir_types, "# $" <> " ")
 
       :descr ->
         elixir_types = convert(:descrize_annotation, spec_path, type_paths)
-        create_new_file_with_insertion(spec_path, @path_descr, elixir_types, "#" <> " ")
+        create_new_file_with_insertion(spec_path, save_path, elixir_types, "# $" <> " ")
 
       :descr_assert ->
         elixir_types = convert(:descrize_assert, spec_path, type_paths)
-        create_new_file_with_insertion(spec_path, @path_descr_assert, elixir_types, @descr_prefix <> " ")
+        create_new_file_with_insertion(spec_path, save_path, elixir_types, @descr_prefix <> " ")
 
         elixir_types
 
@@ -209,7 +213,7 @@ defmodule Migrator do
 
       {_time_type_translation, translated_types} = :timer.tc(&TypeTr.process/1, [type_paths])
 
-      {_time_spec_translations, translated_spec} = :timer.tc(&SpecTr.process/1, [spec_path])
+      {_time_spec_translations, translated_spec} = :timer.tc(&SpecTr.process/1, [spec_path]) |> dbg
 
       {_time_stringification_type_replacing, descrized_elixir_types} = :timer.tc(&TypeConstr.process/3, [:descrize_assert, translated_spec, translated_types])
 
@@ -236,38 +240,51 @@ defmodule Migrator do
     end
   end
 
-  defp create_new_file_with_insertion(spec_path, save_path, elixir_types, prefix) do
-    spec_path_list = spec_path
-      |> String.split(".")
-      |> Enum.reverse()
-      |> tl()
-    output_name = spec_path_list
-      |> List.replace_at(0, hd(spec_path_list) <> "_test.exs")
-      |> Enum.reverse()
-      |> Enum.reduce("", fn chunk, acc -> if acc == "", do: chunk, else: acc <> "." <> chunk end)
-    output_path = save_path <> (output_name |> String.split("/") |> List.last())
+  defp create_new_file_with_insertion(spec_path, _save_path, elixir_types, prefix) do
+    # spec_path_list = spec_path
+    #   |> String.split(".")
+    #   |> Enum.reverse()
+    #   |> tl()
+    # output_name = spec_path_list
+    #   |> List.replace_at(0, hd(spec_path_list) <> "_test.exs")
+    #   |> Enum.reverse()
+    #   |> Enum.reduce("", fn chunk, acc -> if acc == "", do: chunk, else: acc <> "." <> chunk end)
+    # output_path = save_path <> (output_name |> String.split("/") |> List.last())
 
-    if !File.exists?(save_path) do
-      File.mkdir_p!(save_path)
-    end
+    # if !File.exists?(save_path) do
+    #   File.mkdir_p!(save_path)
+    # end
 
-    insert_expression(spec_path, output_path, elixir_types, prefix)
+    insert_expression(spec_path, spec_path, elixir_types, prefix)
   end
 
   defp insert_expression(input_path, output_path, elixir_types, prefix) do
     try do
-      content_lines = input_path |> File.read!() |> String.split("\n")
+      content_lines =
+        input_path
+        |> File.read!()
+        |> String.split("\n")
+        # Strip any lines that are already annotations from a previous run
+        |> Enum.reject(&String.contains?(&1, prefix))
 
-      new_content_lines = elixir_types
-        |> Enum.reverse()             # insert from bottom to avoid shifting
+      new_content_lines =
+        elixir_types
+        |> Enum.reverse()
         |> Enum.reduce(content_lines, fn {line_nums, {_module_name, _fun_name}, full_expression}, acc ->
           line_idx = List.first(line_nums) - 1
-          {padding, _} = acc |> Enum.at(line_idx) |> String.to_charlist() |> Enum.reduce({"", true}, fn char, {pad, pad?} -> if pad? and char == 32, do: {pad <> " ", true}, else: {pad, false} end)
+          {padding, _} =
+            acc
+            |> Enum.at(line_idx)
+            |> String.to_charlist()
+            |> Enum.reduce({"", true}, fn char, {pad, pad?} ->
+              if pad? and char == 32, do: {pad <> " ", true}, else: {pad, false}
+            end)
+
           line_content = padding <> prefix <> (full_expression |> String.replace("\n", " "))
-          acc |> List.insert_at(line_idx, line_content)
+          List.insert_at(acc, line_idx, line_content)
         end)
 
-      output_path |> File.write(new_content_lines |> Enum.join("\n"))
+      File.write(output_path, Enum.join(new_content_lines, "\n"))
 
     catch
       {:CompileError, msg} -> IO.puts("CompileError:\n#{msg}")

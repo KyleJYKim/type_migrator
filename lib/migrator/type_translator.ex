@@ -5,9 +5,10 @@ defmodule Migrator.TypeTranslator do
   def process(paths) when is_list(paths) do
     extracted_types = paths
       |> Enum.map(fn path ->
-        path |> File.read!
-        |> Code.string_to_quoted!
-        |> extract_type
+        case safe_parse(path) do
+          {:ok, ast} -> extract_type(ast)
+          :error -> %{}
+        end
       end)
       |> Enum.reduce(%{}, fn elem, acc -> Map.merge(acc, elem) end)
 
@@ -22,7 +23,7 @@ defmodule Migrator.TypeTranslator do
     translated_types
   end
 
-  defp extract_type(ast) do
+  def extract_type(ast) do
 
     extractor = fn {ast, module_name_acc, acc}, extractor_fun ->
       extractor_fun = &extractor_fun.(&1, extractor_fun)

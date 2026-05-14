@@ -2,6 +2,19 @@ defmodule Migrator.Translator.Utils do
 
   alias Migrator.Translator.Approximator, as: Approx
 
+  def safe_parse(path) do
+    try do
+      {:ok, path |> File.read!() |> Code.string_to_quoted!()}
+    rescue
+      e in SyntaxError ->
+        IO.puts("Skipping #{path} — syntax error: #{e.description}")
+        :error
+      e in TokenMissingError ->
+        IO.puts("Skipping #{path} — incomplete expression: #{e.description}")
+        :error
+    end
+  end
+
   def parse(type_node, current_module) do
     case type_node do
       {:"::", _, [{_user_def_type_var, _, _}, type]} -> type |> parse(current_module)

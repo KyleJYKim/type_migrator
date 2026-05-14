@@ -17,15 +17,16 @@ defmodule Migrator.SpecTranslator do
   import Migrator.Translator.Utils
 
   def process(path) when is_binary(path) do
-    quoted = path
-      |> File.read!
-      |> Code.string_to_quoted!
+    quoted =
+      case safe_parse(path) do
+        {:ok, ast} -> extract_spec(ast)
+        :error -> %{}
+      end
 
     quoted
-      |> extract_spec
       |> mark_type_variable
       |> parse_spec
-      |> translate_spec
+      |> translate_spec |> dbg
   end
 
   defp extract_spec(ast) do
