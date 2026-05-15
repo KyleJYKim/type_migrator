@@ -213,7 +213,7 @@ defmodule Migrator do
 
       {_time_type_translation, translated_types} = :timer.tc(&TypeTr.process/1, [type_paths])
 
-      {_time_spec_translations, translated_spec} = :timer.tc(&SpecTr.process/1, [spec_path]) |> dbg
+      {_time_spec_translations, translated_spec} = :timer.tc(&SpecTr.process/1, [spec_path])
 
       {_time_stringification_type_replacing, descrized_elixir_types} = :timer.tc(&TypeConstr.process/3, [:descrize_assert, translated_spec, translated_types])
 
@@ -260,18 +260,30 @@ defmodule Migrator do
 
   defp insert_expression(input_path, output_path, elixir_types, prefix) do
     try do
-      content_lines =
-        input_path
-        |> File.read!()
-        |> String.split("\n")
-        # Strip any lines that are already annotations from a previous run
-        |> Enum.reject(&String.contains?(&1, prefix))
+      original_lines = input_path |> File.read!() |> String.split("\n")
+
+      # Strip annotations but track how original line numbers map to stripped ones
+      {stripped_lines, original_to_stripped} =
+        original_lines
+        |> Enum.with_index()
+        |> Enum.reduce({[], %{}, 0}, fn {line, orig_idx}, {lines_acc, mapping, stripped_idx} ->
+          if String.contains?(line, prefix) do
+            # Annotation line — skip, don't advance stripped_idx
+            {lines_acc, mapping, stripped_idx}
+          else
+            {lines_acc ++ [line], Map.put(mapping, orig_idx, stripped_idx), stripped_idx + 1}
+          end
+        end)
+        |> then(fn {lines, mapping, _} -> {lines, mapping} end)
 
       new_content_lines =
         elixir_types
         |> Enum.reverse()
-        |> Enum.reduce(content_lines, fn {line_nums, {_module_name, _fun_name}, full_expression}, acc ->
-          line_idx = List.first(line_nums) - 1
+        |> Enum.reduce(stripped_lines, fn {line_nums, {_module_name, _fun_name}, full_expression}, acc ->
+          orig_idx = List.first(line_nums) - 1
+          # Fall back to orig_idx if not in mapping (first run, no stripping happened)
+          line_idx = Map.get(original_to_stripped, orig_idx, orig_idx)
+
           {padding, _} =
             acc
             |> Enum.at(line_idx)

@@ -507,7 +507,13 @@ defmodule Migrator.ElixirTypeConstructor do
                   if acc == "", do: ":#{atom} => #{type_right |> descrizing_fun.()}", else: acc <> ", " <>  ":#{atom} => #{type_right |> descrizing_fun.()}"
                   # if acc == "", do: "{:#{atom}, #{type_right |> descrizing_fun.()}}", else: acc <> ", " <>  "{:#{atom}, #{type_right |> descrizing_fun.()}}"
                 end)
-              fields = "#{fields_descr}, :__struct__ => :\"#{strt_name}\""
+
+              fields =
+                if fields == [] do
+                  ":__struct__ => :\"#{strt_name}\""
+                else
+                  "#{fields_descr}, :__struct__ => :\"#{strt_name}\""
+                end
               "%{#{fields}}"  # "closed_map([#{fields}])"
             {:closed_map, fields} ->
               fields = fields |> Enum.reverse() |> Enum.reduce("", fn {type_left, type_right}, acc ->
@@ -530,7 +536,12 @@ defmodule Migrator.ElixirTypeConstructor do
             {:atom, nil} -> ":nil"
             {:atom, true} -> ":true"
             {:atom, false} -> ":false"
-            {:atom, atom} -> ":#{atom}"
+            {:atom, atom} ->
+              if String.contains?(Atom.to_string(atom), " ") do
+                ":\"#{atom}\"" |> dbg
+              else
+                ":#{atom}" |> dbg
+              end
             # {:guard_type_var, type_var} -> NOT DEFINED IN DESCR
 
             :none -> "none()"

@@ -1,91 +1,85 @@
-defmodule Credo.CLI.Output.Formatter.JSON do
-  @moduledoc false
+defmodule ExAws.Operation.JSON do
+  @moduledoc """
+  Datastructure representing an operation on a JSON based AWS service.
 
-  alias Credo.CLI.Output.UI
-  alias Credo.Issue
+  This module is generally not used directly, but rather is constructed by one
+  of the relevant AWS services.
 
-  def print_issues(issues) do
-    %{
-      "issues" => Enum.map(issues, &issue_to_json/1)
-    }
-    |> print_map(pretty: true)
+  These include:
+  - DynamoDB
+  - Kinesis
+  - Lambda (Rest style)
+  - ElasticTranscoder
+
+  JSON services are generally pretty simple. You just need to populate the `data`
+  attribute with whatever request body parameters need converted to JSON, and set
+  any service specific headers.
+
+  The `before_request`
+  """
+
+  defstruct stream_builder: nil,
+            http_method: :post,
+            parser: &Function.identity/1,
+            error_parser: &Function.identity/1,
+            path: "/",
+            data: %{},
+            params: %{},
+            headers: [],
+            service: nil,
+            before_request: nil
+
+  @type t :: %__MODULE__{}
+
+  def new(service, opts) do
+    struct(%__MODULE__{service: service}, opts)
+  end
+end
+
+defimpl ExAws.Operation, for: ExAws.Operation.JSON do
+  @type response_t :: %{} | ExAws.Request.error_t()
+
+  def perform(operation, config) do
+    operation = handle_callbacks(operation, config)
+    url = ExAws.Request.Url.build(operation, config)
+
+    headers = [
+      {"x-amz-content-sha256", ""} | operation.headers
+    ]
+
+    ExAws.Request.request(
+      operation.http_method,
+      url,
+      operation.data,
+      headers,
+      config,
+      operation.service
+    )
+    |> operation.error_parser.()
+    |> ExAws.Request.default_aws_error()
+    |> parse(config)
   end
 
-  def print_map(map, json_opts \\ []) do
-    print_term(map, json_opts)
+  def stream!(%ExAws.Operation.JSON{stream_builder: nil}, _) do
+    raise ArgumentError, """
+    This operation does not support streaming!
+    """
   end
 
-  def print_term(map, json_opts \\ []) do
-    map
-    |> prepare_for_json()
-    |> Jason.encode!(json_opts)
-    |> UI.puts()
+  def stream!(%ExAws.Operation.JSON{stream_builder: stream_builder}, config_overrides) do
+    stream_builder.(config_overrides)
   end
 
-  def prepare_for_json(term)
-      when is_atom(term) or is_number(term) or is_binary(term) do
-    term
+  defp handle_callbacks(%{before_request: nil} = op, _), do: op
+
+  defp handle_callbacks(%{before_request: callback} = op, config) do
+    callback.(op, config)
   end
 
-  def prepare_for_json(term) when is_list(term), do: Enum.map(term, &prepare_for_json/1)
+  defp parse({:error, result}, _), do: {:error, result}
+  defp parse({:ok, %{body: ""}}, _), do: {:ok, %{}}
 
-  def prepare_for_json(%Regex{} = regex), do: inspect(regex)
-
-  def prepare_for_json(%{} = term) do
-    Enum.into(term, %{}, fn {key, value} ->
-      {prepare_key_for_json(key), prepare_for_json(value)}
-    end)
-  end
-
-  def prepare_for_json(term) when is_tuple(term) do
-    term
-    |> Tuple.to_list()
-    |> prepare_for_json()
-  end
-
-  def prepare_for_json(term) do
-    inspect(term)
-  end
-
-  defp prepare_key_for_json(key) when is_atom(key) or is_binary(key) or is_number(key) do
-    key
-  end
-
-  defp prepare_key_for_json(key) do
-    inspect(key)
-  end
-
-  def issue_to_json(
-        %Issue{
-          check: check,
-          category: category,
-          message: message,
-          filename: filename,
-          priority: priority,
-          scope: scope
-        } = issue
-      ) do
-    check_name =
-      check
-      |> to_string()
-      |> String.replace(~r/^(Elixir\.)/, "")
-
-    column_end =
-      if issue.column && issue.trigger do
-        issue.column + String.length(to_string(issue.trigger))
-      end
-
-    %{
-      "check" => check_name,
-      "category" => to_string(category),
-      "filename" => to_string(filename),
-      "line_no" => issue.line_no,
-      "column" => issue.column,
-      "column_end" => column_end,
-      "trigger" => issue.trigger,
-      "message" => message,
-      "priority" => priority,
-      "scope" => scope
-    }
+  defp parse({:ok, %{body: body}}, config) do
+    {:ok, config[:json_codec].decode!(body)}
   end
 end

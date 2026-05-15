@@ -20,13 +20,13 @@ defmodule Migrator.SpecTranslator do
     quoted =
       case safe_parse(path) do
         {:ok, ast} -> extract_spec(ast)
-        :error -> %{}
+        :error -> {[], []}
       end
 
     quoted
       |> mark_type_variable
       |> parse_spec
-      |> translate_spec |> dbg
+      |> translate_spec
   end
 
   defp extract_spec(ast) do
