@@ -41,3 +41,6 @@ translation.pdf
 
 /lib/experiments
 /lib/test
+
+/logs
+/results

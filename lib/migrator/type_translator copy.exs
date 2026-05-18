@@ -239,171 +239,146 @@ defmodule Migrator.TypeTranslator do
 
         {:remote_type, {{modules, def_type}, elements}} ->
           recursive? =
-            root_user_defined_types
-            |> Enum.find_value(fn udt ->
-              case udt do
-                {:user_type, {udt_type, udt_elements}} ->
-                  udt_type == def_type and length(udt_elements) == length(elements)
-
-                _ ->
-                  false
-              end
+            Enum.find_value(root_user_defined_types, fn
+              {:user_type, {udt_type, udt_elements}} ->
+                udt_type == def_type and length(udt_elements) == length(elements)
+              _ -> false
             end)
 
           if recursive? do
-            # a recursive type becomes dynamic.
             :dynamic
           else
-            module_to_find =
-              modules
-              |> Enum.reduce("", fn m, acc -> if acc == "", do: "#{m}", else: "#{acc}.#{m}" end)
+            type_defs_to_be_searched =
+              resolve_module(modules_to_string(modules), whole_type_definition)
 
-            type_defs_to_be_searched = whole_type_definition |> Map.get(module_to_find)
-
-            found_type =
-              if type_defs_to_be_searched do
-                type_defs_to_be_searched
-                |> Enum.find_value(fn {udt, dt} ->
-                  case udt do
-                    {:user_type, {udt_type, udt_elements}} ->
-                      if udt_type == def_type and length(udt_elements) == length(elements),
-                        do: dt,
-                        else: nil
-
-                    _ ->
-                      nil
-                  end
-                end)
-              else
-                nil
-              end
+            found_type = find_type(type_defs_to_be_searched, def_type, elements)
 
             if found_type == nil do
               {:def_not_found, {{modules, def_type}, elements}}
             else
-              new_root_user_defined_types =
-                root_user_defined_types ++ [{:user_type, {{modules, def_type}, elements}}]
-
-              {{new_root_user_defined_types, found_type}, type_defs_to_be_searched,
-               whole_type_definition}
+              new_root = root_user_defined_types ++ [{:user_type, {{modules, def_type}, elements}}]
+              {{new_root, found_type}, type_defs_to_be_searched, whole_type_definition}
               |> replacing_fun.()
             end
           end
 
         {:remote_type, {modules, def_type}} ->
           recursive? =
-            root_user_defined_types
-            |> Enum.find_value(fn udt ->
-              case udt do
-                {:user_type, udt_type} ->
-                  udt_type == def_type
-                  # _ -> false
-              end
+            Enum.find_value(root_user_defined_types, fn
+              {:user_type, udt_type} when not is_tuple(udt_type) -> udt_type == def_type
+              _ -> false
             end)
 
           if recursive? do
-            # a recursive type becomes dynamic.
             :dynamic
           else
-            module_to_find =
-              modules
-              |> Enum.reduce("", fn m, acc -> if acc == "", do: "#{m}", else: "#{acc}.#{m}" end)
+            type_defs_to_be_searched =
+              resolve_module(modules_to_string(modules), whole_type_definition)
 
-            # Enum.map(whole_type_definition, fn {k, v} -> if k == "Cachex.Spec", do: IO.inspect(v), else: IO.inspect(k) end)
-            type_defs_to_be_searched = whole_type_definition |> Map.get(module_to_find)
-
-            found_type =
-              if type_defs_to_be_searched do
-                type_defs_to_be_searched
-                |> Enum.find_value(fn {udt, dt} ->
-                  if udt == {:user_type, def_type}, do: dt, else: nil
-                end)
-              else
-                nil
-              end
+            found_type = find_type(type_defs_to_be_searched, def_type, [])
 
             if found_type == nil do
               {:def_not_found, {modules, def_type}}
             else
-              new_root_user_defined_types = root_user_defined_types ++ [{:user_type, def_type}]
-
-              {{new_root_user_defined_types, found_type}, type_defs_to_be_searched, whole_type_definition} |> replacing_fun.()
+              new_root = root_user_defined_types ++ [{:user_type, def_type}]
+              {{new_root, found_type}, type_defs_to_be_searched, whole_type_definition}
+              |> replacing_fun.()
             end
           end
 
         {:user_type, {{modules, def_type}, elements}} ->
           recursive? =
-            root_user_defined_types
-            |> Enum.find_value(fn udt ->
-              case udt do
-                {:user_type, {udt_type, udt_elements}} ->
-                  udt_type == def_type and length(udt_elements) == length(elements)
-
-                _ ->
-                  false
-              end
+            Enum.find_value(root_user_defined_types, fn
+              {:user_type, {udt_type, udt_elements}} ->
+                udt_type == def_type and length(udt_elements) == length(elements)
+              _ -> false
             end)
 
           if recursive? do
-            # a recursive type becomes dynamic.
             :dynamic
           else
-            found_type =
-              current_type_defs
-              |> Enum.find_value(fn {udt, dt} ->
-                case udt do
-                  {:user_type, {udt_type, udt_elements}} ->
-                    if udt_type == def_type and length(udt_elements) == length(elements),
-                      do: dt,
-                      else: nil
+            type_defs_to_be_searched =
+              resolve_module(modules_to_string(modules), whole_type_definition)
+              || current_type_defs
 
-                  _ ->
-                    nil
-                end
-              end)
+            found_type = find_type(type_defs_to_be_searched, def_type, elements)
 
             if found_type == nil do
               {:def_not_found, {{modules, def_type}, elements}}
             else
-              new_root_user_defined_types =
-                root_user_defined_types ++ [{:user_type, {{modules, def_type}, elements}}]
-
-              {{new_root_user_defined_types, found_type}, current_type_defs,
-               whole_type_definition}
+              new_root = root_user_defined_types ++ [{:user_type, {{modules, def_type}, elements}}]
+              {{new_root, found_type}, type_defs_to_be_searched, whole_type_definition}
               |> replacing_fun.()
             end
           end
 
         {:user_type, def_type} ->
           recursive? =
-            root_user_defined_types
-            |> Enum.find_value(fn udt ->
-              case udt do
-                {:user_type, udt_type} ->
-                  udt_type == def_type
-                  # _ -> false
-              end
+            Enum.find_value(root_user_defined_types, fn
+              {:user_type, udt_type} when not is_tuple(udt_type) -> udt_type == def_type
+              _ -> false
             end)
 
           if recursive? do
-            # a recursive type becomes dynamic.
             :dynamic
           else
+            # Try current module first, then fall back to global search
+            Enum.map(whole_type_definition, fn {k, v} -> if k == "Cachex.Spec", do: IO.inspect(v), else: IO.inspect(k) end)
             found_type =
-              current_type_defs
-              |> Enum.find_value(fn {udt, dt} ->
-                if udt == {:user_type, def_type}, do: dt, else: nil
-              end)
+              find_type(current_type_defs, def_type, []) ||
+                Enum.find_value(whole_type_definition, fn {_key, type_defs} -> find_type(type_defs |> dbg, def_type |> dbg, []) end)
 
             if found_type == nil do
               {:def_not_found, def_type}
             else
-              new_root_user_defined_types = root_user_defined_types ++ [{:user_type, def_type}]
-
-              {{new_root_user_defined_types, found_type}, current_type_defs,
-               whole_type_definition}
+              new_root = root_user_defined_types ++ [{:user_type, def_type}]
+              {{new_root, found_type}, current_type_defs, whole_type_definition}
               |> replacing_fun.()
             end
+          end
+
+        {:def_not_found, {{modules, def_type}, elements}} ->
+          type_defs_to_be_searched =
+            resolve_module(modules_to_string(modules), whole_type_definition)
+
+          found_type = find_type(type_defs_to_be_searched, def_type, elements)
+
+          if found_type == nil do
+            {:def_not_found, {{modules, def_type}, elements}}
+          else
+            new_root = root_user_defined_types ++ [{:user_type, {{modules, def_type}, elements}}]
+            {{new_root, found_type}, type_defs_to_be_searched, whole_type_definition}
+            |> replacing_fun.()
+          end
+
+        {:def_not_found, {modules, def_type}} ->
+          type_defs_to_be_searched =
+            resolve_module(modules_to_string(modules), whole_type_definition)
+
+          found_type = find_type(type_defs_to_be_searched, def_type, [])
+
+          if found_type == nil do
+            {:def_not_found, {modules, def_type}}
+          else
+            new_root = root_user_defined_types ++ [{:user_type, def_type}]
+            {{new_root, found_type}, type_defs_to_be_searched, whole_type_definition}
+            |> replacing_fun.()
+          end
+
+        {:def_not_found, def_type} ->
+          found_type =
+            find_type(current_type_defs, def_type, []) ||
+              whole_type_definition
+              |> Enum.find_value(fn {_key, type_defs} ->
+                find_type(type_defs, def_type, [])
+              end)
+
+          if found_type == nil do
+            {:def_not_found, def_type}
+          else
+            new_root = root_user_defined_types ++ [{:user_type, def_type}]
+            {{new_root, found_type}, current_type_defs, whole_type_definition}
+            |> replacing_fun.()
           end
 
         _ ->
@@ -418,19 +393,67 @@ defmodule Migrator.TypeTranslator do
           translated_type_defs =
             type_defs
             |> Enum.map(fn {user_defined_type, defining_type} ->
-              {user_defined_type |> translate(), defining_type |> translate()}
+              {translate(user_defined_type), translate(defining_type)}
             end)
 
           acc |> Map.merge(%{module => translated_type_defs})
         end)
 
-      saturate_replacement(translated_types, replacing_definition)
+      # Pass the FULL translated_types as the lookup universe from the start
+      saturate_replacement(translated_types, translated_types, replacing_definition)
     end
 
     parsed_types |> total_translator.()
   end
 
-  defp saturate_replacement(current_translated_types, replacing_definition) do
+  # Converts modules representation to a dotted string: [:Cachex, :Spec] -> "Cachex.Spec"
+  defp modules_to_string(modules) do
+    cond do
+      is_list(modules) ->
+        Enum.reduce(modules, "", fn m, acc ->
+          if acc == "", do: "#{m}", else: "#{acc}.#{m}"
+        end)
+      is_atom(modules) -> Atom.to_string(modules)
+      true -> "#{modules}"
+    end
+  end
+
+  # Finds a type by name+arity in a type_defs list, handling all udt shapes:
+  #   {:user_type, :name}              — plain translated type
+  #   {:user_type, {name, []}}         — zero-param parsed type
+  #   {:user_type, {name, [params]}}   — parameterised parsed type
+  defp find_type(nil, _def_type, _elements), do: nil
+  defp find_type(type_defs, def_type, elements) do
+    arity = length(elements)
+    Enum.find_value(type_defs, fn {udt, dt} ->
+      case udt do
+        {:user_type, {udt_type, udt_elements}} when is_list(udt_elements) ->
+          if udt_type == def_type and length(udt_elements) == arity, do: dt, else: nil
+        {:user_type, udt_type} ->
+          if udt_type == def_type and arity == 0, do: dt, else: nil
+        _ ->
+          nil
+      end
+    end)
+  end
+
+  # Tries direct key lookup first, then suffix match for unqualified names
+  defp resolve_module(module_str, whole_type_definition) do
+    case Map.get(whole_type_definition, module_str) do
+      nil ->
+        suffix = ".#{module_str}"
+        Enum.find_value(whole_type_definition, fn {key, type_defs} ->
+          if String.ends_with?(key, suffix), do: type_defs, else: nil
+        end)
+      type_defs ->
+        type_defs
+    end
+  end
+
+  defp saturate_replacement(current_translated_types, full_type_definition, replacing_definition) do
+    # One-time diagnostic — remove after confirming
+    IO.inspect(Map.keys(full_type_definition), label: "full_type_definition keys")
+
     next_translated_types =
       current_translated_types
       |> Enum.reduce(%{}, fn {module, type_defs}, acc ->
@@ -445,8 +468,8 @@ defmodule Migrator.TypeTranslator do
               end
 
             {user_defined_type,
-             {{[user_defined_type], defining_type}, type_defs, current_translated_types}
-             |> replacing_definition.(replacing_definition)}
+            {{[user_defined_type], defining_type}, type_defs, full_type_definition}
+            |> replacing_definition.(replacing_definition)}
           end)
 
         acc |> Map.put(module, replaced_type_defs)
@@ -455,7 +478,8 @@ defmodule Migrator.TypeTranslator do
     if next_translated_types == current_translated_types do
       current_translated_types
     else
-      saturate_replacement(next_translated_types, replacing_definition)
+      # Pass full_type_definition unchanged — it's the complete lookup universe
+      saturate_replacement(next_translated_types, full_type_definition, replacing_definition)
     end
   end
 end

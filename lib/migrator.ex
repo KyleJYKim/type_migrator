@@ -33,6 +33,7 @@ defmodule Migrator do
   alias Migrator.SpecTranslator, as: SpecTr
   alias Migrator.TypeTranslator, as: TypeTr
   alias Migrator.ElixirTypeConstructor, as: TypeConstr
+  require Logger
 
   @root_path "lib/test/"
   @path_direct @root_path <> "direct/"
@@ -48,6 +49,10 @@ defmodule Migrator do
   """
   def main(args) do
     case args do
+      [mode, spec_path, type_paths] ->
+        save_path = Regex.replace(~r"\w+(?*(?i))\.ex", spec_path, "") |> dbg
+        run(mode, spec_path, save_path, type_paths)
+
       [mode, spec_path, save_path | type_paths] ->
         run(mode, spec_path, save_path, type_paths)
 
@@ -115,113 +120,144 @@ defmodule Migrator do
 
   defp convert(:stringify_direct, spec_path) when is_binary(spec_path) do
     try do
-
       {_time_spec_translations, translated_spec} = :timer.tc(&SpecTr.process/1, [spec_path])
 
-      {_time_stringification, stringified_elixir_types} = :timer.tc(&TypeConstr.process/2, [:stringify_direct, translated_spec])
+      {_time_stringification, stringified_elixir_types} =
+        :timer.tc(&TypeConstr.process/2, [:stringify_direct, translated_spec])
 
-      #handle_output(stringified_annotations, time)
+      # handle_output(stringified_annotations, time)
       # IO.puts("Translation Time Elapsed: #{time_translation}")
       # IO.puts("Stringification Time Elapsed: #{time_stringification}")
 
       IO.puts("Translation without User-defined Type Replacement")
-      stringified_elixir_types |> Enum.map(fn {line_nums, {module_name, fun_name}, full_expression} ->
-        lines = line_nums |> Enum.reduce("", fn num, acc -> if acc == "", do: num |> Integer.to_string(), else: "#{acc}, #{num |> Integer.to_string()}" end)
+
+      stringified_elixir_types
+      |> Enum.map(fn {line_nums, {module_name, fun_name}, full_expression} ->
+        lines =
+          line_nums
+          |> Enum.reduce("", fn num, acc ->
+            if acc == "",
+              do: num |> Integer.to_string(),
+              else: "#{acc}, #{num |> Integer.to_string()}"
+          end)
+
         name = "#{module_name}.#{fun_name}"
-        "Line Number: " <> lines |> IO.puts()
-        "Function Name: " <> name |> IO.puts()
+        ("Line Number: " <> lines) |> IO.puts()
+        ("Function Name: " <> name) |> IO.puts()
         full_expression |> IO.puts()
       end)
 
       stringified_elixir_types
-
     catch
       {:CompileError, msg} ->
-        #CDuceRepl.close(pid)
+        # CDuceRepl.close(pid)
 
         IO.puts("CompileError:\n#{msg}")
     end
   end
 
-  defp convert(:stringify_replace, spec_path, type_paths) when is_binary(spec_path) and is_list(type_paths) do
+  defp convert(:stringify_replace, spec_path, type_paths)
+       when is_binary(spec_path) and is_list(type_paths) do
     try do
-
       {_time_type_translation, translated_types} = :timer.tc(&TypeTr.process/1, [type_paths])
 
       {_time_spec_translations, translated_spec} = :timer.tc(&SpecTr.process/1, [spec_path])
 
-      {_time_stringification, stringified_elixir_types} = :timer.tc(&TypeConstr.process/3, [:stringify_replace, translated_spec, translated_types])
+      {_time_stringification, stringified_elixir_types} =
+        :timer.tc(&TypeConstr.process/3, [:stringify_replace, translated_spec, translated_types])
 
-      #handle_output(stringified_annotations, time)
+      # handle_output(stringified_annotations, time)
       # IO.puts("Translation Time Elapsed: #{time_translation}")
       # IO.puts("Stringification Time Elapsed: #{time_stringification}")
 
       IO.puts("Translation with User-defined Type Replacement")
-      stringified_elixir_types |> Enum.map(fn {line_nums, {module_name, fun_name}, full_expression} ->
-        lines = line_nums |> Enum.reduce("", fn num, acc -> if acc == "", do: num |> Integer.to_string(), else: "#{acc}, #{num |> Integer.to_string()}" end)
+
+      stringified_elixir_types
+      |> Enum.map(fn {line_nums, {module_name, fun_name}, full_expression} ->
+        lines =
+          line_nums
+          |> Enum.reduce("", fn num, acc ->
+            if acc == "",
+              do: num |> Integer.to_string(),
+              else: "#{acc}, #{num |> Integer.to_string()}"
+          end)
+
         name = "#{module_name}.#{fun_name}"
-        "Line Number: " <> lines |> IO.puts()
-        "Function Name: " <> name |> IO.puts()
+        ("Line Number: " <> lines) |> IO.puts()
+        ("Function Name: " <> name) |> IO.puts()
         full_expression |> IO.puts()
       end)
 
       stringified_elixir_types
-
     catch
       {:CompileError, msg} ->
-        #CDuceRepl.close(pid)
+        # CDuceRepl.close(pid)
 
         IO.puts("CompileError:\n#{msg}")
     end
   end
 
-  defp convert(:descrize_annotation, spec_path, type_paths) when is_binary(spec_path) and is_list(type_paths) do
+  defp convert(:descrize_annotation, spec_path, type_paths)
+       when is_binary(spec_path) and is_list(type_paths) do
     try do
-
       {_time_type_translation, translated_types} = :timer.tc(&TypeTr.process/1, [type_paths])
 
       {_time_spec_translations, translated_spec} = :timer.tc(&SpecTr.process/1, [spec_path])
 
-      {_time_stringification_type_replacing, descrized_elixir_types} = :timer.tc(&TypeConstr.process/3, [:descrize_annotation, translated_spec, translated_types])
+      {_time_stringification_type_replacing, descrized_elixir_types} =
+        :timer.tc(&TypeConstr.process/3, [:descrize_annotation, translated_spec, translated_types])
 
-      #handle_output(stringified_annotations, time)
+      # handle_output(stringified_annotations, time)
       # IO.puts("Translation Time Elapsed: #{time_translation}")
       # IO.puts("Stringification Time Elapsed: #{time_stringification}")
 
       IO.puts("Translation in Descr")
-      descrized_elixir_types |> Enum.map(fn {line_nums, {module_name, fun_name}, full_expression} ->
-        lines = line_nums |> Enum.reduce("", fn num, acc -> if acc == "", do: num |> Integer.to_string(), else: "#{acc}, #{num |> Integer.to_string()}" end)
+
+      descrized_elixir_types
+      |> Enum.map(fn {line_nums, {module_name, fun_name}, full_expression} ->
+        lines =
+          line_nums
+          |> Enum.reduce("", fn num, acc ->
+            if acc == "",
+              do: num |> Integer.to_string(),
+              else: "#{acc}, #{num |> Integer.to_string()}"
+          end)
+
         name = "#{module_name}.#{fun_name}"
-        "Line Number: " <> lines |> IO.puts()
-        "Function Name: " <> name |> IO.puts()
-        full_expression |> Descr.to_quoted_string |> IO.puts()
+        ("Line Number: " <> lines) |> IO.puts()
+        ("Function Name: " <> name) |> IO.puts()
+        full_expression |> Descr.to_quoted_string() |> IO.puts()
       end)
 
       # return after converting Descr to string for insertion.
-      descrized_elixir_types |> Enum.map(fn {line_nums, {module_name, fun_name}, full_expression} -> {line_nums, {module_name, fun_name}, full_expression |> Descr.to_quoted_string} end)
-
+      descrized_elixir_types
+      |> Enum.map(fn {line_nums, {module_name, fun_name}, full_expression} ->
+        {line_nums, {module_name, fun_name}, full_expression |> Descr.to_quoted_string()}
+      end)
     catch
       {:CompileError, msg} ->
-        #CDuceRepl.close(pid)
+        # CDuceRepl.close(pid)
 
         IO.puts("CompileError:\n#{msg}")
     end
   end
 
-  defp convert(:descrize_assert, spec_path, type_paths) when is_binary(spec_path) and is_list(type_paths) do
+  defp convert(:descrize_assert, spec_path, type_paths)
+       when is_binary(spec_path) and is_list(type_paths) do
     try do
-
       {_time_type_translation, translated_types} = :timer.tc(&TypeTr.process/1, [type_paths])
 
       {_time_spec_translations, translated_spec} = :timer.tc(&SpecTr.process/1, [spec_path])
 
-      {_time_stringification_type_replacing, descrized_elixir_types} = :timer.tc(&TypeConstr.process/3, [:descrize_assert, translated_spec, translated_types])
+      {_time_stringification_type_replacing, descrized_elixir_types} =
+        :timer.tc(&TypeConstr.process/3, [:descrize_assert, translated_spec, translated_types])
 
-      #handle_output(stringified_annotations, time)
+      # handle_output(stringified_annotations, time)
       # IO.puts("Translation Time Elapsed: #{time_translation}")
       # IO.puts("Stringification Time Elapsed: #{time_stringification}")
 
       IO.puts("Translation in Descr functions")
+
       # descrized_elixir_types |> Enum.map(fn {line_nums, {module_name, fun_name}, full_expression} ->
       #   lines = line_nums |> Enum.reduce("", fn num, acc -> if acc == "", do: num |> Integer.to_string(), else: "#{acc}, #{num |> Integer.to_string()}" end)
       #   name = "#{module_name}.#{fun_name}"
@@ -231,14 +267,74 @@ defmodule Migrator do
       # end)
 
       descrized_elixir_types
-
     catch
       {:CompileError, msg} ->
-        #CDuceRepl.close(pid)
+        # CDuceRepl.close(pid)
 
         IO.puts("CompileError:\n#{msg}")
     end
   end
+
+  # New public entry point that accepts pre-computed translated_types
+  def run_with_types(mode, spec_path, translated_types) do
+    save_path = Regex.replace(~r/\w+\.exs?$/, spec_path, "")
+
+    case mode do
+      :descr_assert ->
+        elixir_types = convert_with_types(:descrize_assert, spec_path, translated_types)
+        create_new_file_with_insertion(spec_path, save_path, elixir_types, @descr_prefix <> " ")
+        elixir_types
+
+      :descr ->
+        elixir_types = convert_with_types(:descrize_annotation, spec_path, translated_types)
+        create_new_file_with_insertion(spec_path, save_path, elixir_types, "# $" <> " ")
+        elixir_types
+
+      :replace ->
+        elixir_types = convert_with_types(:stringify_replace, spec_path, translated_types)
+        create_new_file_with_insertion(spec_path, save_path, elixir_types, "# $" <> " ")
+        elixir_types
+
+      _ ->
+        Logger.error("Unknown mode: #{mode}")
+        []
+    end
+  end
+
+  # Mirrors convert/3 but receives translated_types directly — no TypeTr.process call
+  defp convert_with_types(:descrize_assert, spec_path, translated_types) do
+    try do
+      {_t, translated_spec} = :timer.tc(&SpecTr.process/1, [spec_path])
+      {_t, descrized} = :timer.tc(&TypeConstr.process/3, [:descrize_assert, translated_spec, translated_types])
+      descrized
+    catch
+      {:CompileError, msg} -> Logger.error("CompileError:\n#{msg}"); []
+    end
+  end
+
+  defp convert_with_types(:descrize_annotation, spec_path, translated_types) do
+    try do
+      {_t, translated_spec} = :timer.tc(&SpecTr.process/1, [spec_path])
+      {_t, descrized} = :timer.tc(&TypeConstr.process/3, [:descrize_annotation, translated_spec, translated_types])
+      descrized
+      |> Enum.map(fn {line_nums, {m, f}, expr} ->
+        {line_nums, {m, f}, Descr.to_quoted_string(expr)}
+      end)
+    catch
+      {:CompileError, msg} -> Logger.error("CompileError:\n#{msg}"); []
+    end
+  end
+
+  defp convert_with_types(:stringify_replace, spec_path, translated_types) do
+    try do
+      {_t, translated_spec} = :timer.tc(&SpecTr.process/1, [spec_path])
+      {_t, stringified} = :timer.tc(&TypeConstr.process/3, [:stringify_replace, translated_spec, translated_types])
+      stringified
+    catch
+      {:CompileError, msg} -> Logger.error("CompileError:\n#{msg}"); []
+    end
+  end
+
 
   defp create_new_file_with_insertion(spec_path, _save_path, elixir_types, prefix) do
     # spec_path_list = spec_path
@@ -279,7 +375,8 @@ defmodule Migrator do
       new_content_lines =
         elixir_types
         |> Enum.reverse()
-        |> Enum.reduce(stripped_lines, fn {line_nums, {_module_name, _fun_name}, full_expression}, acc ->
+        |> Enum.reduce(stripped_lines, fn {line_nums, {_module_name, _fun_name}, full_expression},
+                                          acc ->
           orig_idx = List.first(line_nums) - 1
           # Fall back to orig_idx if not in mapping (first run, no stripping happened)
           line_idx = Map.get(original_to_stripped, orig_idx, orig_idx)
@@ -297,7 +394,6 @@ defmodule Migrator do
         end)
 
       File.write(output_path, Enum.join(new_content_lines, "\n"))
-
     catch
       {:CompileError, msg} -> IO.puts("CompileError:\n#{msg}")
     end

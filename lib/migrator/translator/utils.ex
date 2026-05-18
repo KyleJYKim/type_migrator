@@ -7,13 +7,13 @@ defmodule Migrator.Translator.Utils do
       {:ok, path |> File.read!() |> Code.string_to_quoted!()}
     rescue
       e in SyntaxError ->
-        Logger.warning("Skipping — syntax error: #{e.description}")
+        Logger.warning("Skipping — syntax error (#{path}): #{e.description}")
         :error
       e in TokenMissingError ->
-        Logger.warning("Skipping — incomplete expression: #{e.description}")
+        Logger.warning("Skipping — incomplete expression (#{path}: #{e.description}")
         :error
       e in MismatchedDelimiterError ->
-        Logger.warning("Skipping — mismatched delimiter: #{e.description}")
+        Logger.warning("Skipping — mismatched delimiter (#{path}: #{e.description}")
         :error
     end
 end

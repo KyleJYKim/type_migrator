@@ -1,5 +1,4 @@
 defmodule Ex3 do
-
   @type my_type :: map()
   @opaque my_opaque :: map()
   @typep my_typep :: map()
@@ -15,6 +14,9 @@ defmodule Ex3 do
 
   @spec map_id4(%{optional(atom()) => binary(), :a => integer()}) :: map()
   def map_id4(x) when is_map(x), do: x
+
+  @spec map_id5(%{(String.t() | nil) => binary()}) :: binary() | nil
+  def map_id5(x) when is_map(x), do: Map.get(x, "x")
 
   defmodule Some do
     defstruct a: 0, b: 0

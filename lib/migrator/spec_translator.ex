@@ -24,66 +24,119 @@ defmodule Migrator.SpecTranslator do
       end
 
     quoted
-      |> mark_type_variable
-      |> parse_spec
-      |> translate_spec
+    |> mark_type_variable
+    |> parse_spec
+    |> translate_spec
   end
 
   defp extract_spec(ast) do
     # Note: Patterns are matched only when tried with elixir codes written on files (not from prompt).
     extractor = fn {ast, alias_acc, module_name_acc, spec_acc}, extractor_fun ->
       extractor_fun = &extractor_fun.(&1, extractor_fun)
+
       case ast do
         {:defmodule, _, [{:__aliases__, _, module_name}, [do: module_ast]]} ->
-          module_name_new = module_name |> Enum.reduce("", fn name, acc -> if acc == "", do: Atom.to_string(name), else: acc <> "." <> Atom.to_string(name) end)
-          module_name_acc = if module_name_acc == "", do: module_name_new, else: module_name_acc <> "." <> module_name_new
+          module_name_new =
+            module_name
+            |> Enum.reduce("", fn name, acc ->
+              if acc == "", do: Atom.to_string(name), else: acc <> "." <> Atom.to_string(name)
+            end)
+
+          module_name_acc =
+            if module_name_acc == "",
+              do: module_name_new,
+              else: module_name_acc <> "." <> module_name_new
+
           {module_ast, alias_acc, module_name_acc, spec_acc} |> extractor_fun.()
 
         {:__block__, _, block} ->
-          block |> Enum.reduce({alias_acc, spec_acc}, fn block_ast, {alias_acc, spec_acc} -> {block_ast, alias_acc, module_name_acc, spec_acc} |> extractor_fun.() end)
-
-
-        {:alias, _,[{{:., _, alias_module_paths}, _, alias_modules}]} ->
-          alias_module_path = case alias_module_paths do
-            [{:__MODULE__, _, nil}, :{}] ->
-              module_name_acc
-            [{:__aliases__, _, alias_module_paths}, :{}] ->
-              alias_module_paths |> Enum.reduce("", fn name, acc -> if acc == "", do: Atom.to_string(name), else: acc <> "." <> Atom.to_string(name) end)
-          end
-          alias_modules_new = alias_modules |> Enum.map(fn {:__aliases__, _, modules} ->
-            alias_module = modules |> Enum.reverse |> hd
-            end_module = modules |> Enum.reduce("", fn name, acc -> if acc == "", do: Atom.to_string(name), else: acc <> "." <> Atom.to_string(name) end)
-            {alias_module, alias_module_path <> "." <> end_module}
+          block
+          |> Enum.reduce({alias_acc, spec_acc}, fn block_ast, {alias_acc, spec_acc} ->
+            {block_ast, alias_acc, module_name_acc, spec_acc} |> extractor_fun.()
           end)
+
+        {:alias, _, [{{:., _, alias_module_paths}, _, alias_modules}]} ->
+          alias_module_path =
+            case alias_module_paths do
+              [{:__MODULE__, _, nil}, :{}] ->
+                module_name_acc
+
+              [{:__aliases__, _, alias_module_paths}, :{}] ->
+                alias_module_paths
+                |> Enum.reduce("", fn name, acc ->
+                  if acc == "", do: Atom.to_string(name), else: acc <> "." <> Atom.to_string(name)
+                end)
+            end
+
+          alias_modules_new =
+            alias_modules
+            |> Enum.map(fn {:__aliases__, _, modules} ->
+              alias_module = modules |> Enum.reverse() |> hd
+
+              end_module =
+                modules
+                |> Enum.reduce("", fn name, acc ->
+                  if acc == "", do: Atom.to_string(name), else: acc <> "." <> Atom.to_string(name)
+                end)
+
+              {alias_module, alias_module_path <> "." <> end_module}
+            end)
+
           {alias_acc ++ alias_modules_new, spec_acc}
 
         {:alias, _, [{:__aliases__, _, alias_modules}, [as: {:__aliases__, _, [aliased_name]}]]} ->
-          alias_module_new = case alias_modules do
-            [{:__MODULE__, _, nil} | alias_modules] ->
-              alias_modules |> Enum.reduce(module_name_acc, fn name, acc -> acc <> "." <> Atom.to_string(name) end)
-            _ ->
-              alias_modules |> Enum.reduce("", fn name, acc -> if acc == "", do: Atom.to_string(name), else: acc <> "." <> Atom.to_string(name) end)
-          end
+          alias_module_new =
+            case alias_modules do
+              [{:__MODULE__, _, nil} | alias_modules] ->
+                alias_modules
+                |> Enum.reduce(module_name_acc, fn name, acc ->
+                  acc <> "." <> Atom.to_string(name)
+                end)
+
+              _ ->
+                alias_modules
+                |> Enum.reduce("", fn name, acc ->
+                  if acc == "", do: Atom.to_string(name), else: acc <> "." <> Atom.to_string(name)
+                end)
+            end
+
           {alias_acc ++ [{Atom.to_string(aliased_name), alias_module_new}], spec_acc}
 
         {:alias, _, [{:__aliases__, _, alias_modules}]} ->
-          alias_module_new = case alias_modules do
-            [{:__MODULE__, _, nil} | alias_modules] ->
-              alias_modules |> Enum.reduce(module_name_acc, fn name, acc -> acc <> "." <> Atom.to_string(name) end)
-            _ ->
-              alias_modules |> Enum.reduce("", fn name, acc -> if acc == "", do: Atom.to_string(name), else: acc <> "." <> Atom.to_string(name) end)
-          end
-          {alias_acc ++ [{Atom.to_string(alias_modules |> Enum.reverse |> hd), alias_module_new}], spec_acc}
+          alias_module_new =
+            case alias_modules do
+              [{:__MODULE__, _, nil} | alias_modules] ->
+                alias_modules
+                |> Enum.reduce(module_name_acc, fn name, acc ->
+                  acc <> "." <> Atom.to_string(name)
+                end)
+
+              _ ->
+                alias_modules
+                |> Enum.reduce("", fn name, acc ->
+                  if acc == "", do: Atom.to_string(name), else: acc <> "." <> Atom.to_string(name)
+                end)
+            end
+
+          {alias_acc ++
+             [{Atom.to_string(alias_modules |> Enum.reverse() |> hd), alias_module_new}],
+           spec_acc}
 
         {:@, [line: line_num], [{:spec, _, [{:"::", _, [{fun_name, _, inputs}, output]}]}]} ->
           inputs = if inputs == nil, do: [], else: inputs
-          {alias_acc, spec_acc ++ [{line_num, {"#{module_name_acc}", "#{fun_name}"}, inputs, output, nil}]}
 
-        {:@, [line: line_num], [{:spec, _, [{:when, _, [{:"::", _, [{fun_name, _, inputs}, output]}, guards]}]}]} ->
+          {alias_acc,
+           spec_acc ++ [{line_num, {"#{module_name_acc}", "#{fun_name}"}, inputs, output, nil}]}
+
+        {:@, [line: line_num],
+         [{:spec, _, [{:when, _, [{:"::", _, [{fun_name, _, inputs}, output]}, guards]}]}]} ->
           inputs = if inputs == nil, do: [], else: inputs
-          {alias_acc, spec_acc ++ [{line_num, {"#{module_name_acc}", "#{fun_name}"}, inputs, output, guards}]}
 
-        _ -> {alias_acc, spec_acc}
+          {alias_acc,
+           spec_acc ++ [{line_num, {"#{module_name_acc}", "#{fun_name}"}, inputs, output, guards}]}
+
+        _ ->
+          {alias_acc, spec_acc}
       end
     end
 
@@ -91,60 +144,79 @@ defmodule Migrator.SpecTranslator do
   end
 
   defp mark_type_variable({alias_info, spec_tree}) do
+    type_var_marker = fn {line_num, name, inputs, output, guards} ->
+      inputs =
+        inputs
+        |> Enum.map(fn input ->
+          Macro.prewalk(input, fn type ->
+            if guards == nil,
+              do: type,
+              else:
+                guards
+                |> Enum.reduce(type, fn {k, _v}, acc ->
+                  case type do
+                    {var_name, _, nil} ->
+                      if var_name == k, do: {var_name, [], :__guard_type_variable__}, else: acc
 
-    type_var_marker = fn {line_num, name, inputs, output, guards} -> (
-
-      inputs = inputs |> Enum.map(fn input ->
-        Macro.prewalk(input, fn type ->
-            if guards == nil, do: type, else: guards |> Enum.reduce(type, fn {k, _v}, acc ->
-              case type do
-                {var_name, _, nil} -> if var_name == k, do: {var_name, [], :__guard_type_variable__}, else: acc
-                _ -> acc
-              end
-            end)
+                    _ ->
+                      acc
+                  end
+                end)
           end)
         end)
 
-      output = Macro.prewalk(output, fn type ->
-          if guards == nil, do: type, else: guards |> Enum.reduce(type, fn {k, _v}, acc ->
-            case type do
-              {var_name, _, nil} -> if var_name == k, do: {var_name, [], :__guard_type_variable__}, else: acc
-              _ -> acc
-            end
-          end)
+      output =
+        Macro.prewalk(output, fn type ->
+          if guards == nil,
+            do: type,
+            else:
+              guards
+              |> Enum.reduce(type, fn {k, _v}, acc ->
+                case type do
+                  {var_name, _, nil} ->
+                    if var_name == k, do: {var_name, [], :__guard_type_variable__}, else: acc
+
+                  _ ->
+                    acc
+                end
+              end)
         end)
 
       {line_num, name, inputs, output, guards}
-    )end
+    end
 
     {alias_info, spec_tree |> Enum.map(type_var_marker)}
   end
 
   defp parse_spec({alias_info, spec_tree}) do
-
-    total_parser = fn {line_num, {module_name, fun_name}, inputs, output, guards} -> (
-
+    total_parser = fn {line_num, {module_name, fun_name}, inputs, output, guards} ->
       inputs = inputs |> Enum.map(fn type -> type |> parse(module_name) end)
       output = output |> parse(module_name)
-      guards = if guards == nil, do: nil, else: guards |> Enum.map(fn {k, v} -> {k, v |> parse(module_name)} end)
+
+      guards =
+        if guards == nil,
+          do: nil,
+          else: guards |> Enum.map(fn {k, v} -> {k, v |> parse(module_name)} end)
 
       {line_num, {module_name, fun_name}, inputs, output, guards}
-    )end
+    end
 
     {alias_info, spec_tree |> Enum.map(total_parser)}
   end
 
   defp translate_spec({alias_info, parsed_spec_tree}) do
-
-    total_translator = fn {line_num, name, inputs, output, guards} -> (
-
+    total_translator = fn {line_num, name, inputs, output, guards} ->
       translation = &translate(&1, guards)
-      inputs = inputs |> Enum.map(fn input -> input |> translation.()end)
+      inputs = inputs |> Enum.map(fn input -> input |> translation.() end)
       output = output |> translation.()
-      guards = if guards == nil, do: nil, else: guards |> Enum.map(fn {var, type} -> {var, type |> translation.()} end)
+
+      guards =
+        if guards == nil,
+          do: nil,
+          else: guards |> Enum.map(fn {var, type} -> {var, type |> translation.()} end)
 
       {line_num, name, inputs, output, guards}
-    )end
+    end
 
     {alias_info, parsed_spec_tree |> Enum.map(total_translator)}
   end
