@@ -79,16 +79,28 @@ defmodule Migrator.ElixirTypeConstructor do
           {:struct,
            {strt_name,
             fields
-            |> Enum.map(fn {type_left, type_right} ->
-              {type_left |> replacing_fun.(), type_right |> replacing_fun.()}
+            |> Enum.reduce([], fn {type_left, type_right}, acc ->
+              expanding_union = fn {type_l, type_r}, expanding_fun ->
+                case type_l do
+                  {:union, {union_l, union_r}} -> [{union_l, type_r}] ++ expanding_fun.({union_r, type_r}, expanding_fun)
+                  _ -> [{type_l, type_r}]
+                end
+              end
+              acc ++ expanding_union.({type_left |> replacing_fun.(), type_right |> replacing_fun.()}, expanding_union)
             end)}}
 
         {:closed_map, fields} ->
           {:closed_map,
-           fields
-           |> Enum.map(fn {type_left, type_right} ->
-             {type_left |> replacing_fun.(), type_right |> replacing_fun.()}
-           end)}
+            fields
+            |> Enum.reduce([], fn {type_left, type_right}, acc ->
+              expanding_union = fn {type_l, type_r}, expanding_fun ->
+                case type_l do
+                  {:union, {union_l, union_r}} -> [{union_l, type_r}] ++ expanding_fun.({union_r, type_r}, expanding_fun)
+                  _ -> [{type_l, type_r}]
+                end
+              end
+              acc ++ expanding_union.({type_left |> replacing_fun.(), type_right |> replacing_fun.()}, expanding_union)
+            end)}
 
         {:if_set, type} ->
           {:if_set, type |> replacing_fun.()}
@@ -852,10 +864,10 @@ defmodule Migrator.ElixirTypeConstructor do
         {:struct, {strt_name, fields}} ->
           fields_descr =
             fields
-            |> Enum.reduce("", fn {{:atom, atom}, type_right}, acc ->
+            |> Enum.reduce("", fn {type_left, type_right}, acc ->
               if acc == "",
-                do: ":#{atom} => #{type_right |> descrizing_fun.()}",
-                else: acc <> ", " <> ":#{atom} => #{type_right |> descrizing_fun.()}"
+                do: "#{type_left |> descrizing_fun.()} => #{type_right |> descrizing_fun.()}",
+                else: acc <> ", " <> "#{type_left |> descrizing_fun.()} => #{type_right |> descrizing_fun.()}"
 
               # if acc == "", do: "{:#{atom}, #{type_right |> descrizing_fun.()}}", else: acc <> ", " <>  "{:#{atom}, #{type_right |> descrizing_fun.()}}"
             end)
@@ -867,7 +879,6 @@ defmodule Migrator.ElixirTypeConstructor do
               "#{fields_descr}, :__struct__ => :\"#{strt_name}\""
             end
 
-          # "closed_map([#{fields}])"
           "%{#{fields}}"
 
         {:closed_map, fields} ->
@@ -879,7 +890,6 @@ defmodule Migrator.ElixirTypeConstructor do
               if acc == "", do: field, else: acc <> ", " <> field
             end)
 
-          # "closed_map([#{fields}])"
           "%{#{fields}}"
 
         :... ->
@@ -906,7 +916,8 @@ defmodule Migrator.ElixirTypeConstructor do
           ":false"
 
         {:atom, atom} ->
-          if String.contains?(Atom.to_string(atom), " ") do
+          to_be_quoted? = [" ", "-", "."] |> Enum.reduce(false, &String.contains?(Atom.to_string(atom), &1) or &2)
+          if to_be_quoted? do
             ":\"#{atom}\""
           else
             ":#{atom}"
