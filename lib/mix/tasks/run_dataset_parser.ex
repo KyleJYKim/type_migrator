@@ -1,16 +1,12 @@
 defmodule Mix.Tasks.RunDatasetParser do
   use Mix.Task
-  @shortdoc "Parse dataset.jsonl and print warning statistics"
+  @shortdoc "Parse dataset.jsonl and write analysis to a file"
 
-  def run([]) do
-    DatasetParser.main()
-  end
-
-  def run([dataset_path]) do
-    DatasetParser.main(dataset_path)
-  end
+  def run([]), do: DatasetParser.main()
+  def run([dataset_path]), do: DatasetParser.main(dataset_path)
+  def run([dataset_path, output_path]), do: DatasetParser.main(dataset_path, output_path)
 
   def run(_) do
-    Mix.raise("Usage: mix run_dataset_parser [/path/to/dataset.jsonl]")
+    Mix.raise("Usage: mix run_dataset_parser [dataset.jsonl [output.tex]]")
   end
 end
