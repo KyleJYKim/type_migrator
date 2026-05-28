@@ -18,7 +18,7 @@ defmodule Migrator.SpecTranslator do
 
   def process(path) when is_binary(path) do
     quoted =
-      case safe_parse(path) do
+      case safe_string_to_quoted(path) do
         {:ok, ast} -> extract_spec(ast)
         :error -> {[], []}
       end

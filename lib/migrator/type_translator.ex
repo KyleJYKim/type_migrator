@@ -5,7 +5,7 @@ defmodule Migrator.TypeTranslator do
     extracted_types =
       paths
       |> Enum.map(fn path ->
-        case safe_parse(path) do
+        case safe_string_to_quoted(path) do
           {:ok, ast} -> extract_type(ast)
           :error -> %{}
         end

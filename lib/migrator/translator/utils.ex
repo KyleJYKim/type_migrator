@@ -2,7 +2,7 @@ defmodule Migrator.Translator.Utils do
   alias Migrator.Translator.Approximator, as: Approx
   require Logger
 
-  def safe_parse(path) do
+  def safe_string_to_quoted(path) do
     try do
       {:ok, path |> File.read!() |> Code.string_to_quoted!()}
     rescue
