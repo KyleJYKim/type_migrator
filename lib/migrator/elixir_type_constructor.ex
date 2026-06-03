@@ -295,18 +295,30 @@ defmodule Migrator.ElixirTypeConstructor do
 
           {:struct, {strt_name, fields}} ->
             {:struct,
-             {strt_name,
+            {strt_name,
               fields
-              |> Enum.map(fn {type_left, type_right} ->
-                {type_left |> search_fun.(), type_right |> search_fun.()}
+              |> Enum.reduce([], fn {type_left, type_right}, acc ->
+                expanding_union = fn {type_l, type_r}, expanding_fun ->
+                  case type_l do
+                    {:union, {union_l, union_r}} -> [{union_l, type_r}] ++ expanding_fun.({union_r, type_r}, expanding_fun)
+                    _ -> [{type_l, type_r}]
+                  end
+                end
+                acc ++ expanding_union.({type_left |> search_fun.(), type_right |> search_fun.()}, expanding_union)
               end)}}
 
           {:closed_map, fields} ->
             {:closed_map,
-             fields
-             |> Enum.map(fn {type_left, type_right} ->
-               {type_left |> search_fun.(), type_right |> search_fun.()}
-             end)}
+              fields
+              |> Enum.reduce([], fn {type_left, type_right}, acc ->
+                expanding_union = fn {type_l, type_r}, expanding_fun ->
+                  case type_l do
+                    {:union, {union_l, union_r}} -> [{union_l, type_r}] ++ expanding_fun.({union_r, type_r}, expanding_fun)
+                    _ -> [{type_l, type_r}]
+                  end
+                end
+                acc ++ expanding_union.({type_left |> search_fun.(), type_right |> search_fun.()}, expanding_union)
+              end)}
 
           {:if_set, type} ->
             {:if_set, type |> search_fun.()}
@@ -963,7 +975,7 @@ defmodule Migrator.ElixirTypeConstructor do
 
         # "open_map()"
         :open_map ->
-          "%{...}"
+          "open_map()" #"%{...}"
 
         :fun ->
           "fun()"

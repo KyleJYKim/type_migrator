@@ -212,7 +212,7 @@ defmodule Ex1 do
 
     def id_type4(), do: Ex1.id_type4("string")
 
-    def id_type5(), do: Ex1.id_type5({1, 2})
+    # def id_type5(), do: Ex1.id_type5({1, 2})
   end
 
   # @spec weak_identity(integer()) :: integer()

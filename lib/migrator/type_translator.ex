@@ -157,9 +157,7 @@ defmodule Migrator.TypeTranslator do
   end
 
   defp translate_type(parsed_types) do
-    replacing_definition = fn {{root_user_defined_types, defining_type}, current_type_defs,
-                               whole_type_definition},
-                              replacing_fun ->
+    replacing_definition = fn {{root_user_defined_types, defining_type}, current_type_defs, whole_type_definition}, replacing_fun ->
       replacing_fun = &replacing_fun.(&1, replacing_fun)
 
       case defining_type do
@@ -217,25 +215,54 @@ defmodule Migrator.TypeTranslator do
                |> replacing_fun.()}
             end)}}
 
+        {:struct, {strt_name, fields}} ->
+          {:struct,
+            {strt_name,
+            fields
+            |> Enum.reduce([], fn {type_left, type_right}, acc ->
+              expanding_union = fn {type_l, type_r}, expanding_fun ->
+                case type_l do
+                  {:union, {union_l, union_r}} -> [{union_l, type_r}] ++ expanding_fun.({union_r, type_r}, expanding_fun)
+                  _ -> [{type_l, type_r}]
+                end
+              end
+              expanded = {{{root_user_defined_types, type_left}, current_type_defs, whole_type_definition}
+                          |> replacing_fun.(),
+                          {{root_user_defined_types, type_right}, current_type_defs, whole_type_definition}
+                          |> replacing_fun.()}
+                        |> expanding_union.(expanding_union)
+
+              acc ++ expanded
+            end)}}
+
         {:closed_map, fields} ->
           {:closed_map,
-           fields
-           |> Enum.map(fn {type_left, type_right} ->
-             {{{root_user_defined_types, type_left}, current_type_defs, whole_type_definition}
-              |> replacing_fun.(),
-              {{root_user_defined_types, type_right}, current_type_defs, whole_type_definition}
-              |> replacing_fun.()}
-           end)}
+            fields
+            |> Enum.reduce([], fn {type_left, type_right}, acc ->
+            expanding_union = fn {type_l, type_r}, expanding_fun ->
+                case type_l do
+                  {:union, {union_l, union_r}} -> [{union_l, type_r}] ++ expanding_fun.({union_r, type_r}, expanding_fun)
+                  _ -> [{type_l, type_r}]
+                end
+              end
+            expanded = {{{root_user_defined_types, type_left}, current_type_defs, whole_type_definition}
+                          |> replacing_fun.(),
+                          {{root_user_defined_types, type_right}, current_type_defs, whole_type_definition}
+                          |> replacing_fun.()}
+                        |> expanding_union.(expanding_union)
+
+              acc ++ expanded
+            end)}
 
         {:if_set, type} ->
           {:if_set,
-           {{root_user_defined_types, type}, current_type_defs, whole_type_definition}
-           |> replacing_fun.()}
+            {{root_user_defined_types, type}, current_type_defs, whole_type_definition}
+            |> replacing_fun.()}
 
         {:dynamic, type} ->
           {:dynamic,
-           {{root_user_defined_types, type}, current_type_defs, whole_type_definition}
-           |> replacing_fun.()}
+            {{root_user_defined_types, type}, current_type_defs, whole_type_definition}
+            |> replacing_fun.()}
 
         {:remote_type, {{modules, def_type}, elements}} ->
           recursive? =
