@@ -50,5 +50,21 @@ defmodule SpecTranslationTypeReplacementTest do
                )
              )
     end
+
+    # Guards normalize_map_fields/2: when a map field's key is replaced from a
+    # user-defined type to an atom singleton, the field's declared optionality
+    # must be preserved. A `required` key must stay required (no if_set wrapper);
+    # the earlier normalize_map_fields/1 wrongly marked it optional because it
+    # inferred optionality from the replaced value alone.
+    test "a required map key sourced from a user-defined type stays required after replacement" do
+      [{_, _, result}] = translate("#{@user_def_types}required_user_typed_key.ex")
+
+      # :name comes from required(key_t()) — it must remain required.
+      assert result =~ ":name => binary()"
+      refute result =~ ":name => if_set"
+
+      # :age is declared optional and must stay optional.
+      assert result =~ ":age => if_set(integer())"
+    end
   end
 end
