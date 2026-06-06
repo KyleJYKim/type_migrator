@@ -35,7 +35,8 @@ defmodule Migrator.SpecTranslator do
       extractor_fun = &extractor_fun.(&1, extractor_fun)
 
       case ast do
-        {:defmodule, _, [{:__aliases__, _, module_name}, [do: module_ast]]} ->
+        {def_kind, _, [{:__aliases__, _, module_name}, [do: module_ast]]}
+        when def_kind in [:defmodule, :defprotocol] ->
           module_name_new =
             module_name
             |> Enum.reduce("", fn name, acc ->
@@ -53,6 +54,15 @@ defmodule Migrator.SpecTranslator do
           block
           |> Enum.reduce({alias_acc, spec_acc}, fn block_ast, {alias_acc, spec_acc} ->
             {block_ast, alias_acc, module_name_acc, spec_acc} |> extractor_fun.()
+          end)
+
+        # Compile-time conditional definitions: @spec/def may live inside
+        # cond/case/if/unless branches at module level. Descend into each branch.
+        {control, _, _} when control in [:cond, :case, :if, :unless] ->
+          ast
+          |> branch_bodies()
+          |> Enum.reduce({alias_acc, spec_acc}, fn body, {alias_acc, spec_acc} ->
+            {body, alias_acc, module_name_acc, spec_acc} |> extractor_fun.()
           end)
 
         {:alias, _, [{{:., _, alias_module_paths}, _, alias_modules}]} ->
@@ -83,6 +93,10 @@ defmodule Migrator.SpecTranslator do
             end)
 
           {alias_acc ++ alias_modules_new, spec_acc}
+
+        # alias __MODULE__, as: X  → X refers to the current module itself
+        {:alias, _, [{:__MODULE__, _, nil}, [as: {:__aliases__, _, [aliased_name]}]]} ->
+          {alias_acc ++ [{Atom.to_string(aliased_name), module_name_acc}], spec_acc}
 
         {:alias, _, [{:__aliases__, _, alias_modules}, [as: {:__aliases__, _, [aliased_name]}]]} ->
           alias_module_new =
