@@ -2,6 +2,29 @@ defmodule Migrator.Translator.Utils do
   alias Migrator.Translator.Approximator, as: Approx
   require Logger
 
+  @doc """
+  Returns the branch bodies of a compile-time control-flow node
+  (cond/case/if/unless), so AST walkers can descend into @spec/def
+  definitions placed inside them. Returns [] for anything else.
+  """
+  def branch_bodies({:cond, _, [[do: clauses]]}), do: clause_bodies(clauses)
+  def branch_bodies({:case, _, [_expr, [do: clauses]]}), do: clause_bodies(clauses)
+
+  def branch_bodies({control, _, [_cond, kw]}) when control in [:if, :unless] and is_list(kw) do
+    [Keyword.get(kw, :do), Keyword.get(kw, :else)] |> Enum.reject(&is_nil/1)
+  end
+
+  def branch_bodies(_), do: []
+
+  defp clause_bodies(clauses) when is_list(clauses) do
+    Enum.flat_map(clauses, fn
+      {:->, _, [_head, body]} -> [body]
+      _ -> []
+    end)
+  end
+
+  defp clause_bodies(_), do: []
+
   def safe_string_to_quoted(path) do
     try do
       {:ok, path |> File.read!() |> Code.string_to_quoted!()}
@@ -39,6 +62,17 @@ end
       # Type Variables
       {_, _, :__guard_type_variable__} ->
         type_node
+
+      # __MODULE__.type(...) — the module is the current module itself
+      {{:., _, [{:__MODULE__, _, nil}, type]}, _, elements} when is_list(elements) ->
+        modules = current_module |> String.split(".") |> Enum.map(&String.to_atom/1)
+        {{:., [], [{:__aliases__, [], modules}, type]}, [], elements}
+
+      # Erlang remote type:  :mod.type(...)  where the module is a bare atom.
+      # Treat the erlang module as a single-segment remote so it resolves via the
+      # std/remote-type cache (keyed by the erlang module name, e.g. "ets").
+      {{:., _, [m, type]}, _, elements} when is_atom(m) and is_atom(type) and is_list(elements) ->
+        {{:., [], [{:__aliases__, [], [m]}, type]}, [], elements}
 
       {{:., _, [{:__aliases__, _, modules}, type]}, _, elements}
       when is_list(elements) and elements != [] ->
@@ -120,7 +154,7 @@ end
          [
            [],
            {:nonempty_maybe_improper_list, [],
-            [{:|, [], [type1, type2] |> Enum.map(fn type -> type |> parse(current_module) end)}]}
+            [type1 |> parse(current_module), type2 |> parse(current_module)]}
          ]}
 
       {:maybe_improper_list, _, param} when param == [] or param == nil ->
@@ -215,6 +249,26 @@ end
 
       [type, {:..., _, _}] ->
         {:nonempty_list, [], [type]} |> parse(current_module)
+
+      # keyword-list type: [k1: t1, k2: t2, ...] ≡ a (possibly empty) list whose
+      # elements are the union of {:k, value} tuples. Reconstruct that union of
+      # tuples and reuse the list machinery so each value is parsed/replaced.
+      kw = [{first_key, _} | _] when is_atom(first_key) ->
+        if Enum.all?(kw, fn
+             {k, _v} -> is_atom(k)
+             _ -> false
+           end) do
+          union_ast =
+            kw
+            |> Enum.reverse()
+            |> Enum.reduce(nil, fn pair, acc ->
+              if acc == nil, do: pair, else: {:|, [], [pair, acc]}
+            end)
+
+          {:list, [], [union_ast]} |> parse(current_module)
+        else
+          kw
+        end
 
       [type] ->
         {:list, [], [type]} |> parse(current_module)
@@ -469,8 +523,13 @@ end
       {:pos_integer, _, _} ->
         {:interval, {1, :infty}}
 
-      {:"::", _, [user_type_var, type]} ->
-        {user_type_var |> translate_fun.(), type |> translate_fun.()}
+      # A named-type label (e.g. `x :: term()`) is cosmetic: only the type
+      # matters. `parse/2` drops the label at the top level, but remote/user-type
+      # elements reach `translate` unparsed, so we drop it here too for
+      # consistency. Keeping it produced a malformed {name, type} pair that the
+      # stringifier could not render.
+      {:"::", _, [_named_label, type]} ->
+        type |> translate_fun.()
 
       # Remote module type (e.g., String.t())
       {{:., _, [{:__aliases__, _, modules}, type]}, _, elements}
