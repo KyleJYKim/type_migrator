@@ -1,5 +1,6 @@
 defmodule Migrator.ElixirTypeConstructor do
   alias Module.Types.Descr
+  alias Migrator.Translator.Approximator, as: Approx
   import Migrator.TypeTableHandler
   import Migrator.Translator.Utils
 
@@ -76,31 +77,24 @@ defmodule Migrator.ElixirTypeConstructor do
           {:tuple, types |> Enum.map(fn type -> type |> replacing_fun.() end)}
 
         {:struct, {strt_name, fields}} ->
-          {:struct,
-           {strt_name,
+          new_fields =
             fields
-            |> Enum.reduce([], fn {type_left, type_right}, acc ->
-              expanding_union = fn {type_l, type_r}, expanding_fun ->
-                case type_l do
-                  {:union, {union_l, union_r}} -> [{union_l, type_r}] ++ expanding_fun.({union_r, type_r}, expanding_fun)
-                  _ -> [{type_l, type_r}]
-                end
-              end
-              acc ++ expanding_union.({type_left |> replacing_fun.(), type_right |> replacing_fun.()}, expanding_union)
-            end)}}
+            |> Enum.map(fn {type_left, type_right} ->
+              {type_left |> replacing_fun.(), type_right |> replacing_fun.()}
+            end)
+            |> normalize_map_fields(fields)
+
+          {:struct, {strt_name, new_fields}}
 
         {:closed_map, fields} ->
-          {:closed_map,
+          new_fields =
             fields
-            |> Enum.reduce([], fn {type_left, type_right}, acc ->
-              expanding_union = fn {type_l, type_r}, expanding_fun ->
-                case type_l do
-                  {:union, {union_l, union_r}} -> [{union_l, type_r}] ++ expanding_fun.({union_r, type_r}, expanding_fun)
-                  _ -> [{type_l, type_r}]
-                end
-              end
-              acc ++ expanding_union.({type_left |> replacing_fun.(), type_right |> replacing_fun.()}, expanding_union)
-            end)}
+            |> Enum.map(fn {type_left, type_right} ->
+              {type_left |> replacing_fun.(), type_right |> replacing_fun.()}
+            end)
+            |> normalize_map_fields(fields)
+
+          {:closed_map, new_fields}
 
         {:if_set, type} ->
           {:if_set, type |> replacing_fun.()}
@@ -127,11 +121,7 @@ defmodule Migrator.ElixirTypeConstructor do
             :__not_found__ ->
               case {:__search__, user_type, elements, module_full} |> replacing_fun.() do
                 :__not_found__ ->
-                  alias_module_full =
-                    alias_info
-                    |> Enum.find_value(nil, fn {aliased_name, alias_module} ->
-                      if aliased_name == module_full, do: alias_module, else: nil
-                    end)
+                  alias_module_full = resolve_alias(alias_info, module_full)
 
                   if alias_module_full != nil do
                     case {:__search__, user_type, elements, alias_module_full}
@@ -164,11 +154,7 @@ defmodule Migrator.ElixirTypeConstructor do
             :__not_found__ ->
               case {:__search__, user_type, module_full} |> replacing_fun.() do
                 :__not_found__ ->
-                  alias_module_full =
-                    alias_info
-                    |> Enum.find_value(nil, fn {aliased_name, alias_module} ->
-                      if aliased_name == module_full, do: alias_module, else: nil
-                    end)
+                  alias_module_full = resolve_alias(alias_info, module_full)
 
                   if alias_module_full != nil do
                     case {:__search__, user_type, alias_module_full} |> replacing_fun.() do
@@ -266,6 +252,92 @@ defmodule Migrator.ElixirTypeConstructor do
 
       {line_num, {module_name, fun_name}, inputs, output, guards}
     end)
+  end
+
+  # Resolve a (possibly multi-segment) module name through the aliases captured
+  # for the file. Handles both an exact alias (`alias Foo.Bar` → "Bar") and a
+  # prefix alias where a child is referenced (`alias Foo.Bar` + `Bar.Baz.t()`
+  # → "Foo.Bar.Baz").
+  defp resolve_alias(alias_info, module_full) do
+    Enum.find_value(alias_info, nil, fn {aliased_name, alias_module} ->
+      # aliased_name may be an atom (from multi-aliases like `alias Foo.{A, B}`)
+      # or a string (from `alias Foo.Bar`); normalize before comparing.
+      name = to_string(aliased_name)
+      target = to_string(alias_module)
+
+      cond do
+        name == module_full ->
+          target
+
+        String.starts_with?(module_full, name <> ".") ->
+          target <> "." <> String.replace_prefix(module_full, name <> ".", "")
+
+        true ->
+          nil
+      end
+    end)
+  end
+
+  # Re-normalize struct/closed_map fields after user-type replacement, mirroring
+  # the field handling in Migrator.Translator.Utils (closed_map translation):
+  #   * a field's optionality is carried by an `:if_set` wrapper on its value
+  #   * atom keys are tagged :atom_req / :atom_opt so Approx.map re-derives if_set
+  #   * key unions expand into separate fields; value unions flatten into a list
+  # Approx.promote/Approx.map then merge same-key fields and re-apply if_set.
+  defp normalize_map_fields(replaced_fields, org_fields) do
+    flatten = fn type, flatten_fun ->
+      flatten_fun = &flatten_fun.(&1, flatten_fun)
+
+      case type do
+        {:union, {type_l, type_r}} -> flatten_fun.(type_l) ++ flatten_fun.(type_r)
+        _ -> [type]
+      end
+    end
+
+    replaced_fields
+    |> Enum.zip(org_fields)
+    |> Enum.flat_map(fn {{new_left, new_right}, {org_left, _org_right}} ->
+      # optionality is decided by the key (left) type, i.e., singleton atom,
+      # and then here it also checks if a singleton is replaced or flattened before.
+      optional? =
+        case new_left do
+          {:atom, _singleton} ->
+            if new_left != org_left do
+              false
+            else
+              case new_right do
+                {:if_set, _type_r} -> true
+                _ -> false
+              end
+            end
+          _ ->
+            true
+        end
+
+      # strip the :if_set to be evaluated in Approx module
+      new_right =
+        case new_right do
+          {:if_set, type_r} -> type_r
+          _ -> new_right
+        end
+        |> flatten.(flatten)
+
+      new_left
+      |> flatten.(flatten)
+      |> Enum.map(fn key ->
+        tagged_key =
+          case key do
+            {:atom, singleton} ->
+              if optional?, do: {:atom_opt, singleton}, else: {:atom_req, singleton}
+            _ ->
+              key
+          end
+
+        {tagged_key, new_right}
+      end)
+    end)
+    |> Approx.promote()
+    |> Approx.map()
   end
 
   defp replace_user_type_variables(elements_zipped, definition) do
