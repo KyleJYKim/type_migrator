@@ -29,7 +29,8 @@ defmodule Migrator.TypeTranslator do
       extractor_fun = &extractor_fun.(&1, extractor_fun)
 
       case ast do
-        {:defmodule, _, [{:__aliases__, _, module_name}, [do: module_ast]]} ->
+        {def_kind, _, [{:__aliases__, _, module_name}, [do: module_ast]]}
+        when def_kind in [:defmodule, :defprotocol] ->
           module_name_new =
             module_name
             |> Enum.reduce("", fn name, acc ->
@@ -47,6 +48,13 @@ defmodule Migrator.TypeTranslator do
           block
           |> Enum.reduce(acc, fn block_ast, acc ->
             {block_ast, module_name_acc, acc} |> extractor_fun.()
+          end)
+
+        {control, _, _} when control in [:cond, :case, :if, :unless] ->
+          ast
+          |> branch_bodies()
+          |> Enum.reduce(acc, fn body, acc ->
+            {body, module_name_acc, acc} |> extractor_fun.()
           end)
 
         {:@, _, [{:type, _, [{:"::", _, [user_defined_type, defining_type]}]}]} ->
