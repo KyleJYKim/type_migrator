@@ -43,13 +43,18 @@ defmodule Migrator.TypeTableHandler do
 
   @spec lookup_type(atom(), binary()) :: {:ok, value} | :error when value: atom() | tuple()
   def lookup_type(table_name, key) when is_atom(table_name) and is_binary(key) do
-    case :ets.lookup(table_name, key) do
-      [{^key, value}] ->
-        {:ok, value}
-
-      [] ->
-        # IO.puts("No table found")
+    # The table may not exist (e.g. a standalone `mix run lib/migrator.ex` that
+    # never loaded the std/remote-type cache, or a concurrent task that deleted
+    # it). Treat a missing table as "not found" rather than raising.
+    case :ets.whereis(table_name) do
+      :undefined ->
         :error
+
+      _ ->
+        case :ets.lookup(table_name, key) do
+          [{^key, value}] -> {:ok, value}
+          [] -> :error
+        end
     end
   end
 
