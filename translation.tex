@@ -184,7 +184,7 @@ Provided, it is sufficient to say that these are not subtypes of \texttt{$n$..$\
 
 \subsection{Translation of Fields}
 
-Let $\tau$ range over the right-hand side type of field types, that is, $\tau$ is either $\TST$ or $\ifset\TST$. We consider lists whose elements are of the form \texttt{\ETK\,\,=>\,\,$\tau$}. Given such a list $L$ we write $\ETK\in L$ is there exist $\tau$ such that the element \texttt{\ETK\,\,=>\,\,$\tau$} belongs to $L$. We denote by \textsf{Empty} the lists that maps all the non-singleton key types to \texttt{not\_set()}.  
+Let $\tau$ range over the right-hand side type of field types, that is, $\tau$ is either $\TST$ or $\ifset\TST$. We consider lists whose elements are of the form \texttt{\ETK\,\,=>\,\,$\tau$}. Given such a list $L$ we write $\ETK\in L$ if there exist $\tau$ such that the element \texttt{\ETK\,\,=>\,\,$\tau$} belongs to $L$. We denote by \textsf{Empty} that maps all the non-singleton key types to \texttt{not\_set()}.  
 
 First we define the translation of single field types. If $\ETK_1,...,\ETK_n$ are pairwise distinct key types, we write \texttt{[$\bigvee_{i=1}^n \ETK_i\fto\tau$]} for the list \texttt{[$\ETK_1\fto\tau,\cdots,\ETK_n\fto\tau$]}. Then the translation of single field types is defined in Figure~\ref{app:translation-in-field-types}:
 
@@ -256,7 +256,7 @@ That is because while merge must take original intention of types in TypeSpecs i
 Keeping that in mind, we can safely write the promotion rule with approximation from TypeSpecs types that are \textit{undefined} to key types in Elixir Types.
 Which rule essentially lets an approximated type carry its original type so that the merge function can use the extra information to minimize the loss of the original semantics in translation.
 
-To begin with, we approximate the left-hand side of a field type $\dsb{\TST}$ to $\ETK$, i.e., to its lower bound supertype in Elixir key types.
+To begin with, we approximate the left-hand side of a field type $\dsb{\TST}$ to $\ETK$, i.e., to its smallest supertype in Elixir key types.
 Then superscript the original type information to the approximated type, $\ETK^{\dsb{\TST}}$.
 In other words, $\ETK^{\dsb{\TST}}$ is the key type promoted from $\dsb{\TST}$. 
 This is important for the merge function when applied to approximated field types in terms of comparison.
