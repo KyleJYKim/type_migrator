@@ -85,6 +85,8 @@ end
             end
           end)
 
+        elements = elements |> Enum.map(&parse(&1, current_module))
+
         {{:., [], [{:__aliases__, [], modules}, type]}, [], elements}
 
       {{:., _, [{:__aliases__, _, modules}, type]}, _, _} ->
@@ -311,7 +313,17 @@ end
             current_module |> String.to_atom()
           else
             modules
-            |> Enum.reduce("", fn m, acc -> if acc == "", do: "#{m}", else: "#{acc}.#{m}" end)
+            |> Enum.reduce("", fn m, acc ->
+              # `%__MODULE__.Sub{}` — __MODULE__ is the enclosing module (unresolved at
+              # AST level); map it to current_module rather than interpolating the tuple.
+              segment =
+                case m do
+                  {:__MODULE__, _, _} -> current_module
+                  _ -> "#{m}"
+                end
+
+              if acc == "", do: segment, else: "#{acc}.#{segment}"
+            end)
             |> String.to_atom()
           end
 

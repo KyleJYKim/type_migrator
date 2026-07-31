@@ -1,0 +1,13 @@
+PWD /Users/kjykim1011/UNIVE_4th/Thesis/projects/type_migrator
+INPUT /usr/local/texlive/2025/texmf.cnf
+INPUT /usr/local/texlive/2025/texmf-dist/web2c/texmf.cnf
+INPUT /usr/local/texlive/2025/texmf-var/web2c/pdftex/pdflatex.fmt
+INPUT thesis/main.tex
+OUTPUT main.log
+INPUT /usr/local/texlive/2025/texmf-dist/tex/latex/base/report.cls
+INPUT /usr/local/texlive/2025/texmf-dist/tex/latex/base/report.cls
+INPUT /usr/local/texlive/2025/texmf-dist/tex/latex/base/size11.clo
+INPUT /usr/local/texlive/2025/texmf-dist/tex/latex/base/size11.clo
+INPUT /usr/local/texlive/2025/texmf-dist/tex/latex/base/size11.clo
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/map/fontname/texfonts.map
+INPUT /usr/local/texlive/2025/texmf-dist/fonts/tfm/public/cm/cmr10.tfm

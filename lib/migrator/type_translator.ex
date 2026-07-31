@@ -1,13 +1,24 @@
 defmodule Migrator.TypeTranslator do
   import Migrator.Translator.Utils
+  require Logger
 
   def process(paths) when is_list(paths) do
     extracted_types =
       paths
       |> Enum.map(fn path ->
         case safe_string_to_quoted(path) do
-          {:ok, ast} -> extract_type(ast)
-          :error -> %{}
+          {:ok, ast} ->
+            # One malformed file must not abort the whole (deps-wide) cache build.
+            try do
+              extract_type(ast)
+            rescue
+              e ->
+                Logger.warning("Skipping — type extraction failed (#{path}): #{Exception.message(e)}")
+                %{}
+            end
+
+          :error ->
+            %{}
         end
       end)
       |> Enum.reduce(%{}, fn elem, acc -> Map.merge(acc, elem) end)
@@ -31,16 +42,31 @@ defmodule Migrator.TypeTranslator do
       case ast do
         {def_kind, _, [{:__aliases__, _, module_name}, [do: module_ast]]}
         when def_kind in [:defmodule, :defprotocol] ->
+          # A nested module can be written `defmodule __MODULE__.Sub`, where __MODULE__
+          # is the enclosing module. At the AST level it is the unresolved node
+          # {:__MODULE__, _, _} (Elixir only resolves it at compile time), so map it to
+          # the accumulated enclosing name. When it leads the alias the name is already
+          # absolute (e.g. Foo.Bar.Sub) and must not be prefixed again.
+          leads_with_module? = match?([{:__MODULE__, _, _} | _], module_name)
+
           module_name_new =
             module_name
             |> Enum.reduce("", fn name, acc ->
-              if acc == "", do: Atom.to_string(name), else: acc <> "." <> Atom.to_string(name)
+              segment =
+                case name do
+                  {:__MODULE__, _, _} -> module_name_acc
+                  _ -> Atom.to_string(name)
+                end
+
+              if acc == "", do: segment, else: acc <> "." <> segment
             end)
 
           module_name_acc =
-            if module_name_acc == "",
-              do: "#{module_name_new}",
-              else: "#{module_name_acc}.#{module_name_new}"
+            cond do
+              leads_with_module? -> module_name_new
+              module_name_acc == "" -> module_name_new
+              true -> "#{module_name_acc}.#{module_name_new}"
+            end
 
           {module_ast, module_name_acc, acc} |> extractor_fun.()
 
@@ -163,6 +189,36 @@ defmodule Migrator.TypeTranslator do
       acc |> Map.merge(type_definition |> total_parser.())
     end)
   end
+
+  # Bind a parameterised type's arguments to its type variables and substitute them
+  # into the body. `params` are the definition's parameters, each a translated type
+  # variable {:user_type_var, name}; `args` are the call's arguments, zipped
+  # positionally.
+  defp substitute_type_vars(body, params, args) do
+    subst =
+      params
+      |> Enum.zip(args)
+      |> Enum.reduce(%{}, fn {param, arg}, acc ->
+        case param do
+          {:user_type_var, var} -> Map.put(acc, var, arg)
+          _ -> acc
+        end
+      end)
+
+    if map_size(subst) == 0, do: body, else: subst_vars(body, subst)
+  end
+
+  # Recursively replace type variables in an intermediate-form type tree.
+  defp subst_vars({:user_type_var, var} = node, subst),
+    do: Map.get(subst, var, node)
+
+  defp subst_vars(tuple, subst) when is_tuple(tuple),
+    do: tuple |> Tuple.to_list() |> Enum.map(&subst_vars(&1, subst)) |> List.to_tuple()
+
+  defp subst_vars(list, subst) when is_list(list),
+    do: Enum.map(list, &subst_vars(&1, subst))
+
+  defp subst_vars(other, _subst), do: other
 
   defp translate_type(parsed_types) do
     replacing_definition = fn {{root_user_defined_types, defining_type}, current_type_defs, whole_type_definition}, replacing_fun ->
@@ -295,14 +351,14 @@ defmodule Migrator.TypeTranslator do
 
             type_defs_to_be_searched = whole_type_definition |> Map.get(module_to_find)
 
-            found_type =
+            found_def =
               if type_defs_to_be_searched do
                 type_defs_to_be_searched
                 |> Enum.find_value(fn {udt, dt} ->
                   case udt do
                     {:user_type, {udt_type, udt_elements}} ->
                       if udt_type == def_type and length(udt_elements) == length(elements),
-                        do: dt,
+                        do: {udt_elements, dt},
                         else: nil
 
                     _ ->
@@ -313,13 +369,28 @@ defmodule Migrator.TypeTranslator do
                 nil
               end
 
-            if found_type == nil do
+            if found_def == nil do
               {:def_not_found, {{modules, def_type}, elements}}
             else
+              {params, body} = found_def
+              # The arguments are written in the CALLER's context, so resolve them here
+              # (current_type_defs) BEFORE binding them to the remote definition's type
+              # variables — otherwise a caller-local type passed as an argument would be
+              # looked up in the remote module and lost. The body itself is then resolved
+              # in the REMOTE module's context (type_defs_to_be_searched).
+              resolved_args =
+                elements
+                |> Enum.map(fn arg ->
+                  {{root_user_defined_types, arg}, current_type_defs, whole_type_definition}
+                  |> replacing_fun.()
+                end)
+
+              substituted_body = substitute_type_vars(body, params, resolved_args)
+
               new_root_user_defined_types =
                 root_user_defined_types ++ [{:user_type, {{modules, def_type}, elements}}]
 
-              {{new_root_user_defined_types, found_type}, type_defs_to_be_searched,
+              {{new_root_user_defined_types, substituted_body}, type_defs_to_be_searched,
                whole_type_definition}
               |> replacing_fun.()
             end
@@ -404,6 +475,60 @@ defmodule Migrator.TypeTranslator do
                 root_user_defined_types ++ [{:user_type, {{modules, def_type}, elements}}]
 
               {{new_root_user_defined_types, found_type}, current_type_defs,
+               whole_type_definition}
+              |> replacing_fun.()
+            end
+          end
+
+        {:user_type, {def_type, elements}} when is_atom(def_type) and is_list(elements) ->
+          # Local parameterised type call, e.g. `t(integer())` inside its own module —
+          # notably the 0-arity `t()` that delegates to `t(x)`. Match the definition by
+          # name AND arity in the current module. The bare `{:user_type, def_type}` clause
+          # below can never match this, because it compares by exact equality and the
+          # stored def carries the type variable (`t(x)`), not the call's argument.
+          recursive? =
+            root_user_defined_types
+            |> Enum.find_value(fn udt ->
+              case udt do
+                {:user_type, {udt_type, udt_elements}} ->
+                  udt_type == def_type and length(udt_elements) == length(elements)
+
+                _ ->
+                  false
+              end
+            end)
+
+          if recursive? do
+            # a recursive type becomes dynamic.
+            :dynamic
+          else
+            found_def =
+              current_type_defs
+              |> Enum.find_value(fn {udt, dt} ->
+                case udt do
+                  {:user_type, {udt_type, udt_elements}} ->
+                    if udt_type == def_type and length(udt_elements) == length(elements),
+                      do: {udt_elements, dt},
+                      else: nil
+
+                  _ ->
+                    nil
+                end
+              end)
+
+            if found_def == nil do
+              {:def_not_found, {def_type, elements}}
+            else
+              {params, body} = found_def
+              # Bind the call's arguments to the definition's type variables, so
+              # `t(integer())` against `@type t(x) :: %M{v: x}` yields `%M{v: integer()}`
+              # instead of leaving `x` to fall through to dynamic().
+              substituted_body = substitute_type_vars(body, params, elements)
+
+              new_root_user_defined_types =
+                root_user_defined_types ++ [{:user_type, {def_type, elements}}]
+
+              {{new_root_user_defined_types, substituted_body}, current_type_defs,
                whole_type_definition}
               |> replacing_fun.()
             end

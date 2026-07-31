@@ -110,6 +110,19 @@ defmodule Migrator.ElixirTypeConstructor do
         # {:guard_var, type_var} -> "#{type_var}"
         # :... -> "..."
         {:remote_type, {{modules, user_type}, elements}} when is_list(elements) ->
+          # Resolve the arguments in the caller's context before the search substitutes
+          # them into the (callee) definition; otherwise a caller-local type passed as an
+          # argument stays unresolved and renders as dynamic(). Built-in types (term(),
+          # integer(), ...) also parse as {:user_type, name} but have no definition to
+          # find, so leave anything that does not resolve raw for the renderer.
+          elements =
+            Enum.map(elements, fn el ->
+              case el |> replacing_fun.() do
+                {:def_not_found, _} -> el
+                resolved -> resolved
+              end
+            end)
+
           module_full =
             modules
             |> Enum.reduce("", fn module, acc ->
@@ -174,6 +187,16 @@ defmodule Migrator.ElixirTypeConstructor do
           end
 
         {:user_type, {user_type, elements}} when is_list(elements) ->
+          # See the remote clause above: resolve caller-context arguments, but leave
+          # built-ins / unresolvables raw for the renderer.
+          elements =
+            Enum.map(elements, fn el ->
+              case el |> replacing_fun.() do
+                {:def_not_found, _} -> el
+                resolved -> resolved
+              end
+            end)
+
           case {:__search__, user_type, elements, current_module_name} |> replacing_fun.() do
             :__not_found__ -> {:def_not_found, {user_type, elements}}
             definition -> definition

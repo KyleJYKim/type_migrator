@@ -4,6 +4,10 @@ defmodule Ex2 do
     @type t :: %Types{integer: integer(), float: float(), atom: atom(), binary: binary()}
     @type t_in_t :: t
   end
+  defmodule Types2 do
+    defstruct [:atom, :binary, integer: 0, float: 0.0]
+    @type t :: %__MODULE__{integer: atom()}
+  end
 
   @type container :: keyword | struct | map
   @type nil_container :: nil
@@ -154,6 +158,9 @@ defmodule Ex2 do
   def id3(x), do: x
 
   defmodule In do
+    @spec id(Types2.t()) :: atom()
+    def id(%Types2{integer: x}), do: x
+
     @spec id1(<<_::8, _::_*8>>) :: <<_::_*8>>
     def id1(x) when is_binary(x), do: x
 

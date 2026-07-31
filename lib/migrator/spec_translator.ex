@@ -37,16 +37,29 @@ defmodule Migrator.SpecTranslator do
       case ast do
         {def_kind, _, [{:__aliases__, _, module_name}, [do: module_ast]]}
         when def_kind in [:defmodule, :defprotocol] ->
+          # `defmodule __MODULE__.Sub` — __MODULE__ is the (unresolved at AST level)
+          # enclosing module; map it to the accumulated name. When it leads the alias
+          # the name is already absolute and must not be prefixed again.
+          leads_with_module? = match?([{:__MODULE__, _, _} | _], module_name)
+
           module_name_new =
             module_name
             |> Enum.reduce("", fn name, acc ->
-              if acc == "", do: Atom.to_string(name), else: acc <> "." <> Atom.to_string(name)
+              segment =
+                case name do
+                  {:__MODULE__, _, _} -> module_name_acc
+                  _ -> Atom.to_string(name)
+                end
+
+              if acc == "", do: segment, else: acc <> "." <> segment
             end)
 
           module_name_acc =
-            if module_name_acc == "",
-              do: module_name_new,
-              else: module_name_acc <> "." <> module_name_new
+            cond do
+              leads_with_module? -> module_name_new
+              module_name_acc == "" -> module_name_new
+              true -> module_name_acc <> "." <> module_name_new
+            end
 
           {module_ast, alias_acc, module_name_acc, spec_acc} |> extractor_fun.()
 
