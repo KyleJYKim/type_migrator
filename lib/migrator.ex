@@ -50,7 +50,7 @@ defmodule Migrator do
   def main(args) do
     case args do
       [mode, spec_path, type_paths] ->
-        save_path = Regex.replace(~r"\w+(?*(?i))\.ex", spec_path, "") |> dbg
+        save_path = Regex.replace(~r"\w+(?*(?i))\.ex", spec_path, "")
         run(mode, spec_path, save_path, type_paths)
 
       [mode, spec_path, save_path | type_paths] ->
