@@ -28,13 +28,11 @@ type_migrator-*.tar
 
 /elixir
 
-/thesis/main.pdf
 /thesis/main.aux
 /thesis/main.fdb_latexmk
 /thesis/main.fls
 /thesis/main.log
 /thesis/main.synctex.gz
-/thesis/main.pdf
 
 /translation.aux
 /translation.fdb_latexmk
