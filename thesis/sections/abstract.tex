@@ -1,0 +1,23 @@
+\section*{Abstract}
+
+% Elixir is incorporating a gradual set-theoretic type system into its compiler, enabling optional static type-checking while preserving the language's dynamic nature.
+% The stronger safety this brings does not transfer freely to existing codebases: the established Erlang-style TypeSpecs does not map one-to-one onto the new types, and most production code carries no type annotations at all, so migration is neither automatic nor precise.
+
+% This thesis addresses migration on the two fronts where type information can be obtained.
+% It first formalises the translation of TypeSpecs into set-theoretic Elixir Types as a set of equations, isolating the constructs that cannot be translated precisely and approximating the map type with the merge function.
+% A prototype realises this translation, widening remote types whose definitions it cannot resolve to the gradual type \texttt{dynamic()}, and is applied to 383 repositories from 54 distinct owners, producing \num{23073} annotations that are cross-validated against both Dialyzer and the new typechecker.
+% An agreement study finds the typechecker substantially stricter than Dialyzer yet subsuming the majority of its findings, so the two analyses are complementary rather than nested, and it yields \num{7498} annotations accepted by both tools.
+% The thesis then fine-tunes a code language model (Qwen2.5-Coder-7B) to infer annotations for the unspecified majority, and asks through a two-track study whether gradual types should be admitted into the supervision signal.
+% The outcome is a trade-off rather than a single recommendation: admitting gradual types yields a model that makes more code typecheck, a low-noise migration, but over-emits \texttt{dynamic()}, whereas excluding them yields a model that produces precise, genuinely-static annotations at the cost of coverage.
+% Migration is therefore best framed as a tunable trade-off between low-noise transition and type precision.
+
+
+This thesis addresses the problem of type inference for the Elixir programming language in two complementary parts.
+The first part develops a formal translation from Elixir's TypeSpecs, the language's long-standing type annotation mechanism, to Elixir Types, Elixir's new set-theoretic types recently introduced into the language.
+We provide a formalisation of this translation and a corresponding implementation, which is systematically tested and validated to ensure that the generated types faithfully preserve the semantics of the original TypeSpec annotations.
+This translation serves both as a contribution in its own right and as the enabling infrastructure for the second, empirical part of the work.
+
+The second part investigates the fine-tuning of large language models (LLMs) for inferring Elixir Types over legacy, unannotated Elixir code.
+Leveraging the translation developed in the first part, we construct a training dataset from a corpus of open-source Elixir repositories already annotated with TypeSpecs: each TypeSpec is converted into the corresponding Elixir Type, and the resulting (code, type) pairs are retained only when they and their  type-check successfully under Elixir's native typechecker after also pass successfully by Dialyzer with TypeSpecs, thereby guaranteeing that supervision signals are well-typed by construction.
+Model inference is evaluated not merely by exact match but against Elixir's notion of type-compatibility---an extension of subtyping to the setting of gradual types---which provides a semantically meaningful measure of correctness.
+We experiment with two model families, a decoder-only architecture (Qwen) and an encoder-decoder architecture, and carry out a comparative assessment of their performance across models and across a range of training hyperparameters.

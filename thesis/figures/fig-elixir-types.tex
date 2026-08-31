@@ -1,0 +1,33 @@
+\begin{figure} [H]
+   \begin{grammarfig}
+      \textbf{Annotations} & \ETA &\bnfeq& 
+      \texttt{\$}\,\ETS \bnfor \texttt{\$}\,\ETS\,\,\texttt{when}\,\,\ov{\texttt{$\alpha$:}\,\ETT}
+      \\
+      \textbf{Signatures} & \ETS &\bnfeq& 
+      \ETFn{\ETT} \bnfor \texttt{\ETS\,and\,\ETS}
+      \\[2mm]
+      \textbf{Types} & \ETT &\bnfeq&
+      \texttt{$\alpha$} & \text{type variables}
+      \\ &&\bnfor& \ETK \bnfor \texttt{term()} \bnfor \texttt{none()} \bnfor \texttt{dynamic()} &\text{basic types}
+      \\ &&\bnfor& \gor{\ETT}{\ETT} \bnfor \gand{\ETT}{\ETT} \bnfor \gnot{\ETT} & \text{type connectives}
+      \\ &&\bnfor& \texttt{$n$..$n$} \bnfor \texttt{infty..}n\bnfor n\texttt{..infty}& \text{integers (internal representation)}
+      \\ &&\bnfor& \tuple{\ov{\ETT}} \bnfor \tuple{\ov{\ETT},\texttt{...}} \bnfor \map{\ov{\ETF}} \bnfor \map{\texttt{...},\ov{\ETF}}\bnfor\texttt{(\fun{$\ov{\ETT}$}{\ETT})}& \text{type constructors}
+      \\ &&\bnfor& \texttt{empty\_list()} \bnfor \texttt{non\_empty\_list(\ETT, \ETT)}
+      \\
+      \textbf{Key types} & \ETK &\bnfeq&
+      \texttt{atom()} \bnfor \texttt{:$k$}
+      \\ &&\bnfor& \texttt{pid()} \bnfor \texttt{port()} \bnfor \texttt{reference()}
+      \\ &&\bnfor& \texttt{float()} \bnfor \texttt{integer()}
+      \\ &&\bnfor& \texttt{bitstring()} \bnfor \texttt{binary()}
+      \\ &&\bnfor& \texttt{tuple()} \bnfor \texttt{open\_map()} \bnfor \texttt{fun()}
+      \\ &&\bnfor& \texttt{list()}
+      \\
+      \textbf{Fields} & \ETF &\bnfeq&
+      \texttt{:$k$\,=>\,\ETT} \bnfor \texttt{\ETK\,=>\,if\_set(\ETT)}
+   \end{grammarfig}
+   \noindent
+   where $x$ ranges over expression variables, $\alpha$ ranges over type variables, 
+   $n$ ranges over integers (integers internal representation: types not available to the programmer), and $k$ ranges over atom names. (N.B., the notation $\ov{E}$ denotes a possibly empty sequence of elements $E$ separated by commas apart from \tuple{\ov{\ETT},\texttt{...}}, \map{\texttt{...},\ov{\ETF}}, and $\ov{\alpha\texttt{:}\,\ETT}$, where it denotes a non-empty sequence. Also, in $\ov\ETF$ each \ETF{} must have a different keytype)
+   \caption{Elixir Types Syntax}
+   \label{app:elixir-types-syntax}
+\end{figure}

@@ -1,0 +1,78 @@
+
+
+% Import the setup
+\input{setup}
+
+\backgroundsetup{
+  scale=1,
+  color=black,
+  opacity=0.05,
+  angle=0,
+  position={0cm,0cm},
+  contents={
+    \begin{tikzpicture}[remember picture,overlay]
+      \node[anchor=west, inner sep=-80mm] at (current page.center) 
+        {\includegraphics[height=29.7cm]{images/UNIVE_square.png}};
+    \end{tikzpicture}
+  }
+}
+
+\begin{document}
+
+% TITLE PAGE
+% Remove the page number from the first page
+\thispagestyle{empty}
+
+% UNIVERSITY LOGO
+\begin{figure}
+    \begin{flushleft}
+        \includegraphics[width=36mm]{images/UNIVE_eng.png}
+    \end{flushleft}
+\end{figure}
+\vspace*{10mm}
+
+% TITLE 
+\begin{center}
+    % Course
+    {\fontsize{20}{20}\textbf{Master Degree Programme \\
+    in Computer Science and Information technology}} \\
+    \vspace{15mm}
+    
+    {\fontsize{18}{\baselineskip}\textbf{Final Thesis}} \\
+    \vspace{15mm}
+
+    % Title
+    {\fontsize{24}{\baselineskip}\textbf{Migrating Elixir TypeSpecs to Elixir Types for LLM inference of Elixir type annotations}} \\
+    % Subtitle
+    % {\fontsize{14}{\baselineskip}\textbf{Translation of Erlang Style TypeSpecs to Gradual Set-theoretic Elixir Types}} \\
+    
+\end{center}
+\vspace{15mm}
+
+% Authors
+\begin{flushleft}
+    \textbf{Supervisor} \\
+    Ch. Prof. Michele Bugliesi \\
+    \vspace{3mm}
+    \textbf{Co-supervisor} \\
+    Ch. Prof. Giuseppe Castagna \\
+\end{flushleft}
+
+    \vspace{5mm}
+    
+\begin{flushright}
+    \textbf{Graduand} \\
+    Juyoung Kim \\
+    Matriculation Number 903635 \\
+\end{flushright}
+
+    \vspace{5mm}
+
+\begin{flushleft}
+    Academic Year \\
+    2025 / 2026
+\end{flushleft}
+
+\vfill
+\newpage
+\backgroundsetup{contents={}}

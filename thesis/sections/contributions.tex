@@ -1,0 +1,27 @@
+\section{Contributions}
+
+Elixir is currently taking a significant step towards integrating a type checker into its compiler.
+Although the transition is gradual, both in its adoption and in the type system itself, the ultimate goal is to establish a static type system in Elixir.
+To support this process, we make the following contributions in this paper:
+
+\begin{itemize}
+    \item \textit{Formalisation of TypeSpecs and Elixir Types.} 
+    We formalise the existing TypeSpecs based on the TypeSpecs reference and the behaviour of Dialyzer. 
+    The formalisation of Elixir Types is drawn from Elixir Type System by Giuseppe Castagna and Guillaume Duboc~\cite{duboc2024}.
+    \item \textit{Translation from TypeSpecs to Elixir Types.} 
+    We suggest the guideline to safely interpret Formalised TypeSpecs to Elixir Types.
+    % \item Identification of mismatches between the two type systems.
+    \item \textit{Approximating translation of undefined types.} 
+    We identify types that are unable to directly translate and introduce conservative techniques to approximate the types.
+    \item \textit{Prototype implementation of the proposed translation.}
+    We apply the developed theory to real world data (public open-source repositories\footnote{The \num{175} source repositories, with the exact commits used during construction, are listed in the appendix (Table~\ref{tab:source-projects}).}) to produce a dataset that contains function definitions, original TypeSpecs, and translated types.
+    \footnote{The translation prototype and dataset-construction pipeline are available at \url{https://github.com/KyleJYKim/type_migrator}.}
+    \item \textit{Agreement study: Dialyzer versus the Elixir typechecker.}
+    We measure the produced dataset by means of examining the validity and the quality of translation.
+    \item \textit{LLM type prediction with translated Elixir Types.}
+    We fine-tune a model (Qwen2.5+ 70b) based on the paper by H.B.Mengesha~\cite{Nina} with a filtered dataset that is the entries passed by both Dialyzer and the compiler.
+    \footnote{The fine-tuning pipeline is available at \url{https://github.com/KyleJYKim/type_migrator_with_llm}.}
+    The evaluation adopts a set-theoretic method by using \texttt{compatable?/2} from \texttt{Modulue.Types.Descr} developed by Duboc Guillaume.
+    % on the checker-verified dataset (one on the precise, dynamic-free labels and one on the full both-pass set) to infer Elixir Types on untyped code, and compare them to assess whether admitting gradual types helps or hurts safe, precise prediction.
+    % The intrinsic evaluation metric is based on semantic distance, a work done by H.B.Mengesha~\cite{Nina}, complemented by an extrinsic typecheck-acceptance metric.
+\end{itemize}

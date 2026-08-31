@@ -1,0 +1,24 @@
+\section{Problem Statements}
+
+The first problem to be addressed by this paper is the friction in translation that is caused by the syntactical gap between TypeSpecs and Elixir Types.
+As Elixir is built on top of Erlang, their semantics match one-to-one, which means that Erlang can achieve everything Elixir can do, and vice versa.
+However, the major difference of two languages comes from their syntaxes; Elixir is designed to be simpler than Erlang, that is, to remove boilerplates and to reduce noise from Erlang in order to maximise usability while keeping the advantages of high availability.
+Accordingly, the principle difference between TypeSpecs and Elixir Types originates from the syntactical difference of the two languages.
+Since the initial intention of TypeSpecs is to compensate the lack of a static type system in Erlang, it reflects granularity of Erlang syntax.
+That is, TypeSpecs allows specifying literal types such as atoms, binaries, and digits, whereas, Elixir Types pursues simplicity and does not support all of the literal types but atoms.
+
+This problem is crucial for developers in the process of moving forward to Elixir Types. 
+The new Elixir type system is meant to perform more precise type check, providing useful information. 
+However, this advantage could fade out, for example, with abuse of the union type or the gradual type ( i.e., \texttt{or} or \texttt{dynamic()}, respectively) everywhere to mute type errors. 
+This misuse of types could arise easily when transition is attempted without any guidelines. Hence, the main purpose of this paper is to provide safe and clear translation and eventually migration guidance; since the more precise type system could generate errors unseen before on codebases that run without problems.
+
+The translation is the transition from a subtype (TypeSpecs) to a supertype (Elixir Types) since Elixir Types does not support types that are not frequently used for design simplicity while it can cover all the existing TypeSpecs. 
+We will explore deeper into this in the formalisation chapter by considering each type to discover types that can be directly translated and types that need to be approximated.
+
+The second problem is that the use of TypeSpecs is optional.
+A safe translation on an annotation can be helpful but it only works when there is a specification while most of Elixir definitions do not have TypeSpecs annotations.
+This problem is already recognized in Duboc's paper which is suggested to make types gradual with inferred types.
+Despite its safeness, this may slow down the steps in the whole transition to the ultimate static type system and may allow most of users to settle down on gradual types, which trivially circumvents the compile time type check.
+
+Inferring types with LLMs using fine-tuning has already been studied.
+We make a reference to an existing paper and create an adaptation suits for Elixir's set-theoretic types in order to train, generate, and evaluate types.

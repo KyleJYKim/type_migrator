@@ -1,0 +1,2622 @@
+Rc files read:
+  NONE
+Latexmk: This is Latexmk, John Collins, 27 Dec. 2024. Version 4.86a.
+Latexmk: Changing directory to './'
+No existing .aux file, so I'll make a simple one, and require run of *latex.
+Latexmk: applying rule 'pdflatex'...
+Rule 'pdflatex':  Reasons for rerun
+Category 'other':
+  Rerun of 'pdflatex' forced or previously required:
+    Reason or flag: 'Initial setup'
+
+------------
+Run number 1 of rule 'pdflatex'
+------------
+------------
+Running 'pdflatex  -interaction=nonstopmode -synctex=1 -recorder  "main.tex"'
+------------
+This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex)
+ restricted \write18 enabled.
+entering extended mode
+(./main.tex
+LaTeX2e <2024-11-01> patch level 2
+L3 programming layer <2025-01-18>
+(/usr/local/texlive/2025/texmf-dist/tex/latex/base/report.cls
+Document Class: report 2024/06/29 v1.4n Standard LaTeX document class
+(/usr/local/texlive/2025/texmf-dist/tex/latex/base/size11.clo)) (./setup.tex
+(/usr/local/texlive/2025/texmf-dist/tex/latex/base/inputenc.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/base/fontenc.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?' option.
+(/usr/local/texlive/2025/texmf-dist/tex/latex/amsmath/amstext.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/amsmath/amsgen.sty))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/amsmath/amsbsy.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/amsmath/amsopn.sty))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/amsfonts/amssymb.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/amsfonts/amsfonts.sty))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/graphics/graphicx.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/graphics/keyval.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/graphics/graphics.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/graphics/trig.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/graphics-cfg/graphics.cfg)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/graphics-def/pdftex.def)))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/caption/caption.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/caption/caption3.sty))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/caption/subcaption.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/booktabs/booktabs.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/siunitx/siunitx.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/translations/translations.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/etoolbox/etoolbox.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pdftexcmds/pdftexcmds.sty
+(/usr/local/texlive/2025/texmf-dist/tex/generic/infwarerr/infwarerr.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/iftex/iftex.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/ltxcmds/ltxcmds.sty)))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/tools/array.sty))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/hyperref/hyperref.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/kvsetkeys/kvsetkeys.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/kvdefinekeys/kvdefinekeys.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pdfescape/pdfescape.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/hycolor/hycolor.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/hyperref/nameref.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/refcount/refcount.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/gettitlestring/gettitlestring.s
+ty (/usr/local/texlive/2025/texmf-dist/tex/latex/kvoptions/kvoptions.sty)))
+(/usr/local/texlive/2025/texmf-dist/tex/generic/stringenc/stringenc.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/hyperref/pd1enc.def)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/intcalc/intcalc.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/hyperref/puenc.def)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/url/url.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/bitset/bitset.sty
+(/usr/local/texlive/2025/texmf-dist/tex/generic/bigintcalc/bigintcalc.sty))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/base/atbegshi-ltx.sty))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/hyperref/hpdftex.def
+(/usr/local/texlive/2025/texmf-dist/tex/latex/base/atveryend-ltx.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/rerunfilecheck/rerunfilecheck.sty
+
+(/usr/local/texlive/2025/texmf-dist/tex/generic/uniquecounter/uniquecounter.sty
+))) (/usr/local/texlive/2025/texmf-dist/tex/latex/float/float.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/textgreek/textgreek.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/greek-fontenc/lgrenc.def
+(/usr/local/texlive/2025/texmf-dist/tex/latex/greek-inputenc/lgrenc.dfu)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/greek-fontenc/greek-fontenc.def))
+) (/usr/local/texlive/2025/texmf-dist/tex/latex/fancyhdr/fancyhdr.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/psnfss/mathptmx.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/textpos/textpos.sty
+Grid set 16 x 16 = 37.34424pt x 52.81541pt
+TextBlockOrigin set to 0pt x 0pt
+) (/usr/local/texlive/2025/texmf-dist/tex/latex/background/background.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/xkeyval/xkeyval.sty
+(/usr/local/texlive/2025/texmf-dist/tex/generic/xkeyval/xkeyval.tex
+(/usr/local/texlive/2025/texmf-dist/tex/generic/xkeyval/xkvutils.tex)))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/pgf/frontendlayer/tikz.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/pgf/basiclayer/pgf.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/pgf/utilities/pgfrcs.sty
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/utilities/pgfutil-common.te
+x)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/utilities/pgfutil-latex.def
+) (/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/utilities/pgfrcs.code.tex
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/pgf.revision.tex)))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/pgf/basiclayer/pgfcore.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/pgf/systemlayer/pgfsys.sty
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/systemlayer/pgfsys.code.tex
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/utilities/pgfkeys.code.tex
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/utilities/pgfkeyslibraryfil
+tered.code.tex))
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/systemlayer/pgf.cfg)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/systemlayer/pgfsys-pdftex.d
+ef
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/systemlayer/pgfsys-common-p
+df.def)))
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/systemlayer/pgfsyssoftpath.
+code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/systemlayer/pgfsysprotocol.
+code.tex)) (/usr/local/texlive/2025/texmf-dist/tex/latex/xcolor/xcolor.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/graphics-cfg/color.cfg)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/graphics/mathcolor.ltx))
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcore.code.tex
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/math/pgfmath.code.tex
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/math/pgfmathutil.code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/math/pgfmathparser.code.tex
+)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.code.
+tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.basic
+.code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.trigo
+nometric.code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.rando
+m.code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.compa
+rison.code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.base.
+code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.round
+.code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.misc.
+code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.integ
+erarithmetics.code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/math/pgfmathcalc.code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/math/pgfmathfloat.code.tex)
+) (/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/math/pgfint.code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcorepoints.co
+de.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcorepathconst
+ruct.code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcorepathusage
+.code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcorescopes.co
+de.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcoregraphicst
+ate.code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcoretransform
+ations.code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcorequick.cod
+e.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcoreobjects.c
+ode.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcorepathproce
+ssing.code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcorearrows.co
+de.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcoreshade.cod
+e.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcoreimage.cod
+e.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcoreexternal.
+code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcorelayers.co
+de.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcoretranspare
+ncy.code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcorepatterns.
+code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcorerdf.code.
+tex)))
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/modules/pgfmoduleshapes.cod
+e.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/modules/pgfmoduleplot.code.
+tex)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/pgf/compatibility/pgfcomp-version
+-0-65.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/pgf/compatibility/pgfcomp-version
+-1-18.sty))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/pgf/utilities/pgffor.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/pgf/utilities/pgfkeys.sty
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/utilities/pgfkeys.code.tex)
+) (/usr/local/texlive/2025/texmf-dist/tex/latex/pgf/math/pgfmath.sty
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/math/pgfmath.code.tex))
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/utilities/pgffor.code.tex))
+
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/frontendlayer/tikz/tikz.cod
+e.tex
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/libraries/pgflibraryplothan
+dlers.code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/modules/pgfmodulematrix.cod
+e.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/frontendlayer/tikz/librarie
+s/tikzlibrarytopaths.code.tex)))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/everypage/everypage.sty
+
+Package everypage Warning: Functionality similar to this package has recently
+(everypage)                been implemented in LaTeX. This package is now in
+(everypage)                legacy status.
+(everypage)                Please, don't use it in new documents and packages.
+
+
+Package everypage Warning: You appear to be running a version of LaTeX
+(everypage)                providing the new functionality.
+(everypage)                Doing the best to deliver the original `everypage`
+(everypage)                interface on top of it. Strict equivalence is
+(everypage)                not possible, breakage may occur.
+(everypage)                If truly needed, Use `everypage-1x` to force the
+(everypage)                loading of an older code base.
+
+) (/usr/local/texlive/2025/texmf-dist/tex/latex/tools/afterpage.sty))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/tools/tabularx.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/tools/longtable.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/multirow/multirow.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/algorithms/algorithm.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/base/ifthen.sty))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/algorithmicx/algpseudocode.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/algorithmicx/algorithmicx.sty
+Document Style algorithmicx 1.2 - a greatly improved `algorithmic' style
+)
+Document Style - pseudocode environments for use with the `algorithmicx' style
+) (/usr/local/texlive/2025/texmf-dist/tex/latex/natbib/natbib.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/mathtools/mathtools.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/tools/calc.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/mathtools/mhsetup.sty))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/bera/beramono.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/mathpartir/mathpartir.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/graphics/dvipsnam.def)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/stmaryrd/stmaryrd.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/listings/listings.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/listings/lstpatch.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/listings/lstmisc.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/listings/listings.cfg))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/geometry/geometry.sty
+(/usr/local/texlive/2025/texmf-dist/tex/generic/iftex/ifvtex.sty)))
+(./macros.tex) (./Frontespizio in inglese.tex (./setup.tex
+(/usr/local/texlive/2025/texmf-dist/tex/latex/base/fontenc.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/psnfss/t1ptm.fd)))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/l3backend/l3backend-pdftex.def)
+(./main.aux) (/usr/local/texlive/2025/texmf-dist/tex/latex/cbfonts-fd/lgrcmr.fd
+) (/usr/local/texlive/2025/texmf-dist/tex/context/base/mkii/supp-pdf.mkii
+[Loading MPS to PDF converter (version 2006.09.02).]
+) (/usr/local/texlive/2025/texmf-dist/tex/latex/epstopdf-pkg/epstopdf-base.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/grfext/grfext.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/latexconfig/epstopdf-sys.cfg))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/caption/ltcaption.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/translations/translations-basic-d
+ictionary-english.trsl)
+*geometry* driver: auto-detecting
+*geometry* detected driver: pdftex
+
+[1{/usr/local/texlive/2025/texmf-var/fonts/map/pdftex/updmap/pdftex.map}{/usr/l
+ocal/texlive/2025/texmf-dist/fonts/enc/dvips/base/8r.enc} <./images/UNIVE_squar
+e.png> <./images/UNIVE_eng.png>]) (./sections/acknowledgement.tex)
+[2] (./sections/declaration-of-ai-usage.tex)
+[3] (./sections/abstract.tex
+(/usr/local/texlive/2025/texmf-dist/tex/latex/bera/t1fvm.fd)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/psnfss/ot1ztmcm.fd)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/psnfss/omlztmcm.fd)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/psnfss/omsztmcm.fd)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/psnfss/omxztmcm.fd)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/psnfss/ot1ptm.fd)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/stmaryrd/Ustmry.fd))
+[4]
+No file main.toc.
+
+[5]
+Chapter 1.
+(./sections/introduction.tex
+
+Package natbib Warning: Citation `elixir-lang' on page 6 undefined on input lin
+e 8.
+
+
+Package natbib Warning: Citation `elixir-typespecs' on page 6 undefined on inpu
+t line 9.
+
+
+Package natbib Warning: Citation `lindahl2006practical' on page 6 undefined on 
+input line 10.
+
+
+Package natbib Warning: Citation `duboc2024' on page 6 undefined on input line 
+17.
+
+) (./sections/background.tex
+
+Package natbib Warning: Citation `elixir-lang' on page 6 undefined on input lin
+e 3.
+
+
+Package natbib Warning: Citation `erlang-armstrong' on page 6 undefined on inpu
+t line 3.
+
+
+[6]
+
+Package natbib Warning: Citation `elixir-typespecs' on page 7 undefined on inpu
+t line 16.
+
+
+Package natbib Warning: Citation `erlang-typespecs' on page 7 undefined on inpu
+t line 16.
+
+
+Package natbib Warning: Citation `lindahl2006practical' on page 7 undefined on 
+input line 69.
+
+
+Package natbib Warning: Citation `lindahl2006practical' on page 7 undefined on 
+input line 70.
+
+
+[7]
+[8]
+
+Package natbib Warning: Citation `frisch2008semantic' on page 9 undefined on in
+put line 168.
+
+
+Package natbib Warning: Citation `duboc2024' on page 9 undefined on input line 
+168.
+
+
+Package natbib Warning: Citation `siek2006gradual' on page 9 undefined on input
+ line 178.
+
+
+Package natbib Warning: Citation `frisch2008semantic' on page 9 undefined on in
+put line 191.
+
+
+Package natbib Warning: Citation `castagna2014polymorphic' on page 9 undefined 
+on input line 191.
+
+
+[9]
+[10]) (./sections/problem-statements.tex) (./sections/contributions.tex
+(/usr/local/texlive/2025/texmf-dist/tex/latex/psnfss/ts1ptm.fd)
+
+Package natbib Warning: Citation `duboc2024' on page 11 undefined on input line
+ 10.
+
+
+[11]
+
+LaTeX Warning: Reference `tab:source-projects' on page 12 undefined on input li
+ne 17.
+
+
+Package natbib Warning: Citation `Nina' on page 12 undefined on input line 23.
+
+)
+[12]
+Chapter 2.
+
+Package natbib Warning: Citation `elixir-typespecs' on page 13 undefined on inp
+ut line 29.
+
+
+Package natbib Warning: Citation `erlang-typespecs' on page 13 undefined on inp
+ut line 29.
+
+
+Package natbib Warning: Citation `duboc2024' on page 13 undefined on input line
+ 30.
+
+(./sections/specification.tex (./figures/fig-typespecs-types.tex)
+
+LaTeX Warning: Reference `app:typespecs-syntax' on page 13 undefined on input l
+ine 5.
+
+
+Package natbib Warning: Citation `elixir-typespecs' on page 13 undefined on inp
+ut line 5.
+
+
+Package natbib Warning: Citation `erlang-typespecs' on page 13 undefined on inp
+ut line 5.
+
+
+[13]
+
+LaTeX Warning: Reference `app:typespecs-builtin-types' on page 14 undefined on 
+input line 61.
+
+
+LaTeX Warning: Reference `app:typespecs-syntactic-sugars' on page 14 undefined 
+on input line 61.
+
+
+[14] (./figures/fig-typespecs-sugar-builtin.tex
+Overfull \hbox (2.09737pt too wide) in alignment at lines 6--10
+ [] [] 
+
+Overfull \hbox (2.09737pt too wide) in alignment at lines 10--14
+ [] [] 
+
+Overfull \hbox (2.09737pt too wide) in alignment at lines 14--15
+ [] [] 
+
+Overfull \hbox (3.2085pt too wide) in paragraph at lines 81--82
+[]|\T1/fvm/m/n/10.95 %{:__struct__=>atom(), optional(atom())=>any()}| 
+
+Overfull \hbox (2.09737pt too wide) in alignment at lines 15--87
+ [] [] 
+[15])
+
+LaTeX Warning: Reference `app:typespecs-syntax' on page 16 undefined on input l
+ine 65.
+
+
+LaTeX Warning: Reference `app:typespecs-builtin-types' on page 16 undefined on 
+input line 68.
+
+
+LaTeX Warning: Reference `app:typespecs-syntactic-sugars' on page 16 undefined 
+on input line 68.
+
+(./figures/fig-elixir-types.tex)
+[16]
+
+LaTeX Warning: Reference `app:elixir-types-syntax' on page 17 undefined on inpu
+t line 83.
+
+
+Package natbib Warning: Citation `duboc2024' on page 17 undefined on input line
+ 83.
+
+
+[17] (./figures/fig-elixir-sugar-builtin.tex
+Underfull \hbox (badness 10000) in paragraph at lines 24--24
+[]|\T1/fvm/m/n/10.95 empty_list() or non_empty_list(term(),
+)
+
+LaTeX Warning: Reference `app:elixir-types-syntax' on page 18 undefined on inpu
+t line 138.
+
+
+LaTeX Warning: Reference `app:elixir-type-builtin-types' on page 18 undefined o
+n input line 139.
+
+
+LaTeX Warning: Reference `app:elixir-type-syntactic-sugars' on page 18 undefine
+d on input line 139.
+
+
+[18]) (./sections/translation.tex
+
+LaTeX Warning: Reference `app:translation-in-annotations-1' on page 19 undefine
+d on input line 43.
+
+
+[19] (./figures/fig-translation-annotations.tex)
+
+LaTeX Warning: Reference `app:translation-in-annotations-2' on page 20 undefine
+d on input line 50.
+
+
+LaTeX Warning: Reference `app:translation-in-annotations-3' on page 20 undefine
+d on input line 55.
+
+
+LaTeX Warning: Reference `app:translation-in-annotations-4' on page 20 undefine
+d on input line 62.
+
+
+[20] (./figures/fig-translation-types.tex)
+[21{/usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/cm-super/cm-super-t1.enc
+}]
+
+LaTeX Warning: Reference `app:translation-in-types' on page 22 undefined on inp
+ut line 76.
+
+
+Package natbib Warning: Citation `elixir-type-precision' on page 22 undefined o
+n input line 90.
+
+
+[22]
+
+LaTeX Warning: Reference `app:translation-in-field-types' on page 23 undefined 
+on input line 129.
+
+) (./sections/approximation.tex
+[23]
+Overfull \hbox (27.11743pt too wide) in paragraph at lines 31--61
+$[]$ 
+
+[24])
+[25]
+Chapter 3.
+(./sections/implementation.tex
+Overfull \hbox (15.80974pt too wide) in paragraph at lines 21--23
+\T1/ptm/m/n/10.95 by a func-tion \T1/fvm/m/n/10.95 safe_string_to_quoted/1 \T1/
+ptm/m/n/10.95 for safety. This wrap-per catches \T1/fvm/m/n/10.95 SyntaxError\T
+1/ptm/m/n/10.95 , \T1/fvm/m/n/10.95 TokenMissingError\T1/ptm/m/n/10.95 ,
+
+Overfull \hbox (3.2659pt too wide) in paragraph at lines 26--30
+\T1/fvm/m/n/10.95 tuple, a list of double-element tuples with metadata (e.g., l
+ine numbers), a list of
+
+[26]
+Overfull \hbox (4.8884pt too wide) in paragraph at lines 31--35
+\T1/ptm/m/n/10.95 be-comes \T1/fvm/m/n/10.95 :infty..-1\T1/ptm/m/n/10.95 , \T1/
+fvm/m/n/10.95 non_neg_integer() \T1/ptm/m/n/10.95 be-comes \T1/fvm/m/n/10.95 0.
+.:infty\T1/ptm/m/n/10.95 , and \T1/fvm/m/n/10.95 pos_integer() \T1/ptm/m/n/10.9
+5 be-comes \T1/fvm/m/n/10.95 1..:infty\T1/ptm/m/n/10.95 ,
+
+Overfull \hbox (9.89177pt too wide) in paragraph at lines 31--35
+\T1/fvm/m/n/10.95 binary() \T1/ptm/m/n/10.95 is rewrit-ten into a bit-string pa
+t-tern \T1/fvm/m/n/10.95 <<_::_*8>>\T1/ptm/m/n/10.95 , \T1/fvm/m/n/10.95 charli
+st() \T1/ptm/m/n/10.95 be-comes \T1/fvm/m/n/10.95 list(char())\T1/ptm/m/n/10.95
+ , and \T1/fvm/m/n/10.95 keyword(T)
+
+Overfull \hbox (2.26642pt too wide) in paragraph at lines 31--35
+\T1/ptm/m/n/10.95 un-folds into an ex-plicit list-of-pairs form \T1/fvm/m/n/10.
+95 [] | nonempty_maybe_improper_list({atom(), T}, [])\T1/ptm/m/n/10.95 . The
+
+Overfull \hbox (2.49257pt too wide) in paragraph at lines 36--39
+[]\T1/ptm/m/n/10.95 Notice that we in-ten-tion-ally parses \T1/fvm/m/n/10.95 bi
+nary() \T1/ptm/m/n/10.95 to \T1/fvm/m/n/10.95 <<_::_*8>> \T1/ptm/m/n/10.95 even
+ though later it is trans-lated back to \T1/fvm/m/n/10.95 binary()
+
+Overfull \hbox (35.00232pt too wide) in paragraph at lines 63--66
+\T1/ptm/m/n/10.95 so that a union of $\OML/ztmcm/m/it/10.95 n$ \T1/ptm/m/n/10.9
+5 al-ter-na-tives be-comes a spine of nested \T1/fvm/m/n/10.95 :union \T1/ptm/m
+/n/10.95 nodes. Two helpers, \T1/fvm/m/n/10.95 flatten_from_union_to_list
+
+[27]
+[28]
+[29]
+Overfull \hbox (1.21211pt too wide) in paragraph at lines 203--206
+\T1/ptm/b/n/10.95 Non-empty lists. \T1/ptm/m/n/10.95 Two non-empty list types \
+T1/fvm/m/n/10.95 {:non_empty_list, {T$[]$, T$[]$}} \T1/ptm/m/n/10.95 and \T1/fv
+m/m/n/10.95 {:non_empty_list, {T$[]$,
+
+LaTeX Warning: Reference `sec:implementation-of-translator' on page 30 undefine
+d on input line 235.
+
+
+[30]) (./sections/dataset-construction.tex
+[31]
+
+LaTeX Warning: Reference `sec:warning-association' on page 32 undefined on inpu
+t line 26.
+
+
+Overfull \hbox (34.534pt too wide) in paragraph at lines 32--33
+\T1/ptm/m/n/10.95 Each mes-sage records its \T1/fvm/m/n/10.95 category\T1/ptm/m
+/n/10.95 , \T1/fvm/m/n/10.95 line\T1/ptm/m/n/10.95 , \T1/fvm/m/n/10.95 message 
+\T1/ptm/m/n/10.95 text, and an ex-plicit \T1/fvm/m/n/10.95 target \T1/ptm/m/n/1
+0.95 (the \T1/fvm/m/n/10.95 Module.function/arity
+
+Overfull \hbox (11.67366pt too wide) in paragraph at lines 47--50
+ []\T1/ptm/b/n/10.95 TypeSpec ex-trac-tion.[] \T1/ptm/m/n/10.95 The file is par
+sed into an AST and walked by a re-cur-sive ex-trac-tor that tra-verses \T1/fvm
+/m/n/10.95 defmodule\T1/ptm/m/n/10.95 ,
+
+[32]
+Overfull \hbox (4.37366pt too wide) in paragraph at lines 84--87
+ []\T1/ptm/b/n/10.95 Project pro-cess-ing.[] \T1/ptm/m/n/10.95 Each project is 
+pro-cessed con-cur-rently. The run-ner in-vokes \T1/fvm/m/n/10.95 mix deps.get\
+T1/ptm/m/n/10.95 , \T1/fvm/m/n/10.95 mix compile\T1/ptm/m/n/10.95 ,
+
+LaTeX Warning: Reference `sec:warning-association' on page 33 undefined on inpu
+t line 93.
+
+
+[33]
+
+LaTeX Warning: Reference `sec:warning-association' on page 34 undefined on inpu
+t line 113.
+
+) (./sections/dataset-evaluation.tex
+[34]
+
+LaTeX Warning: Reference `sec:dataset-construction' on page 35 undefined on inp
+ut line 32.
+
+
+LaTeX Warning: Reference `sec:dataset-construction' on page 35 undefined on inp
+ut line 33.
+
+
+LaTeX Warning: Reference `tab:overall-results' on page 35 undefined on input li
+ne 35.
+
+
+LaTeX Warning: Reference `sec:dialyzer-only' on page 35 undefined on input line
+ 67.
+
+
+LaTeX Warning: Reference `sec:typecheck-only' on page 35 undefined on input lin
+e 71.
+
+
+[35]
+
+Package natbib Warning: Citation `elixir-set-theoretic-types' on page 36 undefi
+ned on input line 85.
+
+
+Package natbib Warning: Citation `elixir-set-theoretic-types' on page 36 undefi
+ned on input line 88.
+
+
+LaTeX Warning: Reference `sec:downstream-implications' on page 36 undefined on 
+input line 89.
+
+
+LaTeX Warning: Reference `sec:dialyzer-only' on page 36 undefined on input line
+ 90.
+
+
+LaTeX Warning: Reference `sec:dialyzer-only' on page 36 undefined on input line
+ 93.
+
+
+LaTeX Warning: Reference `tab:dialyzer-cats' on page 36 undefined on input line
+ 100.
+
+
+Package natbib Warning: Citation `dialyzer-manual' on page 36 undefined on inpu
+t line 100.
+
+
+Package natbib Warning: Citation `dialyxir' on page 36 undefined on input line 
+100.
+
+
+LaTeX Warning: Reference `sec:both-warned' on page 36 undefined on input line 1
+01.
+
+
+LaTeX Warning: Reference `app:dialyzer-examples' on page 36 undefined on input 
+line 103.
+
+
+LaTeX Warning: Reference `sec:both-warned' on page 36 undefined on input line 1
+24.
+
+
+LaTeX Warning: Reference `sec:both-warned' on page 36 undefined on input line 1
+24.
+
+
+LaTeX Warning: `h' float specifier changed to `ht'.
+
+
+[36]
+
+Package natbib Warning: Citation `elixir-set-theoretic-types' on page 37 undefi
+ned on input line 137.
+
+
+Package natbib Warning: Citation `lindahl2006practical' on page 37 undefined on
+ input line 139.
+
+
+[37]
+
+LaTeX Warning: Reference `sec:both-warned' on page 38 undefined on input line 1
+51.
+
+
+LaTeX Warning: Reference `sec:approximation-via-dynamic' on page 38 undefined o
+n input line 154.
+
+
+Overfull \hbox (45.26451pt too wide) in paragraph at lines 159--160
+\T1/ptm/m/n/10.95 same-project callee re-turns, say, an er-ror tu-ple where the
+ code ex-pects a map (e.g. \T1/fvm/m/n/10.95 ScheduledActivity.create/2\T1/ptm/
+m/n/10.95 's
+
+Overfull \hbox (0.98749pt too wide) in paragraph at lines 159--160
+\T1/fvm/m/n/10.95 new/2\T1/ptm/m/n/10.95 , or \T1/fvm/m/n/10.95 as_to_model_dat
+a/1\T1/ptm/m/n/10.95 's \T1/fvm/m/n/10.95 extract_actors/1\T1/ptm/m/n/10.95 ), 
+and module-local in-fer-ence as-sumes that callee
+
+Overfull \hbox (19.30843pt too wide) in paragraph at lines 161--162
+\T1/ptm/m/n/10.95 tribute is \T1/fvm/m/n/10.95 :dev \T1/ptm/m/n/10.95 at com-pi
+le time, so the branch is stat-i-cally dead (\T1/fvm/m/n/10.95 task_children/0\
+T1/ptm/m/n/10.95 , \T1/fvm/m/n/10.95 maybe_inserted_at/0\T1/ptm/m/n/10.95 ). 
+
+[38]
+
+LaTeX Warning: Reference `sec:dialyzer-only' on page 39 undefined on input line
+ 200.
+
+
+LaTeX Warning: Reference `sec:approximation-via-dynamic' on page 39 undefined o
+n input line 206.
+
+
+[39]
+
+LaTeX Warning: Reference `app:typecheck-examples' on page 40 undefined on input
+ line 215.
+
+
+Overfull \hbox (30.44363pt too wide) in paragraph at lines 211--216
+\T1/fvm/m/n/10.95 Absinthe.Type.Custom.parse_date/1 \T1/ptm/m/n/10.95 re-turns 
+\T1/fvm/m/n/10.95 :error \T1/ptm/m/n/10.95 un-der \T1/fvm/m/n/10.95 {:ok, nil}\
+T1/ptm/m/n/10.95 , and \T1/fvm/m/n/10.95 Cldr.Substitution.parse/1
+
+LaTeX Warning: Reference `sec:dialyzer-only' on page 40 undefined on input line
+ 228.
+
+
+LaTeX Warning: Reference `app:both-examples' on page 40 undefined on input line
+ 233.
+
+
+LaTeX Warning: Reference `sec:typecheck-only' on page 40 undefined on input lin
+e 245.
+
+
+[40]
+
+LaTeX Warning: Reference `sec:approximation-via-dynamic' on page 41 undefined o
+n input line 249.
+
+
+LaTeX Warning: Reference `sec:llm-data-prep' on page 41 undefined on input line
+ 255.
+
+)
+[41]
+[42]
+Chapter 4.
+
+LaTeX Warning: Reference `ch:formalisation' on page 43 undefined on input line 
+52.
+
+
+LaTeX Warning: Reference `ch:implementation' on page 43 undefined on input line
+ 52.
+
+
+Package natbib Warning: Citation `lindahl2006practical' on page 43 undefined on
+ input line 55.
+
+
+LaTeX Warning: Reference `sec:downstream-implications' on page 43 undefined on 
+input line 59.
+
+(./sections/llm-type-prediction.tex
+
+Package natbib Warning: Citation `Nina' on page 43 undefined on input line 3.
+
+
+[43]
+
+Package natbib Warning: Citation `Nina' on page 44 undefined on input line 24.
+
+
+LaTeX Warning: Reference `sec:evaluation' on page 44 undefined on input line 32
+.
+
+
+LaTeX Warning: Reference `sec:approximation-via-dynamic' on page 44 undefined o
+n input line 35.
+
+
+LaTeX Warning: Reference `ch:formalisation' on page 44 undefined on input line 
+42.
+
+
+LaTeX Warning: Reference `sec:downstream-implications' on page 44 undefined on 
+input line 43.
+
+
+Overfull \hbox (19.8955pt too wide) in paragraph at lines 42--45
+\T1/ptm/m/n/10.95 or whose tar-get an-no-ta-tion ex-ceeds 1,000 char-ac-ters ar
+e re-moved, as these patho-log-i-cal cases (e.g. \T1/fvm/m/n/10.95 Regex.replac
+e/4\T1/ptm/m/n/10.95 ,
+
+LaTeX Warning: Reference `tab:llm-splits' on page 44 undefined on input line 51
+.
+
+
+LaTeX Warning: `h' float specifier changed to `ht'.
+
+
+Package natbib Warning: Citation `qwen25coder' on page 44 undefined on input li
+ne 75.
+
+
+Package natbib Warning: Citation `qwen25coder' on page 44 undefined on input li
+ne 77.
+
+
+Package natbib Warning: Citation `deepseekcoder' on page 44 undefined on input 
+line 77.
+
+
+Package natbib Warning: Citation `starcoder2' on page 44 undefined on input lin
+e 77.
+
+
+[44]
+
+Package natbib Warning: Citation `qlora' on page 45 undefined on input line 83.
+
+
+
+Package natbib Warning: Citation `lora' on page 45 undefined on input line 83.
+
+
+LaTeX Warning: Reference `sec:extrinsic-eval' on page 45 undefined on input lin
+e 112.
+
+
+[45]
+
+Package natbib Warning: Citation `Nina' on page 46 undefined on input line 122.
+
+
+
+LaTeX Warning: Reference `tab:llm-headline' on page 46 undefined on input line 
+150.
+
+
+[46]
+
+LaTeX Warning: Reference `sec:approximation-via-dynamic' on page 47 undefined o
+n input line 198.
+
+
+LaTeX Warning: Reference `tab:llm-extrinsic' on page 47 undefined on input line
+ 199.
+
+
+LaTeX Warning: `h' float specifier changed to `ht'.
+
+
+[47]
+[48]
+Overfull \hbox (23.0519pt too wide) in paragraph at lines 261--264
+\T1/fvm/m/n/10.95 get_delete_status/1 \T1/ptm/m/n/10.95 has ref-er-ence \T1/fvm
+/m/n/10.95 (binary() -> :deleted or :undeleted)\T1/ptm/m/n/10.95 ; Track 1 pre-
+dicts \T1/fvm/m/n/10.95 (binary()
+)
+Overfull \hbox (35.16277pt too wide) in paragraph at lines 272--68
+\T1/fvm/m/n/10.95 Pleroma.Web.ActivityPub.Relay.get_actor/0 \T1/ptm/m/n/10.95 h
+as ref-er-ence \T1/fvm/m/n/10.95 ( -> %{:__struct__ => :"Pleroma.User"}
+(./sections/total-migration.tex
+
+LaTeX Warning: Reference `sec:semantic-distance' on page 49 undefined on input 
+line 29.
+
+
+LaTeX Warning: Reference `ch:implementation' on page 49 undefined on input line
+ 37.
+
+
+LaTeX Warning: Reference `sec:semantic-distance' on page 49 undefined on input 
+line 44.
+
+
+[49]
+
+LaTeX Warning: Reference `sec:qualitative' on page 50 undefined on input line 7
+5.
+
+
+LaTeX Warning: Reference `alg:cascade' on page 50 undefined on input line 99.
+
+
+[50]
+
+LaTeX Warning: Reference `sec:two-track' on page 51 undefined on input line 133
+.
+
+
+LaTeX Warning: Reference `tab:migration-results' on page 51 undefined on input 
+line 141.
+
+
+Overfull \hbox (71.96227pt too wide) in paragraph at lines 139--142
+\T1/ptm/m/n/10.95 anal-y-sis: one standard-library-style code-base (\T1/fvm/m/n
+/10.95 elixir-lang/X\T1/ptm/m/n/10.95 ), one framework-heavy code-base (\T1/fvm
+/m/n/10.95 ScenicFramework/Scenic\T1/ptm/m/n/10.95 ),
+
+LaTeX Warning: Reference `sec:semantic-distance' on page 51 undefined on input 
+line 170.
+
+)
+[51]
+[52]
+Chapter 5.
+(./sections/conclusion.tex
+
+LaTeX Warning: Reference `ch:formalisation' on page 53 undefined on input line 
+4.
+
+
+LaTeX Warning: Reference `ch:implementation' on page 53 undefined on input line
+ 5.
+
+
+LaTeX Warning: Reference `ch:implementation' on page 53 undefined on input line
+ 24.
+
+
+LaTeX Warning: Reference `sec:semantic-distance' on page 53 undefined on input 
+line 27.
+
+
+[53])
+Overfull \hbox (11.45183pt too wide) in paragraph at lines 43--74
+ []\T1/ptm/b/n/10.95 A com-piler un-der ac-tive de-vel-op-ment.[] \T1/ptm/m/n/1
+0.95 The set-theoretic type sys-tem tar-geted in this work ships in a developme
+nt-
+
+[54] (./sections/appendix.tex
+
+LaTeX Warning: Reference `app:translation-in-field-types' on page 55 undefined 
+on input line 4.
+
+
+LaTeX Warning: Reference `ln:map-ok-to-bin' on page 55 undefined on input line 
+19.
+
+
+LaTeX Warning: Reference `ln:map-opt-ok-to-bin' on page 55 undefined on input l
+ine 20.
+
+
+LaTeX Warning: Reference `ln:map-req-atom-to-bin' on page 55 undefined on input
+ line 27.
+
+
+LaTeX Warning: Reference `ln:map-opt-atom-to-bin' on page 55 undefined on input
+ line 27.
+
+
+LaTeX Warning: Reference `app:merge-in-approximated-field-types' on page 55 und
+efined on input line 39.
+
+
+LaTeX Warning: Reference `app:merge-in-approximated-field-types' on page 55 und
+efined on input line 40.
+
+
+LaTeX Warning: Reference `ln:map-a-to-bin-1..10-to-int' on page 55 undefined on
+ input line 73.
+
+
+LaTeX Warning: Reference `ln:map-a-to-bin-1..10-to-int' on page 55 undefined on
+ input line 73.
+
+
+[55]
+
+LaTeX Warning: Reference `ln:map-atom-to-bin-atom-to-int' on page 56 undefined 
+on input line 105.
+
+
+LaTeX Warning: Reference `ln:map-atom-to-bin-atom-to-int' on page 56 undefined 
+on input line 105.
+
+
+Overfull \hbox (46.08797pt too wide) detected at line 140
+[]
+
+LaTeX Warning: Reference `ln:map-1..10-to-bin-6..15-to-int' on page 56 undefine
+d on input line 142.
+
+
+LaTeX Warning: Reference `ln:map-1..10-to-bin-6..15-to-int' on page 56 undefine
+d on input line 142.
+
+
+[56]
+
+LaTeX Warning: Reference `ln:map-atom-to-bin-a-to-int' on page 57 undefined on 
+input line 177.
+
+
+LaTeX Warning: Reference `ln:map-atom-to-bin-a-to-int' on page 57 undefined on 
+input line 177.
+
+
+LaTeX Warning: Reference `ln:map-opt-a-to-bin-a-to-int' on page 57 undefined on
+ input line 209.
+
+
+LaTeX Warning: Reference `ln:map-opt-a-to-bin-a-to-int' on page 57 undefined on
+ input line 209.
+
+)
+[57]
+[58] (./sections/appendix-dialyzer-examples.tex
+
+LaTeX Warning: Reference `tab:dialyzer-cats' on page 59 undefined on input line
+ 5.
+
+
+LaTeX Warning: Reference `sec:dialyzer-only' on page 59 undefined on input line
+ 5.
+
+
+[59]
+Underfull \hbox (badness 10000) in paragraph at lines 97--98
+ []\T1/fvm/b/n/10.95 pattern_match_cov\T1/ptm/b/n/10.95 .[] \T1/ptm/m/n/10.95 O
+n \T1/fvm/m/n/10.95 Mobilizon.Federation.ActivityStream.Converter.Actor.
+
+[60]
+Overfull \hbox (20.54941pt too wide) in paragraph at lines 157--158
+ []\T1/fvm/b/n/10.95 unknown_type\T1/ptm/b/n/10.95 .[] \T1/ptm/m/n/10.95 On \T1
+/fvm/m/n/10.95 Mobilizon.GraphQL.Resolvers.Conversation.find_conversations_for_
+event/
+)
+[61] (./sections/appendix-both-examples.tex
+
+LaTeX Warning: Reference `sec:both-warned' on page 62 undefined on input line 5
+.
+
+
+[62]
+[63]
+[64])
+[65] (./sections/appendix-typecheck-examples.tex
+
+LaTeX Warning: Reference `tab:genuine-leaks' on page 66 undefined on input line
+ 15.
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 19--19
+[]|\T1/fvm/m/n/9 Absinthe.Type.Custom.parse_naive_
+
+Underfull \hbox (badness 10000) in paragraph at lines 27--27
+[]|\T1/fvm/m/n/9 ArrowWeb.API.GtfsImportController.
+
+Underfull \hbox (badness 10000) in paragraph at lines 34--34
+[]|\T1/fvm/m/n/9 Cldr.Calendar.EthiopicAmeteAlem.quarter_
+
+Underfull \hbox (badness 10000) in paragraph at lines 43--43
+[]|\T1/fvm/m/n/9 Livebook.Runtime.Definitions.example_
+
+Underfull \hbox (badness 10000) in paragraph at lines 44--44
+[]|\T1/fvm/m/n/9 Livebook.Runtime.Definitions.file_
+
+Underfull \hbox (badness 10000) in paragraph at lines 47--47
+[]|\T1/fvm/m/n/9 LivebookWeb.SessionHelpers.register_
+
+Underfull \hbox (badness 10000) in paragraph at lines 48--48
+[]|\T1/fvm/m/n/9 MBTAV3API.Stream.StaticInstance.Impl.
+
+Underfull \hbox (badness 10000) in paragraph at lines 49--49
+[]|\T1/fvm/m/n/9 Mobilizon.Actors.Actor.display_name_and_
+
+Underfull \hbox (badness 10000) in paragraph at lines 50--50
+[]|\T1/fvm/m/n/9 Mobilizon.Events.Categories.get_
+
+Underfull \hbox (badness 10000) in paragraph at lines 51--51
+[]|\T1/fvm/m/n/9 Mobilizon.Federation.ActivityPub.Utils.
+
+Underfull \hbox (badness 10000) in paragraph at lines 52--52
+[]|\T1/fvm/m/n/9 Mobilizon.Federation.ActivityStream.
+
+Underfull \hbox (badness 10000) in paragraph at lines 53--53
+[]|\T1/fvm/m/n/9 Mobilizon.Federation.NodeInfo.fetch_
+
+Underfull \hbox (badness 10000) in paragraph at lines 54--54
+[]|\T1/fvm/m/n/9 Mobilizon.GraphQL.Resolvers.Admin.save_
+
+Underfull \hbox (badness 10000) in paragraph at lines 55--55
+[]|\T1/fvm/m/n/9 Mobilizon.GraphQL.Resolvers.Application.
+
+Underfull \hbox (badness 10000) in paragraph at lines 56--56
+[]|\T1/fvm/m/n/9 Mobilizon.GraphQL.Resolvers.Participant.
+
+Underfull \hbox (badness 10000) in paragraph at lines 57--57
+[]|\T1/fvm/m/n/9 Mobilizon.GraphQL.Schema.Custom.Point.
+
+Underfull \hbox (badness 10000) in paragraph at lines 58--58
+[]|\T1/fvm/m/n/9 Mobilizon.GraphQL.Schema.Custom.
+
+Underfull \hbox (badness 10000) in paragraph at lines 59--59
+[]|\T1/fvm/m/n/9 Mobilizon.GraphQL.Schema.Custom.UUID.
+
+Underfull \hbox (badness 10000) in paragraph at lines 60--60
+[]|\T1/fvm/m/n/9 Mobilizon.Service.Export.ICalendar.
+
+Underfull \hbox (badness 10000) in paragraph at lines 61--61
+[]|\T1/fvm/m/n/9 Mobilizon.Service.RichMedia.Parsers.OGP.
+
+Underfull \hbox (badness 10000) in paragraph at lines 69--69
+[]|\T1/fvm/m/n/9 Pleroma.Config.DeprecationWarnings.
+
+Underfull \hbox (badness 10000) in paragraph at lines 70--70
+[]|\T1/fvm/m/n/9 Pleroma.Config.DeprecationWarnings.
+
+Underfull \hbox (badness 10000) in paragraph at lines 71--71
+[]|\T1/fvm/m/n/9 Pleroma.Config.DeprecationWarnings.move_
+[66] [67]
+[68]
+Underfull \hbox (badness 4156) in paragraph at lines 110--111
+\T1/ptm/m/n/10.95 Inferred \T1/fvm/m/n/10.95 {Scenic.Assets.Stream.Bitmap, {int
+eger(), integer(), :g...\T1/ptm/m/n/10.95 ; de-clared \T1/fvm/m/n/10.95 dynamic
+(
+
+Underfull \hbox (badness 10000) in paragraph at lines 118--119
+\T1/ptm/m/n/10.95 Inferred \T1/fvm/m/n/10.95 %Absinthe.Blueprint.SourceLocation
+{line: integer(), col...\T1/ptm/m/n/10.95 ; de-clared \T1/fvm/m/n/10.95 %{__
+
+Underfull \hbox (badness 4156) in paragraph at lines 126--131
+\T1/ptm/m/n/10.95 Inferred \T1/fvm/m/n/10.95 (%{ __struct__: :Primitive, d...\T
+1/ptm/m/n/10.95 ; de-clared \T1/fvm/m/n/10.95 (%{ __struct__: :"Scenic.Graph",
+
+[69])
+[70] (./sections/appendix-source-projects.tex
+Underfull \hbox (badness 10000) in paragraph at lines 5--6
+\T1/ptm/m/n/10.95 The dataset is con-structed from the fol-low-ing $\OT1/ztmcm/
+m/n/10.95 175$ \T1/ptm/m/n/10.95 pub-lic repos-i-to-ries (the repos-i-tory
+
+LaTeX Warning: Reference `tab:source-projects' on page 71 undefined on input li
+ne 12.
+
+
+Package longtable Warning: Column widths have changed
+(longtable)                in table 5.2 on input line 189.
+
+[71] [72] [73])
+[74]
+No file main.bbl.
+
+Package caption Warning: Unused \captionsetup[sub] on input line 7.
+See the caption package documentation for explanation.
+
+
+Package natbib Warning: There were undefined citations.
+
+
+Package longtable Warning: Table widths have changed. Rerun LaTeX.
+
+(./main.aux)
+
+LaTeX Warning: There were undefined references.
+
+
+LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
+
+
+Package rerunfilecheck Warning: File `main.out' has changed.
+(rerunfilecheck)                Rerun to get outlines right
+(rerunfilecheck)                or use package `bookmark'.
+
+ )
+(see the transcript file for additional information)</usr/local/texlive/2025/te
+xmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></usr/local/texlive/2025/tex
+mf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/local/texlive/2025/texm
+f-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/local/texlive/2025/texmf-
+dist/fonts/type1/public/amsfonts/cm/cmss10.pfb></usr/local/texlive/2025/texmf-d
+ist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/local/texlive/2025/texmf-di
+st/fonts/type1/public/bera/fvmb8a.pfb></usr/local/texlive/2025/texmf-dist/fonts
+/type1/public/bera/fvmr8a.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/p
+ublic/bera/fvmro8a.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/a
+msfonts/symbols/msam10.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/publ
+ic/amsfonts/symbols/msbm10.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/
+public/rsfs/rsfs10.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/c
+m-super/sfsi1095.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/cm-
+super/sfss1095.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/urw/symbol/u
+syr.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></
+usr/local/texlive/2025/texmf-dist/fonts/type1/urw/times/utmbi8a.pfb></usr/local
+/texlive/2025/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2
+025/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2025/texmf-
+dist/fonts/type1/urw/times/utmri8a.pfb>
+Output written on main.pdf (74 pages, 699275 bytes).
+SyncTeX written on main.synctex.gz.
+Transcript written on main.log.
+Latexmk: Getting log file 'main.log'
+Latexmk: Examining 'main.fls'
+Latexmk: Examining 'main.log'
+Latexmk: Missing input file 'main.toc' (or dependence on it) from following:
+  No file main.toc.
+Latexmk: Missing bbl file 'main.bbl' in following:
+ No file main.bbl.
+Latexmk: References changed.
+Latexmk: References changed.
+Latexmk: Log file says output to 'main.pdf'
+Latexmk: Found bibliography file(s):
+  ./bibliography.bib
+Latexmk: applying rule 'bibtex main'...
+Rule 'bibtex main':  Reasons for rerun
+Category 'other':
+  Rerun of 'bibtex main' forced or previously required:
+    Reason or flag: 'Initial set up of rule'
+
+------------
+Run number 1 of rule 'bibtex main'
+------------
+------------
+Running 'bibtex  "main.aux"'
+------------
+This is BibTeX, Version 0.99d (TeX Live 2025)
+The top-level auxiliary file: main.aux
+The style file: apalike.bst
+Database file #1: bibliography.bib
+Latexmk: applying rule 'pdflatex'...
+Rule 'pdflatex':  Reasons for rerun
+Changed files or newly in use/created:
+  main.aux
+  main.bbl
+  main.out
+  main.toc
+
+------------
+Run number 2 of rule 'pdflatex'
+------------
+------------
+Running 'pdflatex  -interaction=nonstopmode -synctex=1 -recorder  "main.tex"'
+------------
+This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex)
+ restricted \write18 enabled.
+entering extended mode
+(./main.tex
+LaTeX2e <2024-11-01> patch level 2
+L3 programming layer <2025-01-18>
+(/usr/local/texlive/2025/texmf-dist/tex/latex/base/report.cls
+Document Class: report 2024/06/29 v1.4n Standard LaTeX document class
+(/usr/local/texlive/2025/texmf-dist/tex/latex/base/size11.clo)) (./setup.tex
+(/usr/local/texlive/2025/texmf-dist/tex/latex/base/inputenc.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/base/fontenc.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?' option.
+(/usr/local/texlive/2025/texmf-dist/tex/latex/amsmath/amstext.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/amsmath/amsgen.sty))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/amsmath/amsbsy.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/amsmath/amsopn.sty))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/amsfonts/amssymb.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/amsfonts/amsfonts.sty))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/graphics/graphicx.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/graphics/keyval.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/graphics/graphics.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/graphics/trig.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/graphics-cfg/graphics.cfg)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/graphics-def/pdftex.def)))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/caption/caption.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/caption/caption3.sty))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/caption/subcaption.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/booktabs/booktabs.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/siunitx/siunitx.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/translations/translations.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/etoolbox/etoolbox.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pdftexcmds/pdftexcmds.sty
+(/usr/local/texlive/2025/texmf-dist/tex/generic/infwarerr/infwarerr.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/iftex/iftex.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/ltxcmds/ltxcmds.sty)))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/tools/array.sty))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/hyperref/hyperref.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/kvsetkeys/kvsetkeys.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/kvdefinekeys/kvdefinekeys.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pdfescape/pdfescape.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/hycolor/hycolor.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/hyperref/nameref.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/refcount/refcount.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/gettitlestring/gettitlestring.s
+ty (/usr/local/texlive/2025/texmf-dist/tex/latex/kvoptions/kvoptions.sty)))
+(/usr/local/texlive/2025/texmf-dist/tex/generic/stringenc/stringenc.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/hyperref/pd1enc.def)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/intcalc/intcalc.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/hyperref/puenc.def)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/url/url.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/bitset/bitset.sty
+(/usr/local/texlive/2025/texmf-dist/tex/generic/bigintcalc/bigintcalc.sty))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/base/atbegshi-ltx.sty))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/hyperref/hpdftex.def
+(/usr/local/texlive/2025/texmf-dist/tex/latex/base/atveryend-ltx.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/rerunfilecheck/rerunfilecheck.sty
+
+(/usr/local/texlive/2025/texmf-dist/tex/generic/uniquecounter/uniquecounter.sty
+))) (/usr/local/texlive/2025/texmf-dist/tex/latex/float/float.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/textgreek/textgreek.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/greek-fontenc/lgrenc.def
+(/usr/local/texlive/2025/texmf-dist/tex/latex/greek-inputenc/lgrenc.dfu)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/greek-fontenc/greek-fontenc.def))
+) (/usr/local/texlive/2025/texmf-dist/tex/latex/fancyhdr/fancyhdr.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/psnfss/mathptmx.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/textpos/textpos.sty
+Grid set 16 x 16 = 37.34424pt x 52.81541pt
+TextBlockOrigin set to 0pt x 0pt
+) (/usr/local/texlive/2025/texmf-dist/tex/latex/background/background.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/xkeyval/xkeyval.sty
+(/usr/local/texlive/2025/texmf-dist/tex/generic/xkeyval/xkeyval.tex
+(/usr/local/texlive/2025/texmf-dist/tex/generic/xkeyval/xkvutils.tex)))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/pgf/frontendlayer/tikz.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/pgf/basiclayer/pgf.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/pgf/utilities/pgfrcs.sty
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/utilities/pgfutil-common.te
+x)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/utilities/pgfutil-latex.def
+) (/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/utilities/pgfrcs.code.tex
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/pgf.revision.tex)))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/pgf/basiclayer/pgfcore.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/pgf/systemlayer/pgfsys.sty
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/systemlayer/pgfsys.code.tex
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/utilities/pgfkeys.code.tex
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/utilities/pgfkeyslibraryfil
+tered.code.tex))
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/systemlayer/pgf.cfg)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/systemlayer/pgfsys-pdftex.d
+ef
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/systemlayer/pgfsys-common-p
+df.def)))
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/systemlayer/pgfsyssoftpath.
+code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/systemlayer/pgfsysprotocol.
+code.tex)) (/usr/local/texlive/2025/texmf-dist/tex/latex/xcolor/xcolor.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/graphics-cfg/color.cfg)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/graphics/mathcolor.ltx))
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcore.code.tex
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/math/pgfmath.code.tex
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/math/pgfmathutil.code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/math/pgfmathparser.code.tex
+)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.code.
+tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.basic
+.code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.trigo
+nometric.code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.rando
+m.code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.compa
+rison.code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.base.
+code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.round
+.code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.misc.
+code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.integ
+erarithmetics.code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/math/pgfmathcalc.code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/math/pgfmathfloat.code.tex)
+) (/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/math/pgfint.code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcorepoints.co
+de.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcorepathconst
+ruct.code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcorepathusage
+.code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcorescopes.co
+de.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcoregraphicst
+ate.code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcoretransform
+ations.code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcorequick.cod
+e.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcoreobjects.c
+ode.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcorepathproce
+ssing.code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcorearrows.co
+de.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcoreshade.cod
+e.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcoreimage.cod
+e.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcoreexternal.
+code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcorelayers.co
+de.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcoretranspare
+ncy.code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcorepatterns.
+code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcorerdf.code.
+tex)))
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/modules/pgfmoduleshapes.cod
+e.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/modules/pgfmoduleplot.code.
+tex)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/pgf/compatibility/pgfcomp-version
+-0-65.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/pgf/compatibility/pgfcomp-version
+-1-18.sty))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/pgf/utilities/pgffor.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/pgf/utilities/pgfkeys.sty
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/utilities/pgfkeys.code.tex)
+) (/usr/local/texlive/2025/texmf-dist/tex/latex/pgf/math/pgfmath.sty
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/math/pgfmath.code.tex))
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/utilities/pgffor.code.tex))
+
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/frontendlayer/tikz/tikz.cod
+e.tex
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/libraries/pgflibraryplothan
+dlers.code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/modules/pgfmodulematrix.cod
+e.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/frontendlayer/tikz/librarie
+s/tikzlibrarytopaths.code.tex)))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/everypage/everypage.sty
+
+Package everypage Warning: Functionality similar to this package has recently
+(everypage)                been implemented in LaTeX. This package is now in
+(everypage)                legacy status.
+(everypage)                Please, don't use it in new documents and packages.
+
+
+Package everypage Warning: You appear to be running a version of LaTeX
+(everypage)                providing the new functionality.
+(everypage)                Doing the best to deliver the original `everypage`
+(everypage)                interface on top of it. Strict equivalence is
+(everypage)                not possible, breakage may occur.
+(everypage)                If truly needed, Use `everypage-1x` to force the
+(everypage)                loading of an older code base.
+
+) (/usr/local/texlive/2025/texmf-dist/tex/latex/tools/afterpage.sty))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/tools/tabularx.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/tools/longtable.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/multirow/multirow.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/algorithms/algorithm.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/base/ifthen.sty))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/algorithmicx/algpseudocode.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/algorithmicx/algorithmicx.sty
+Document Style algorithmicx 1.2 - a greatly improved `algorithmic' style
+)
+Document Style - pseudocode environments for use with the `algorithmicx' style
+) (/usr/local/texlive/2025/texmf-dist/tex/latex/natbib/natbib.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/mathtools/mathtools.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/tools/calc.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/mathtools/mhsetup.sty))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/bera/beramono.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/mathpartir/mathpartir.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/graphics/dvipsnam.def)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/stmaryrd/stmaryrd.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/listings/listings.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/listings/lstpatch.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/listings/lstmisc.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/listings/listings.cfg))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/geometry/geometry.sty
+(/usr/local/texlive/2025/texmf-dist/tex/generic/iftex/ifvtex.sty)))
+(./macros.tex) (./Frontespizio in inglese.tex (./setup.tex
+(/usr/local/texlive/2025/texmf-dist/tex/latex/base/fontenc.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/psnfss/t1ptm.fd)))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/l3backend/l3backend-pdftex.def)
+(./main.aux) (/usr/local/texlive/2025/texmf-dist/tex/latex/cbfonts-fd/lgrcmr.fd
+) (/usr/local/texlive/2025/texmf-dist/tex/context/base/mkii/supp-pdf.mkii
+[Loading MPS to PDF converter (version 2006.09.02).]
+) (/usr/local/texlive/2025/texmf-dist/tex/latex/epstopdf-pkg/epstopdf-base.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/grfext/grfext.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/latexconfig/epstopdf-sys.cfg))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/caption/ltcaption.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/translations/translations-basic-d
+ictionary-english.trsl) (./main.out) (./main.out)
+*geometry* driver: auto-detecting
+*geometry* detected driver: pdftex
+
+[1{/usr/local/texlive/2025/texmf-var/fonts/map/pdftex/updmap/pdftex.map}{/usr/l
+ocal/texlive/2025/texmf-dist/fonts/enc/dvips/base/8r.enc} <./images/UNIVE_squar
+e.png> <./images/UNIVE_eng.png>]) (./sections/acknowledgement.tex)
+[2] (./sections/declaration-of-ai-usage.tex)
+[3] (./sections/abstract.tex
+(/usr/local/texlive/2025/texmf-dist/tex/latex/bera/t1fvm.fd)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/psnfss/ot1ztmcm.fd)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/psnfss/omlztmcm.fd)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/psnfss/omsztmcm.fd)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/psnfss/omxztmcm.fd)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/psnfss/ot1ptm.fd)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/stmaryrd/Ustmry.fd))
+[4] (./main.toc
+[5])
+[6]
+Chapter 1.
+(./sections/introduction.tex
+
+Package natbib Warning: Citation `elixir-lang' on page 7 undefined on input lin
+e 8.
+
+
+Package natbib Warning: Citation `elixir-typespecs' on page 7 undefined on inpu
+t line 9.
+
+
+Package natbib Warning: Citation `lindahl2006practical' on page 7 undefined on 
+input line 10.
+
+
+Package natbib Warning: Citation `duboc2024' on page 7 undefined on input line 
+17.
+
+) (./sections/background.tex
+
+Package natbib Warning: Citation `elixir-lang' on page 7 undefined on input lin
+e 3.
+
+
+Package natbib Warning: Citation `erlang-armstrong' on page 7 undefined on inpu
+t line 3.
+
+
+[7]
+
+Package natbib Warning: Citation `elixir-typespecs' on page 8 undefined on inpu
+t line 16.
+
+
+Package natbib Warning: Citation `erlang-typespecs' on page 8 undefined on inpu
+t line 16.
+
+
+Package natbib Warning: Citation `lindahl2006practical' on page 8 undefined on 
+input line 69.
+
+
+Package natbib Warning: Citation `lindahl2006practical' on page 8 undefined on 
+input line 70.
+
+
+[8]
+[9]
+
+Package natbib Warning: Citation `frisch2008semantic' on page 10 undefined on i
+nput line 168.
+
+
+Package natbib Warning: Citation `duboc2024' on page 10 undefined on input line
+ 168.
+
+
+Package natbib Warning: Citation `siek2006gradual' on page 10 undefined on inpu
+t line 178.
+
+
+Package natbib Warning: Citation `frisch2008semantic' on page 10 undefined on i
+nput line 191.
+
+
+Package natbib Warning: Citation `castagna2014polymorphic' on page 10 undefined
+ on input line 191.
+
+
+[10]
+[11]) (./sections/problem-statements.tex) (./sections/contributions.tex
+(/usr/local/texlive/2025/texmf-dist/tex/latex/psnfss/ts1ptm.fd)
+
+Package natbib Warning: Citation `duboc2024' on page 12 undefined on input line
+ 10.
+
+
+[12]
+
+Package natbib Warning: Citation `Nina' on page 13 undefined on input line 23.
+
+)
+[13]
+Chapter 2.
+
+Package natbib Warning: Citation `elixir-typespecs' on page 14 undefined on inp
+ut line 29.
+
+
+Package natbib Warning: Citation `erlang-typespecs' on page 14 undefined on inp
+ut line 29.
+
+
+Package natbib Warning: Citation `duboc2024' on page 14 undefined on input line
+ 30.
+
+(./sections/specification.tex (./figures/fig-typespecs-types.tex)
+
+Package natbib Warning: Citation `elixir-typespecs' on page 14 undefined on inp
+ut line 5.
+
+
+Package natbib Warning: Citation `erlang-typespecs' on page 14 undefined on inp
+ut line 5.
+
+
+[14]
+[15] (./figures/fig-typespecs-sugar-builtin.tex
+Overfull \hbox (2.09737pt too wide) in alignment at lines 6--10
+ [] [] 
+
+Overfull \hbox (2.09737pt too wide) in alignment at lines 10--14
+ [] [] 
+
+Overfull \hbox (2.09737pt too wide) in alignment at lines 14--15
+ [] [] 
+
+Overfull \hbox (3.2085pt too wide) in paragraph at lines 81--82
+[]|\T1/fvm/m/n/10.95 %{:__struct__=>atom(), optional(atom())=>any()}| 
+
+Overfull \hbox (2.09737pt too wide) in alignment at lines 15--87
+ [] [] 
+[16]) (./figures/fig-elixir-types.tex)
+[17]
+
+Package natbib Warning: Citation `duboc2024' on page 18 undefined on input line
+ 83.
+
+
+[18] (./figures/fig-elixir-sugar-builtin.tex
+Underfull \hbox (badness 10000) in paragraph at lines 24--24
+[]|\T1/fvm/m/n/10.95 empty_list() or non_empty_list(term(),
+)
+[19]) (./sections/translation.tex
+[20] (./figures/fig-translation-annotations.tex)
+[21] (./figures/fig-translation-types.tex)
+[22{/usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/cm-super/cm-super-t1.enc
+}]
+
+Package natbib Warning: Citation `elixir-type-precision' on page 23 undefined o
+n input line 90.
+
+
+[23]) (./sections/approximation.tex
+[24]
+Overfull \hbox (27.11743pt too wide) in paragraph at lines 31--61
+$[]$ 
+
+[25])
+[26]
+Chapter 3.
+(./sections/implementation.tex
+Overfull \hbox (15.80974pt too wide) in paragraph at lines 21--23
+\T1/ptm/m/n/10.95 by a func-tion \T1/fvm/m/n/10.95 safe_string_to_quoted/1 \T1/
+ptm/m/n/10.95 for safety. This wrap-per catches \T1/fvm/m/n/10.95 SyntaxError\T
+1/ptm/m/n/10.95 , \T1/fvm/m/n/10.95 TokenMissingError\T1/ptm/m/n/10.95 ,
+
+Overfull \hbox (3.2659pt too wide) in paragraph at lines 26--30
+\T1/fvm/m/n/10.95 tuple, a list of double-element tuples with metadata (e.g., l
+ine numbers), a list of
+
+[27]
+Overfull \hbox (4.8884pt too wide) in paragraph at lines 31--35
+\T1/ptm/m/n/10.95 be-comes \T1/fvm/m/n/10.95 :infty..-1\T1/ptm/m/n/10.95 , \T1/
+fvm/m/n/10.95 non_neg_integer() \T1/ptm/m/n/10.95 be-comes \T1/fvm/m/n/10.95 0.
+.:infty\T1/ptm/m/n/10.95 , and \T1/fvm/m/n/10.95 pos_integer() \T1/ptm/m/n/10.9
+5 be-comes \T1/fvm/m/n/10.95 1..:infty\T1/ptm/m/n/10.95 ,
+
+Overfull \hbox (9.89177pt too wide) in paragraph at lines 31--35
+\T1/fvm/m/n/10.95 binary() \T1/ptm/m/n/10.95 is rewrit-ten into a bit-string pa
+t-tern \T1/fvm/m/n/10.95 <<_::_*8>>\T1/ptm/m/n/10.95 , \T1/fvm/m/n/10.95 charli
+st() \T1/ptm/m/n/10.95 be-comes \T1/fvm/m/n/10.95 list(char())\T1/ptm/m/n/10.95
+ , and \T1/fvm/m/n/10.95 keyword(T)
+
+Overfull \hbox (2.26642pt too wide) in paragraph at lines 31--35
+\T1/ptm/m/n/10.95 un-folds into an ex-plicit list-of-pairs form \T1/fvm/m/n/10.
+95 [] | nonempty_maybe_improper_list({atom(), T}, [])\T1/ptm/m/n/10.95 . The
+
+Overfull \hbox (2.49257pt too wide) in paragraph at lines 36--39
+[]\T1/ptm/m/n/10.95 Notice that we in-ten-tion-ally parses \T1/fvm/m/n/10.95 bi
+nary() \T1/ptm/m/n/10.95 to \T1/fvm/m/n/10.95 <<_::_*8>> \T1/ptm/m/n/10.95 even
+ though later it is trans-lated back to \T1/fvm/m/n/10.95 binary()
+
+Overfull \hbox (35.00232pt too wide) in paragraph at lines 63--66
+\T1/ptm/m/n/10.95 so that a union of $\OML/ztmcm/m/it/10.95 n$ \T1/ptm/m/n/10.9
+5 al-ter-na-tives be-comes a spine of nested \T1/fvm/m/n/10.95 :union \T1/ptm/m
+/n/10.95 nodes. Two helpers, \T1/fvm/m/n/10.95 flatten_from_union_to_list
+
+[28]
+[29]
+[30]
+Overfull \hbox (1.21211pt too wide) in paragraph at lines 203--206
+\T1/ptm/b/n/10.95 Non-empty lists. \T1/ptm/m/n/10.95 Two non-empty list types \
+T1/fvm/m/n/10.95 {:non_empty_list, {T$[]$, T$[]$}} \T1/ptm/m/n/10.95 and \T1/fv
+m/m/n/10.95 {:non_empty_list, {T$[]$,
+
+[31]) (./sections/dataset-construction.tex
+[32]
+Overfull \hbox (34.534pt too wide) in paragraph at lines 32--33
+\T1/ptm/m/n/10.95 Each mes-sage records its \T1/fvm/m/n/10.95 category\T1/ptm/m
+/n/10.95 , \T1/fvm/m/n/10.95 line\T1/ptm/m/n/10.95 , \T1/fvm/m/n/10.95 message 
+\T1/ptm/m/n/10.95 text, and an ex-plicit \T1/fvm/m/n/10.95 target \T1/ptm/m/n/1
+0.95 (the \T1/fvm/m/n/10.95 Module.function/arity
+
+Overfull \hbox (11.67366pt too wide) in paragraph at lines 47--50
+ []\T1/ptm/b/n/10.95 TypeSpec ex-trac-tion.[] \T1/ptm/m/n/10.95 The file is par
+sed into an AST and walked by a re-cur-sive ex-trac-tor that tra-verses \T1/fvm
+/m/n/10.95 defmodule\T1/ptm/m/n/10.95 ,
+
+[33]
+Overfull \hbox (4.37366pt too wide) in paragraph at lines 84--87
+ []\T1/ptm/b/n/10.95 Project pro-cess-ing.[] \T1/ptm/m/n/10.95 Each project is 
+pro-cessed con-cur-rently. The run-ner in-vokes \T1/fvm/m/n/10.95 mix deps.get\
+T1/ptm/m/n/10.95 , \T1/fvm/m/n/10.95 mix compile\T1/ptm/m/n/10.95 ,
+
+[34]) (./sections/dataset-evaluation.tex
+[35]
+[36]
+
+Package natbib Warning: Citation `elixir-set-theoretic-types' on page 37 undefi
+ned on input line 85.
+
+
+Package natbib Warning: Citation `elixir-set-theoretic-types' on page 37 undefi
+ned on input line 88.
+
+
+Package natbib Warning: Citation `dialyzer-manual' on page 37 undefined on inpu
+t line 100.
+
+
+Package natbib Warning: Citation `dialyxir' on page 37 undefined on input line 
+100.
+
+
+[37]
+
+Package natbib Warning: Citation `elixir-set-theoretic-types' on page 38 undefi
+ned on input line 137.
+
+
+Package natbib Warning: Citation `lindahl2006practical' on page 38 undefined on
+ input line 139.
+
+
+[38]
+Overfull \hbox (45.26451pt too wide) in paragraph at lines 159--160
+\T1/ptm/m/n/10.95 same-project callee re-turns, say, an er-ror tu-ple where the
+ code ex-pects a map (e.g. \T1/fvm/m/n/10.95 ScheduledActivity.create/2\T1/ptm/
+m/n/10.95 's
+
+Overfull \hbox (0.98749pt too wide) in paragraph at lines 159--160
+\T1/fvm/m/n/10.95 new/2\T1/ptm/m/n/10.95 , or \T1/fvm/m/n/10.95 as_to_model_dat
+a/1\T1/ptm/m/n/10.95 's \T1/fvm/m/n/10.95 extract_actors/1\T1/ptm/m/n/10.95 ), 
+and module-local in-fer-ence as-sumes that callee
+
+Overfull \hbox (19.30843pt too wide) in paragraph at lines 161--162
+\T1/ptm/m/n/10.95 tribute is \T1/fvm/m/n/10.95 :dev \T1/ptm/m/n/10.95 at com-pi
+le time, so the branch is stat-i-cally dead (\T1/fvm/m/n/10.95 task_children/0\
+T1/ptm/m/n/10.95 , \T1/fvm/m/n/10.95 maybe_inserted_at/0\T1/ptm/m/n/10.95 ). 
+
+[39]
+[40]
+Overfull \hbox (30.44363pt too wide) in paragraph at lines 211--216
+\T1/fvm/m/n/10.95 Absinthe.Type.Custom.parse_date/1 \T1/ptm/m/n/10.95 re-turns 
+\T1/fvm/m/n/10.95 :error \T1/ptm/m/n/10.95 un-der \T1/fvm/m/n/10.95 {:ok, nil}\
+T1/ptm/m/n/10.95 , and \T1/fvm/m/n/10.95 Cldr.Substitution.parse/1
+
+[41])
+[42]
+[43]
+Chapter 4.
+
+Package natbib Warning: Citation `lindahl2006practical' on page 44 undefined on
+ input line 55.
+
+(./sections/llm-type-prediction.tex
+
+Package natbib Warning: Citation `Nina' on page 44 undefined on input line 3.
+
+
+[44]
+
+Package natbib Warning: Citation `Nina' on page 45 undefined on input line 24.
+
+
+Overfull \hbox (19.8955pt too wide) in paragraph at lines 42--45
+\T1/ptm/m/n/10.95 or whose tar-get an-no-ta-tion ex-ceeds 1,000 char-ac-ters ar
+e re-moved, as these patho-log-i-cal cases (e.g. \T1/fvm/m/n/10.95 Regex.replac
+e/4\T1/ptm/m/n/10.95 ,
+
+LaTeX Warning: `h' float specifier changed to `ht'.
+
+
+[45]
+
+Package natbib Warning: Citation `qwen25coder' on page 46 undefined on input li
+ne 75.
+
+
+Package natbib Warning: Citation `qwen25coder' on page 46 undefined on input li
+ne 77.
+
+
+Package natbib Warning: Citation `deepseekcoder' on page 46 undefined on input 
+line 77.
+
+
+Package natbib Warning: Citation `starcoder2' on page 46 undefined on input lin
+e 77.
+
+
+Package natbib Warning: Citation `qlora' on page 46 undefined on input line 83.
+
+
+
+Package natbib Warning: Citation `lora' on page 46 undefined on input line 83.
+
+
+[46]
+
+Package natbib Warning: Citation `Nina' on page 47 undefined on input line 122.
+
+
+
+[47]
+[48]
+[49]
+Overfull \hbox (23.0519pt too wide) in paragraph at lines 261--264
+\T1/fvm/m/n/10.95 get_delete_status/1 \T1/ptm/m/n/10.95 has ref-er-ence \T1/fvm
+/m/n/10.95 (binary() -> :deleted or :undeleted)\T1/ptm/m/n/10.95 ; Track 1 pre-
+dicts \T1/fvm/m/n/10.95 (binary()
+)
+Overfull \hbox (35.16277pt too wide) in paragraph at lines 272--68
+\T1/fvm/m/n/10.95 Pleroma.Web.ActivityPub.Relay.get_actor/0 \T1/ptm/m/n/10.95 h
+as ref-er-ence \T1/fvm/m/n/10.95 ( -> %{:__struct__ => :"Pleroma.User"}
+(./sections/total-migration.tex
+[50]
+[51]
+Overfull \hbox (71.96227pt too wide) in paragraph at lines 139--142
+\T1/ptm/m/n/10.95 anal-y-sis: one standard-library-style code-base (\T1/fvm/m/n
+/10.95 elixir-lang/X\T1/ptm/m/n/10.95 ), one framework-heavy code-base (\T1/fvm
+/m/n/10.95 ScenicFramework/Scenic\T1/ptm/m/n/10.95 ),
+
+LaTeX Warning: `h' float specifier changed to `ht'.
+
+)
+[52]
+[53]
+Chapter 5.
+(./sections/conclusion.tex
+[54])
+Overfull \hbox (11.45183pt too wide) in paragraph at lines 43--74
+ []\T1/ptm/b/n/10.95 A com-piler un-der ac-tive de-vel-op-ment.[] \T1/ptm/m/n/1
+0.95 The set-theoretic type sys-tem tar-geted in this work ships in a developme
+nt-
+
+[55] (./sections/appendix.tex
+[56]
+Overfull \hbox (46.08797pt too wide) detected at line 140
+[]
+
+[57])
+[58]
+[59] (./sections/appendix-dialyzer-examples.tex
+[60]
+Underfull \hbox (badness 10000) in paragraph at lines 97--98
+ []\T1/fvm/b/n/10.95 pattern_match_cov\T1/ptm/b/n/10.95 .[] \T1/ptm/m/n/10.95 O
+n \T1/fvm/m/n/10.95 Mobilizon.Federation.ActivityStream.Converter.Actor.
+
+[61]
+Overfull \hbox (20.54941pt too wide) in paragraph at lines 157--158
+ []\T1/fvm/b/n/10.95 unknown_type\T1/ptm/b/n/10.95 .[] \T1/ptm/m/n/10.95 On \T1
+/fvm/m/n/10.95 Mobilizon.GraphQL.Resolvers.Conversation.find_conversations_for_
+event/
+)
+[62] (./sections/appendix-both-examples.tex
+[63]
+[64]
+[65])
+[66] (./sections/appendix-typecheck-examples.tex
+Underfull \hbox (badness 10000) in paragraph at lines 19--19
+[]|\T1/fvm/m/n/9 Absinthe.Type.Custom.parse_naive_
+
+Underfull \hbox (badness 10000) in paragraph at lines 27--27
+[]|\T1/fvm/m/n/9 ArrowWeb.API.GtfsImportController.
+
+Underfull \hbox (badness 10000) in paragraph at lines 34--34
+[]|\T1/fvm/m/n/9 Cldr.Calendar.EthiopicAmeteAlem.quarter_
+
+Underfull \hbox (badness 10000) in paragraph at lines 43--43
+[]|\T1/fvm/m/n/9 Livebook.Runtime.Definitions.example_
+
+Underfull \hbox (badness 10000) in paragraph at lines 44--44
+[]|\T1/fvm/m/n/9 Livebook.Runtime.Definitions.file_
+
+Underfull \hbox (badness 10000) in paragraph at lines 47--47
+[]|\T1/fvm/m/n/9 LivebookWeb.SessionHelpers.register_
+
+Underfull \hbox (badness 10000) in paragraph at lines 48--48
+[]|\T1/fvm/m/n/9 MBTAV3API.Stream.StaticInstance.Impl.
+
+Underfull \hbox (badness 10000) in paragraph at lines 49--49
+[]|\T1/fvm/m/n/9 Mobilizon.Actors.Actor.display_name_and_
+
+Underfull \hbox (badness 10000) in paragraph at lines 50--50
+[]|\T1/fvm/m/n/9 Mobilizon.Events.Categories.get_
+
+Underfull \hbox (badness 10000) in paragraph at lines 51--51
+[]|\T1/fvm/m/n/9 Mobilizon.Federation.ActivityPub.Utils.
+
+Underfull \hbox (badness 10000) in paragraph at lines 52--52
+[]|\T1/fvm/m/n/9 Mobilizon.Federation.ActivityStream.
+
+Underfull \hbox (badness 10000) in paragraph at lines 53--53
+[]|\T1/fvm/m/n/9 Mobilizon.Federation.NodeInfo.fetch_
+
+Underfull \hbox (badness 10000) in paragraph at lines 54--54
+[]|\T1/fvm/m/n/9 Mobilizon.GraphQL.Resolvers.Admin.save_
+
+Underfull \hbox (badness 10000) in paragraph at lines 55--55
+[]|\T1/fvm/m/n/9 Mobilizon.GraphQL.Resolvers.Application.
+
+Underfull \hbox (badness 10000) in paragraph at lines 56--56
+[]|\T1/fvm/m/n/9 Mobilizon.GraphQL.Resolvers.Participant.
+
+Underfull \hbox (badness 10000) in paragraph at lines 57--57
+[]|\T1/fvm/m/n/9 Mobilizon.GraphQL.Schema.Custom.Point.
+
+Underfull \hbox (badness 10000) in paragraph at lines 58--58
+[]|\T1/fvm/m/n/9 Mobilizon.GraphQL.Schema.Custom.
+
+Underfull \hbox (badness 10000) in paragraph at lines 59--59
+[]|\T1/fvm/m/n/9 Mobilizon.GraphQL.Schema.Custom.UUID.
+
+Underfull \hbox (badness 10000) in paragraph at lines 60--60
+[]|\T1/fvm/m/n/9 Mobilizon.Service.Export.ICalendar.
+
+Underfull \hbox (badness 10000) in paragraph at lines 61--61
+[]|\T1/fvm/m/n/9 Mobilizon.Service.RichMedia.Parsers.OGP.
+
+Underfull \hbox (badness 10000) in paragraph at lines 69--69
+[]|\T1/fvm/m/n/9 Pleroma.Config.DeprecationWarnings.
+
+Underfull \hbox (badness 10000) in paragraph at lines 70--70
+[]|\T1/fvm/m/n/9 Pleroma.Config.DeprecationWarnings.
+
+Underfull \hbox (badness 10000) in paragraph at lines 71--71
+[]|\T1/fvm/m/n/9 Pleroma.Config.DeprecationWarnings.move_
+[67] [68]
+[69]
+Underfull \hbox (badness 4156) in paragraph at lines 110--111
+\T1/ptm/m/n/10.95 Inferred \T1/fvm/m/n/10.95 {Scenic.Assets.Stream.Bitmap, {int
+eger(), integer(), :g...\T1/ptm/m/n/10.95 ; de-clared \T1/fvm/m/n/10.95 dynamic
+(
+
+Underfull \hbox (badness 10000) in paragraph at lines 118--119
+\T1/ptm/m/n/10.95 Inferred \T1/fvm/m/n/10.95 %Absinthe.Blueprint.SourceLocation
+{line: integer(), col...\T1/ptm/m/n/10.95 ; de-clared \T1/fvm/m/n/10.95 %{__
+
+Underfull \hbox (badness 4156) in paragraph at lines 126--131
+\T1/ptm/m/n/10.95 Inferred \T1/fvm/m/n/10.95 (%{ __struct__: :Primitive, d...\T
+1/ptm/m/n/10.95 ; de-clared \T1/fvm/m/n/10.95 (%{ __struct__: :"Scenic.Graph",
+
+[70])
+[71] (./sections/appendix-source-projects.tex
+Underfull \hbox (badness 10000) in paragraph at lines 5--6
+\T1/ptm/m/n/10.95 The dataset is con-structed from the fol-low-ing $\OT1/ztmcm/
+m/n/10.95 175$ \T1/ptm/m/n/10.95 pub-lic repos-i-to-ries (the repos-i-tory
+[72] [73] [74])
+[75] (./main.bbl
+[76]
+Underfull \hbox (badness 6300) in paragraph at lines 125--128
+[]\T1/ptm/m/n/10.95 Valim, J. (2026).  Pre-ci-sion in type sys-tem de-sign.  []
+$\T1/fvm/m/n/10.95 https : / / youtu . be / Ay-[]gnCqDw9o ? is =
+)
+
+Package caption Warning: Unused \captionsetup[sub] on input line 7.
+See the caption package documentation for explanation.
+
+
+[77]
+
+Package natbib Warning: There were undefined citations.
+
+(./main.aux
+
+Package natbib Warning: Citation(s) may have changed.
+(natbib)                Rerun to get citations correct.
+
+)
+
+LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
+
+ )
+(see the transcript file for additional information)</usr/local/texlive/2025/te
+xmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></usr/local/texlive/2025/tex
+mf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/local/texlive/2025/texm
+f-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/local/texlive/2025/texmf-
+dist/fonts/type1/public/amsfonts/cm/cmss10.pfb></usr/local/texlive/2025/texmf-d
+ist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/local/texlive/2025/texmf-di
+st/fonts/type1/public/bera/fvmb8a.pfb></usr/local/texlive/2025/texmf-dist/fonts
+/type1/public/bera/fvmr8a.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/p
+ublic/bera/fvmro8a.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/a
+msfonts/symbols/msam10.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/publ
+ic/amsfonts/symbols/msbm10.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/
+public/rsfs/rsfs10.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/c
+m-super/sfsi1095.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/cm-
+super/sfss1095.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/urw/symbol/u
+syr.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></
+usr/local/texlive/2025/texmf-dist/fonts/type1/urw/times/utmbi8a.pfb></usr/local
+/texlive/2025/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2
+025/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2025/texmf-
+dist/fonts/type1/urw/times/utmri8a.pfb>
+Output written on main.pdf (77 pages, 718269 bytes).
+SyncTeX written on main.synctex.gz.
+Transcript written on main.log.
+Latexmk: Getting log file 'main.log'
+Latexmk: Examining 'main.fls'
+Latexmk: Examining 'main.log'
+Latexmk: Found input bbl file 'main.bbl'
+Latexmk: References changed.
+Latexmk: References changed.
+Latexmk: Log file says output to 'main.pdf'
+Latexmk: Found bibliography file(s):
+  ./bibliography.bib
+Latexmk: applying rule 'bibtex main'...
+Rule 'bibtex main':  Reasons for rerun
+Changed files or newly in use/created:
+  main.aux
+
+------------
+Run number 2 of rule 'bibtex main'
+------------
+------------
+Running 'bibtex  "main.aux"'
+------------
+This is BibTeX, Version 0.99d (TeX Live 2025)
+The top-level auxiliary file: main.aux
+The style file: apalike.bst
+Database file #1: bibliography.bib
+Latexmk: applying rule 'pdflatex'...
+Rule 'pdflatex':  Reasons for rerun
+Changed files or newly in use/created:
+  main.aux
+  main.toc
+
+------------
+Run number 3 of rule 'pdflatex'
+------------
+------------
+Running 'pdflatex  -interaction=nonstopmode -synctex=1 -recorder  "main.tex"'
+------------
+This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex)
+ restricted \write18 enabled.
+entering extended mode
+(./main.tex
+LaTeX2e <2024-11-01> patch level 2
+L3 programming layer <2025-01-18>
+(/usr/local/texlive/2025/texmf-dist/tex/latex/base/report.cls
+Document Class: report 2024/06/29 v1.4n Standard LaTeX document class
+(/usr/local/texlive/2025/texmf-dist/tex/latex/base/size11.clo)) (./setup.tex
+(/usr/local/texlive/2025/texmf-dist/tex/latex/base/inputenc.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/base/fontenc.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?' option.
+(/usr/local/texlive/2025/texmf-dist/tex/latex/amsmath/amstext.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/amsmath/amsgen.sty))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/amsmath/amsbsy.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/amsmath/amsopn.sty))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/amsfonts/amssymb.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/amsfonts/amsfonts.sty))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/graphics/graphicx.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/graphics/keyval.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/graphics/graphics.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/graphics/trig.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/graphics-cfg/graphics.cfg)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/graphics-def/pdftex.def)))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/caption/caption.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/caption/caption3.sty))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/caption/subcaption.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/booktabs/booktabs.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/siunitx/siunitx.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/translations/translations.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/etoolbox/etoolbox.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pdftexcmds/pdftexcmds.sty
+(/usr/local/texlive/2025/texmf-dist/tex/generic/infwarerr/infwarerr.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/iftex/iftex.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/ltxcmds/ltxcmds.sty)))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/tools/array.sty))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/hyperref/hyperref.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/kvsetkeys/kvsetkeys.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/kvdefinekeys/kvdefinekeys.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pdfescape/pdfescape.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/hycolor/hycolor.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/hyperref/nameref.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/refcount/refcount.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/gettitlestring/gettitlestring.s
+ty (/usr/local/texlive/2025/texmf-dist/tex/latex/kvoptions/kvoptions.sty)))
+(/usr/local/texlive/2025/texmf-dist/tex/generic/stringenc/stringenc.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/hyperref/pd1enc.def)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/intcalc/intcalc.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/hyperref/puenc.def)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/url/url.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/bitset/bitset.sty
+(/usr/local/texlive/2025/texmf-dist/tex/generic/bigintcalc/bigintcalc.sty))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/base/atbegshi-ltx.sty))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/hyperref/hpdftex.def
+(/usr/local/texlive/2025/texmf-dist/tex/latex/base/atveryend-ltx.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/rerunfilecheck/rerunfilecheck.sty
+
+(/usr/local/texlive/2025/texmf-dist/tex/generic/uniquecounter/uniquecounter.sty
+))) (/usr/local/texlive/2025/texmf-dist/tex/latex/float/float.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/textgreek/textgreek.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/greek-fontenc/lgrenc.def
+(/usr/local/texlive/2025/texmf-dist/tex/latex/greek-inputenc/lgrenc.dfu)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/greek-fontenc/greek-fontenc.def))
+) (/usr/local/texlive/2025/texmf-dist/tex/latex/fancyhdr/fancyhdr.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/psnfss/mathptmx.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/textpos/textpos.sty
+Grid set 16 x 16 = 37.34424pt x 52.81541pt
+TextBlockOrigin set to 0pt x 0pt
+) (/usr/local/texlive/2025/texmf-dist/tex/latex/background/background.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/xkeyval/xkeyval.sty
+(/usr/local/texlive/2025/texmf-dist/tex/generic/xkeyval/xkeyval.tex
+(/usr/local/texlive/2025/texmf-dist/tex/generic/xkeyval/xkvutils.tex)))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/pgf/frontendlayer/tikz.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/pgf/basiclayer/pgf.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/pgf/utilities/pgfrcs.sty
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/utilities/pgfutil-common.te
+x)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/utilities/pgfutil-latex.def
+) (/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/utilities/pgfrcs.code.tex
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/pgf.revision.tex)))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/pgf/basiclayer/pgfcore.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/pgf/systemlayer/pgfsys.sty
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/systemlayer/pgfsys.code.tex
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/utilities/pgfkeys.code.tex
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/utilities/pgfkeyslibraryfil
+tered.code.tex))
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/systemlayer/pgf.cfg)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/systemlayer/pgfsys-pdftex.d
+ef
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/systemlayer/pgfsys-common-p
+df.def)))
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/systemlayer/pgfsyssoftpath.
+code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/systemlayer/pgfsysprotocol.
+code.tex)) (/usr/local/texlive/2025/texmf-dist/tex/latex/xcolor/xcolor.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/graphics-cfg/color.cfg)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/graphics/mathcolor.ltx))
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcore.code.tex
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/math/pgfmath.code.tex
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/math/pgfmathutil.code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/math/pgfmathparser.code.tex
+)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.code.
+tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.basic
+.code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.trigo
+nometric.code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.rando
+m.code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.compa
+rison.code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.base.
+code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.round
+.code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.misc.
+code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.integ
+erarithmetics.code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/math/pgfmathcalc.code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/math/pgfmathfloat.code.tex)
+) (/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/math/pgfint.code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcorepoints.co
+de.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcorepathconst
+ruct.code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcorepathusage
+.code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcorescopes.co
+de.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcoregraphicst
+ate.code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcoretransform
+ations.code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcorequick.cod
+e.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcoreobjects.c
+ode.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcorepathproce
+ssing.code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcorearrows.co
+de.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcoreshade.cod
+e.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcoreimage.cod
+e.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcoreexternal.
+code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcorelayers.co
+de.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcoretranspare
+ncy.code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcorepatterns.
+code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/basiclayer/pgfcorerdf.code.
+tex)))
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/modules/pgfmoduleshapes.cod
+e.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/modules/pgfmoduleplot.code.
+tex)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/pgf/compatibility/pgfcomp-version
+-0-65.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/pgf/compatibility/pgfcomp-version
+-1-18.sty))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/pgf/utilities/pgffor.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/pgf/utilities/pgfkeys.sty
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/utilities/pgfkeys.code.tex)
+) (/usr/local/texlive/2025/texmf-dist/tex/latex/pgf/math/pgfmath.sty
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/math/pgfmath.code.tex))
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/utilities/pgffor.code.tex))
+
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/frontendlayer/tikz/tikz.cod
+e.tex
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/libraries/pgflibraryplothan
+dlers.code.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/modules/pgfmodulematrix.cod
+e.tex)
+(/usr/local/texlive/2025/texmf-dist/tex/generic/pgf/frontendlayer/tikz/librarie
+s/tikzlibrarytopaths.code.tex)))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/everypage/everypage.sty
+
+Package everypage Warning: Functionality similar to this package has recently
+(everypage)                been implemented in LaTeX. This package is now in
+(everypage)                legacy status.
+(everypage)                Please, don't use it in new documents and packages.
+
+
+Package everypage Warning: You appear to be running a version of LaTeX
+(everypage)                providing the new functionality.
+(everypage)                Doing the best to deliver the original `everypage`
+(everypage)                interface on top of it. Strict equivalence is
+(everypage)                not possible, breakage may occur.
+(everypage)                If truly needed, Use `everypage-1x` to force the
+(everypage)                loading of an older code base.
+
+) (/usr/local/texlive/2025/texmf-dist/tex/latex/tools/afterpage.sty))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/tools/tabularx.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/tools/longtable.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/multirow/multirow.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/algorithms/algorithm.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/base/ifthen.sty))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/algorithmicx/algpseudocode.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/algorithmicx/algorithmicx.sty
+Document Style algorithmicx 1.2 - a greatly improved `algorithmic' style
+)
+Document Style - pseudocode environments for use with the `algorithmicx' style
+) (/usr/local/texlive/2025/texmf-dist/tex/latex/natbib/natbib.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/mathtools/mathtools.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/tools/calc.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/mathtools/mhsetup.sty))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/bera/beramono.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/mathpartir/mathpartir.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/graphics/dvipsnam.def)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/stmaryrd/stmaryrd.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/listings/listings.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/listings/lstpatch.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/listings/lstmisc.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/listings/listings.cfg))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/geometry/geometry.sty
+(/usr/local/texlive/2025/texmf-dist/tex/generic/iftex/ifvtex.sty)))
+(./macros.tex) (./Frontespizio in inglese.tex (./setup.tex
+(/usr/local/texlive/2025/texmf-dist/tex/latex/base/fontenc.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/psnfss/t1ptm.fd)))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/l3backend/l3backend-pdftex.def)
+(./main.aux) (/usr/local/texlive/2025/texmf-dist/tex/latex/cbfonts-fd/lgrcmr.fd
+) (/usr/local/texlive/2025/texmf-dist/tex/context/base/mkii/supp-pdf.mkii
+[Loading MPS to PDF converter (version 2006.09.02).]
+) (/usr/local/texlive/2025/texmf-dist/tex/latex/epstopdf-pkg/epstopdf-base.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/grfext/grfext.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/latexconfig/epstopdf-sys.cfg))
+(/usr/local/texlive/2025/texmf-dist/tex/latex/caption/ltcaption.sty)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/translations/translations-basic-d
+ictionary-english.trsl) (./main.out) (./main.out)
+*geometry* driver: auto-detecting
+*geometry* detected driver: pdftex
+
+[1{/usr/local/texlive/2025/texmf-var/fonts/map/pdftex/updmap/pdftex.map}{/usr/l
+ocal/texlive/2025/texmf-dist/fonts/enc/dvips/base/8r.enc} <./images/UNIVE_squar
+e.png> <./images/UNIVE_eng.png>]) (./sections/acknowledgement.tex)
+[2] (./sections/declaration-of-ai-usage.tex)
+[3] (./sections/abstract.tex
+(/usr/local/texlive/2025/texmf-dist/tex/latex/bera/t1fvm.fd)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/psnfss/ot1ztmcm.fd)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/psnfss/omlztmcm.fd)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/psnfss/omsztmcm.fd)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/psnfss/omxztmcm.fd)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/psnfss/ot1ptm.fd)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/stmaryrd/Ustmry.fd))
+[4] (./main.toc
+[5])
+[6]
+Chapter 1.
+(./sections/introduction.tex) (./sections/background.tex
+[7]
+[8]
+[9]
+[10]
+[11]) (./sections/problem-statements.tex) (./sections/contributions.tex
+(/usr/local/texlive/2025/texmf-dist/tex/latex/psnfss/ts1ptm.fd)
+[12])
+[13]
+Chapter 2.
+(./sections/specification.tex (./figures/fig-typespecs-types.tex)
+[14]
+[15] (./figures/fig-typespecs-sugar-builtin.tex
+Overfull \hbox (2.09737pt too wide) in alignment at lines 6--10
+ [] [] 
+
+Overfull \hbox (2.09737pt too wide) in alignment at lines 10--14
+ [] [] 
+
+Overfull \hbox (2.09737pt too wide) in alignment at lines 14--15
+ [] [] 
+
+Overfull \hbox (3.2085pt too wide) in paragraph at lines 81--82
+[]|\T1/fvm/m/n/10.95 %{:__struct__=>atom(), optional(atom())=>any()}| 
+
+Overfull \hbox (2.09737pt too wide) in alignment at lines 15--87
+ [] [] 
+[16]) (./figures/fig-elixir-types.tex)
+[17]
+[18] (./figures/fig-elixir-sugar-builtin.tex
+Underfull \hbox (badness 10000) in paragraph at lines 24--24
+[]|\T1/fvm/m/n/10.95 empty_list() or non_empty_list(term(),
+)
+[19]) (./sections/translation.tex
+[20] (./figures/fig-translation-annotations.tex)
+[21] (./figures/fig-translation-types.tex)
+[22{/usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/cm-super/cm-super-t1.enc
+}]
+[23]) (./sections/approximation.tex
+[24]
+Overfull \hbox (27.11743pt too wide) in paragraph at lines 31--61
+$[]$ 
+
+[25])
+[26]
+Chapter 3.
+(./sections/implementation.tex
+Overfull \hbox (15.80974pt too wide) in paragraph at lines 21--23
+\T1/ptm/m/n/10.95 by a func-tion \T1/fvm/m/n/10.95 safe_string_to_quoted/1 \T1/
+ptm/m/n/10.95 for safety. This wrap-per catches \T1/fvm/m/n/10.95 SyntaxError\T
+1/ptm/m/n/10.95 , \T1/fvm/m/n/10.95 TokenMissingError\T1/ptm/m/n/10.95 ,
+
+Overfull \hbox (3.2659pt too wide) in paragraph at lines 26--30
+\T1/fvm/m/n/10.95 tuple, a list of double-element tuples with metadata (e.g., l
+ine numbers), a list of
+
+[27]
+Overfull \hbox (4.8884pt too wide) in paragraph at lines 31--35
+\T1/ptm/m/n/10.95 be-comes \T1/fvm/m/n/10.95 :infty..-1\T1/ptm/m/n/10.95 , \T1/
+fvm/m/n/10.95 non_neg_integer() \T1/ptm/m/n/10.95 be-comes \T1/fvm/m/n/10.95 0.
+.:infty\T1/ptm/m/n/10.95 , and \T1/fvm/m/n/10.95 pos_integer() \T1/ptm/m/n/10.9
+5 be-comes \T1/fvm/m/n/10.95 1..:infty\T1/ptm/m/n/10.95 ,
+
+Overfull \hbox (9.89177pt too wide) in paragraph at lines 31--35
+\T1/fvm/m/n/10.95 binary() \T1/ptm/m/n/10.95 is rewrit-ten into a bit-string pa
+t-tern \T1/fvm/m/n/10.95 <<_::_*8>>\T1/ptm/m/n/10.95 , \T1/fvm/m/n/10.95 charli
+st() \T1/ptm/m/n/10.95 be-comes \T1/fvm/m/n/10.95 list(char())\T1/ptm/m/n/10.95
+ , and \T1/fvm/m/n/10.95 keyword(T)
+
+Overfull \hbox (2.26642pt too wide) in paragraph at lines 31--35
+\T1/ptm/m/n/10.95 un-folds into an ex-plicit list-of-pairs form \T1/fvm/m/n/10.
+95 [] | nonempty_maybe_improper_list({atom(), T}, [])\T1/ptm/m/n/10.95 . The
+
+Overfull \hbox (2.49257pt too wide) in paragraph at lines 36--39
+[]\T1/ptm/m/n/10.95 Notice that we in-ten-tion-ally parses \T1/fvm/m/n/10.95 bi
+nary() \T1/ptm/m/n/10.95 to \T1/fvm/m/n/10.95 <<_::_*8>> \T1/ptm/m/n/10.95 even
+ though later it is trans-lated back to \T1/fvm/m/n/10.95 binary()
+
+Overfull \hbox (35.00232pt too wide) in paragraph at lines 63--66
+\T1/ptm/m/n/10.95 so that a union of $\OML/ztmcm/m/it/10.95 n$ \T1/ptm/m/n/10.9
+5 al-ter-na-tives be-comes a spine of nested \T1/fvm/m/n/10.95 :union \T1/ptm/m
+/n/10.95 nodes. Two helpers, \T1/fvm/m/n/10.95 flatten_from_union_to_list
+
+[28]
+[29]
+[30]
+Overfull \hbox (1.21211pt too wide) in paragraph at lines 203--206
+\T1/ptm/b/n/10.95 Non-empty lists. \T1/ptm/m/n/10.95 Two non-empty list types \
+T1/fvm/m/n/10.95 {:non_empty_list, {T$[]$, T$[]$}} \T1/ptm/m/n/10.95 and \T1/fv
+m/m/n/10.95 {:non_empty_list, {T$[]$,
+
+[31]) (./sections/dataset-construction.tex
+[32]
+Overfull \hbox (34.534pt too wide) in paragraph at lines 32--33
+\T1/ptm/m/n/10.95 Each mes-sage records its \T1/fvm/m/n/10.95 category\T1/ptm/m
+/n/10.95 , \T1/fvm/m/n/10.95 line\T1/ptm/m/n/10.95 , \T1/fvm/m/n/10.95 message 
+\T1/ptm/m/n/10.95 text, and an ex-plicit \T1/fvm/m/n/10.95 target \T1/ptm/m/n/1
+0.95 (the \T1/fvm/m/n/10.95 Module.function/arity
+
+Overfull \hbox (11.67366pt too wide) in paragraph at lines 47--50
+ []\T1/ptm/b/n/10.95 TypeSpec ex-trac-tion.[] \T1/ptm/m/n/10.95 The file is par
+sed into an AST and walked by a re-cur-sive ex-trac-tor that tra-verses \T1/fvm
+/m/n/10.95 defmodule\T1/ptm/m/n/10.95 ,
+
+[33]
+Overfull \hbox (4.37366pt too wide) in paragraph at lines 84--87
+ []\T1/ptm/b/n/10.95 Project pro-cess-ing.[] \T1/ptm/m/n/10.95 Each project is 
+pro-cessed con-cur-rently. The run-ner in-vokes \T1/fvm/m/n/10.95 mix deps.get\
+T1/ptm/m/n/10.95 , \T1/fvm/m/n/10.95 mix compile\T1/ptm/m/n/10.95 ,
+
+[34]) (./sections/dataset-evaluation.tex
+[35]
+[36]
+[37]
+[38]
+Overfull \hbox (45.26451pt too wide) in paragraph at lines 159--160
+\T1/ptm/m/n/10.95 same-project callee re-turns, say, an er-ror tu-ple where the
+ code ex-pects a map (e.g. \T1/fvm/m/n/10.95 ScheduledActivity.create/2\T1/ptm/
+m/n/10.95 's
+
+Overfull \hbox (0.98749pt too wide) in paragraph at lines 159--160
+\T1/fvm/m/n/10.95 new/2\T1/ptm/m/n/10.95 , or \T1/fvm/m/n/10.95 as_to_model_dat
+a/1\T1/ptm/m/n/10.95 's \T1/fvm/m/n/10.95 extract_actors/1\T1/ptm/m/n/10.95 ), 
+and module-local in-fer-ence as-sumes that callee
+
+Overfull \hbox (19.30843pt too wide) in paragraph at lines 161--162
+\T1/ptm/m/n/10.95 tribute is \T1/fvm/m/n/10.95 :dev \T1/ptm/m/n/10.95 at com-pi
+le time, so the branch is stat-i-cally dead (\T1/fvm/m/n/10.95 task_children/0\
+T1/ptm/m/n/10.95 , \T1/fvm/m/n/10.95 maybe_inserted_at/0\T1/ptm/m/n/10.95 ). 
+
+[39]
+[40]
+Overfull \hbox (30.44363pt too wide) in paragraph at lines 211--216
+\T1/fvm/m/n/10.95 Absinthe.Type.Custom.parse_date/1 \T1/ptm/m/n/10.95 re-turns 
+\T1/fvm/m/n/10.95 :error \T1/ptm/m/n/10.95 un-der \T1/fvm/m/n/10.95 {:ok, nil}\
+T1/ptm/m/n/10.95 , and \T1/fvm/m/n/10.95 Cldr.Substitution.parse/1
+
+[41])
+[42]
+[43]
+Chapter 4.
+(./sections/llm-type-prediction.tex
+[44]
+Overfull \hbox (19.8955pt too wide) in paragraph at lines 42--45
+\T1/ptm/m/n/10.95 or whose tar-get an-no-ta-tion ex-ceeds 1,000 char-ac-ters ar
+e re-moved, as these patho-log-i-cal cases (e.g. \T1/fvm/m/n/10.95 Regex.replac
+e/4\T1/ptm/m/n/10.95 ,
+
+LaTeX Warning: `h' float specifier changed to `ht'.
+
+
+[45]
+[46]
+[47]
+[48]
+[49]
+Overfull \hbox (23.0519pt too wide) in paragraph at lines 261--264
+\T1/fvm/m/n/10.95 get_delete_status/1 \T1/ptm/m/n/10.95 has ref-er-ence \T1/fvm
+/m/n/10.95 (binary() -> :deleted or :undeleted)\T1/ptm/m/n/10.95 ; Track 1 pre-
+dicts \T1/fvm/m/n/10.95 (binary()
+)
+Overfull \hbox (35.16277pt too wide) in paragraph at lines 272--68
+\T1/fvm/m/n/10.95 Pleroma.Web.ActivityPub.Relay.get_actor/0 \T1/ptm/m/n/10.95 h
+as ref-er-ence \T1/fvm/m/n/10.95 ( -> %{:__struct__ => :"Pleroma.User"}
+(./sections/total-migration.tex
+[50]
+[51]
+Overfull \hbox (71.96227pt too wide) in paragraph at lines 139--142
+\T1/ptm/m/n/10.95 anal-y-sis: one standard-library-style code-base (\T1/fvm/m/n
+/10.95 elixir-lang/X\T1/ptm/m/n/10.95 ), one framework-heavy code-base (\T1/fvm
+/m/n/10.95 ScenicFramework/Scenic\T1/ptm/m/n/10.95 ),
+
+LaTeX Warning: `h' float specifier changed to `ht'.
+
+)
+[52]
+[53]
+Chapter 5.
+(./sections/conclusion.tex
+[54])
+Overfull \hbox (11.45183pt too wide) in paragraph at lines 43--74
+ []\T1/ptm/b/n/10.95 A com-piler un-der ac-tive de-vel-op-ment.[] \T1/ptm/m/n/1
+0.95 The set-theoretic type sys-tem tar-geted in this work ships in a developme
+nt-
+
+[55] (./sections/appendix.tex
+[56]
+Overfull \hbox (46.08797pt too wide) detected at line 140
+[]
+
+[57])
+[58]
+[59] (./sections/appendix-dialyzer-examples.tex
+[60]
+Underfull \hbox (badness 10000) in paragraph at lines 97--98
+ []\T1/fvm/b/n/10.95 pattern_match_cov\T1/ptm/b/n/10.95 .[] \T1/ptm/m/n/10.95 O
+n \T1/fvm/m/n/10.95 Mobilizon.Federation.ActivityStream.Converter.Actor.
+
+[61]
+Overfull \hbox (20.54941pt too wide) in paragraph at lines 157--158
+ []\T1/fvm/b/n/10.95 unknown_type\T1/ptm/b/n/10.95 .[] \T1/ptm/m/n/10.95 On \T1
+/fvm/m/n/10.95 Mobilizon.GraphQL.Resolvers.Conversation.find_conversations_for_
+event/
+)
+[62] (./sections/appendix-both-examples.tex
+[63]
+[64]
+[65])
+[66] (./sections/appendix-typecheck-examples.tex
+Underfull \hbox (badness 10000) in paragraph at lines 19--19
+[]|\T1/fvm/m/n/9 Absinthe.Type.Custom.parse_naive_
+
+Underfull \hbox (badness 10000) in paragraph at lines 27--27
+[]|\T1/fvm/m/n/9 ArrowWeb.API.GtfsImportController.
+
+Underfull \hbox (badness 10000) in paragraph at lines 34--34
+[]|\T1/fvm/m/n/9 Cldr.Calendar.EthiopicAmeteAlem.quarter_
+
+Underfull \hbox (badness 10000) in paragraph at lines 43--43
+[]|\T1/fvm/m/n/9 Livebook.Runtime.Definitions.example_
+
+Underfull \hbox (badness 10000) in paragraph at lines 44--44
+[]|\T1/fvm/m/n/9 Livebook.Runtime.Definitions.file_
+
+Underfull \hbox (badness 10000) in paragraph at lines 47--47
+[]|\T1/fvm/m/n/9 LivebookWeb.SessionHelpers.register_
+
+Underfull \hbox (badness 10000) in paragraph at lines 48--48
+[]|\T1/fvm/m/n/9 MBTAV3API.Stream.StaticInstance.Impl.
+
+Underfull \hbox (badness 10000) in paragraph at lines 49--49
+[]|\T1/fvm/m/n/9 Mobilizon.Actors.Actor.display_name_and_
+
+Underfull \hbox (badness 10000) in paragraph at lines 50--50
+[]|\T1/fvm/m/n/9 Mobilizon.Events.Categories.get_
+
+Underfull \hbox (badness 10000) in paragraph at lines 51--51
+[]|\T1/fvm/m/n/9 Mobilizon.Federation.ActivityPub.Utils.
+
+Underfull \hbox (badness 10000) in paragraph at lines 52--52
+[]|\T1/fvm/m/n/9 Mobilizon.Federation.ActivityStream.
+
+Underfull \hbox (badness 10000) in paragraph at lines 53--53
+[]|\T1/fvm/m/n/9 Mobilizon.Federation.NodeInfo.fetch_
+
+Underfull \hbox (badness 10000) in paragraph at lines 54--54
+[]|\T1/fvm/m/n/9 Mobilizon.GraphQL.Resolvers.Admin.save_
+
+Underfull \hbox (badness 10000) in paragraph at lines 55--55
+[]|\T1/fvm/m/n/9 Mobilizon.GraphQL.Resolvers.Application.
+
+Underfull \hbox (badness 10000) in paragraph at lines 56--56
+[]|\T1/fvm/m/n/9 Mobilizon.GraphQL.Resolvers.Participant.
+
+Underfull \hbox (badness 10000) in paragraph at lines 57--57
+[]|\T1/fvm/m/n/9 Mobilizon.GraphQL.Schema.Custom.Point.
+
+Underfull \hbox (badness 10000) in paragraph at lines 58--58
+[]|\T1/fvm/m/n/9 Mobilizon.GraphQL.Schema.Custom.
+
+Underfull \hbox (badness 10000) in paragraph at lines 59--59
+[]|\T1/fvm/m/n/9 Mobilizon.GraphQL.Schema.Custom.UUID.
+
+Underfull \hbox (badness 10000) in paragraph at lines 60--60
+[]|\T1/fvm/m/n/9 Mobilizon.Service.Export.ICalendar.
+
+Underfull \hbox (badness 10000) in paragraph at lines 61--61
+[]|\T1/fvm/m/n/9 Mobilizon.Service.RichMedia.Parsers.OGP.
+
+Underfull \hbox (badness 10000) in paragraph at lines 69--69
+[]|\T1/fvm/m/n/9 Pleroma.Config.DeprecationWarnings.
+
+Underfull \hbox (badness 10000) in paragraph at lines 70--70
+[]|\T1/fvm/m/n/9 Pleroma.Config.DeprecationWarnings.
+
+Underfull \hbox (badness 10000) in paragraph at lines 71--71
+[]|\T1/fvm/m/n/9 Pleroma.Config.DeprecationWarnings.move_
+[67] [68]
+[69]
+Underfull \hbox (badness 4156) in paragraph at lines 110--111
+\T1/ptm/m/n/10.95 Inferred \T1/fvm/m/n/10.95 {Scenic.Assets.Stream.Bitmap, {int
+eger(), integer(), :g...\T1/ptm/m/n/10.95 ; de-clared \T1/fvm/m/n/10.95 dynamic
+(
+
+Underfull \hbox (badness 10000) in paragraph at lines 118--119
+\T1/ptm/m/n/10.95 Inferred \T1/fvm/m/n/10.95 %Absinthe.Blueprint.SourceLocation
+{line: integer(), col...\T1/ptm/m/n/10.95 ; de-clared \T1/fvm/m/n/10.95 %{__
+
+Underfull \hbox (badness 4156) in paragraph at lines 126--131
+\T1/ptm/m/n/10.95 Inferred \T1/fvm/m/n/10.95 (%{ __struct__: :Primitive, d...\T
+1/ptm/m/n/10.95 ; de-clared \T1/fvm/m/n/10.95 (%{ __struct__: :"Scenic.Graph",
+
+[70])
+[71] (./sections/appendix-source-projects.tex
+Underfull \hbox (badness 10000) in paragraph at lines 5--6
+\T1/ptm/m/n/10.95 The dataset is con-structed from the fol-low-ing $\OT1/ztmcm/
+m/n/10.95 175$ \T1/ptm/m/n/10.95 pub-lic repos-i-to-ries (the repos-i-tory
+[72] [73] [74])
+[75] (./main.bbl
+[76]
+Underfull \hbox (badness 6300) in paragraph at lines 125--128
+[]\T1/ptm/m/n/10.95 Valim, J. (2026).  Pre-ci-sion in type sys-tem de-sign.  []
+$\T1/fvm/m/n/10.95 https : / / youtu . be / Ay-[]gnCqDw9o ? is =
+)
+
+Package caption Warning: Unused \captionsetup[sub] on input line 7.
+See the caption package documentation for explanation.
+
+
+[77] (./main.aux) )
+(see the transcript file for additional information)</usr/local/texlive/2025/te
+xmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></usr/local/texlive/2025/tex
+mf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/local/texlive/2025/texm
+f-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/local/texlive/2025/texmf-
+dist/fonts/type1/public/amsfonts/cm/cmss10.pfb></usr/local/texlive/2025/texmf-d
+ist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/local/texlive/2025/texmf-di
+st/fonts/type1/public/bera/fvmb8a.pfb></usr/local/texlive/2025/texmf-dist/fonts
+/type1/public/bera/fvmr8a.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/p
+ublic/bera/fvmro8a.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/a
+msfonts/symbols/msam10.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/publ
+ic/amsfonts/symbols/msbm10.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/
+public/rsfs/rsfs10.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/c
+m-super/sfsi1095.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/cm-
+super/sfss1095.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/urw/symbol/u
+syr.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></
+usr/local/texlive/2025/texmf-dist/fonts/type1/urw/times/utmbi8a.pfb></usr/local
+/texlive/2025/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2
+025/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2025/texmf-
+dist/fonts/type1/urw/times/utmri8a.pfb>
+Output written on main.pdf (77 pages, 721653 bytes).
+SyncTeX written on main.synctex.gz.
+Transcript written on main.log.
+Latexmk: Getting log file 'main.log'
+Latexmk: Examining 'main.fls'
+Latexmk: Examining 'main.log'
+Latexmk: Found input bbl file 'main.bbl'
+Latexmk: Log file says output to 'main.pdf'
+Latexmk: Found bibliography file(s):
+  ./bibliography.bib
+Latexmk: All targets (main.pdf) are up-to-date
+Latexmk: Undoing directory change
+

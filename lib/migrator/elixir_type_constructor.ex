@@ -979,14 +979,28 @@ defmodule Migrator.ElixirTypeConstructor do
               # if acc == "", do: "{:#{atom}, #{type_right |> descrizing_fun.()}}", else: acc <> ", " <>  "{:#{atom}, #{type_right |> descrizing_fun.()}}"
             end)
 
-          fields =
-            if fields == [] do
-              ":__struct__ => :\"#{strt_name}\""
-            else
-              "#{fields_descr}, :__struct__ => :\"#{strt_name}\""
+          # A struct is always an Elixir module, whose runtime atom carries the
+          # "Elixir." prefix (e.g. Plausible.Site is :"Elixir.Plausible.Site").
+          # Emitting the bare :"Plausible.Site" yields a *different* atom, so a
+          # `%Plausible.Site{}` pattern can never match it.
+          strt_atom =
+            case to_string(strt_name) do
+              "Elixir." <> _ = full -> full
+              name -> "Elixir." <> name
             end
 
-          "%{#{fields}}"
+          if fields == [] do
+            # Struct fields unresolved (the defining module was not visited): the
+            # exact closed struct type is unknown. A struct is a *closed* map, so
+            # asserting an open map would mis-type it; instead mark it gradual
+            # (consistent with how every other unresolvable definition is
+            # widened to dynamic()), keeping the :__struct__ tag as the one
+            # resolved fact.
+            "dynamic(%{atom() => if_set(term()), :__struct__ => :\"#{strt_atom}\"})"
+          else
+            # All fields resolved: a struct is a closed map, emit it closed.
+            "%{#{fields_descr}, :__struct__ => :\"#{strt_atom}\"}"
+          end
 
         {:closed_map, fields} ->
           fields =
@@ -1023,11 +1037,16 @@ defmodule Migrator.ElixirTypeConstructor do
           ":false"
 
         {:atom, atom} ->
-          to_be_quoted? = [" ", "-", "."] |> Enum.reduce(false, &String.contains?(Atom.to_string(atom), &1) or &2)
-          if to_be_quoted? do
-            ":\"#{atom}\""
-          else
-            ":#{atom}"
+          # An atom may only be written bare when Elixir parses it back as the same
+          # atom. Checking for " ", "-" and "." missed every other breaking char —
+          # :HTTP/1 was emitted unquoted and read as :HTTP divided by 1, which the
+          # type checker rejects with "literal 1 is not supported". Macro.classify_atom/1
+          # is authoritative: :identifier (:ok) and :unquoted (:+, :Foo, :foo@bar)
+          # round-trip bare. :quoted must be escaped, and :alias stays quoted because
+          # its bare form (Plug.Conn) would read as a type reference, not an atom.
+          case Macro.classify_atom(atom) do
+            kind when kind in [:identifier, :unquoted] -> ":#{atom}"
+            _ -> ":" <> inspect(Atom.to_string(atom))
           end
 
         # {:guard_type_var, type_var} -> NOT DEFINED IN DESCR

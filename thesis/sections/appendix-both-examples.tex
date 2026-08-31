@@ -1,0 +1,48 @@
+\section*{Appendix. Both-Warned Examples}
+\label{app:both-examples}
+\sloppy
+
+This appendix complements the previous one with entries from the 199-entry \emph{both-warned} set (Subsection~\ref{sec:both-warned}): definitions faulty enough that Dialyzer and the new typechecker independently reject them. The two blocks illustrate the two ways the typechecker co-rejects---for a locally-checkable category it reproduces Dialyzer's finding directly, and for a whole-program or opacity category it cannot, so it rejects instead on a coexisting body-level fault. Each block gives the function definition, the Dialyzer message, and the typechecker's finding (bodies and type dumps elided).
+
+\paragraph{Direct reproduction (\texttt{call}).} On \texttt{Pleroma.\allowbreak HTTP.\allowbreak get/\allowbreak 3}:
+\begin{lstlisting}[language=Elixir,breaklines=true]
+def get(url, headers \\ [], options \\ [])
+def get(nil, _, _) do
+  nil
+end
+def get(url, headers, options) do
+  request(:get, url, nil, headers, options)
+end
+\end{lstlisting}
+\noindent\textbf{Dialyzer:}
+\begin{lstlisting}[breaklines=true]
+The function call will not succeed.
+Pleroma.HTTP.request(:get, _url :: any(), nil, _headers :: any(), _options :: any())
+breaks the contract
+(method(), Request.url(), String.t(), Request.headers(), :elixir.keyword()) ::
+...
+\end{lstlisting}
+\noindent\textbf{Typechecker:}
+\begin{lstlisting}[breaklines=true]
+incompatible types given to request/5
+\end{lstlisting}
+\noindent The finding is a call-site argument mismatch, which the typechecker checks body-locally and reproduces directly.
+
+\paragraph{Co-rejection on a separate fault (\texttt{call\_without\_opaque}).} On \texttt{ExCubicIngestion.\allowbreak ProcessIngestion.\allowbreak error/\allowbreak 1}:
+\begin{lstlisting}[language=Elixir,breaklines=true]
+def error(load_rec) do
+  Ecto.Multi.new()
+  |> Ecto.Multi.update(:update_status, CubicLoad.change(load_rec, %{status: "erroring"}))
+  |> Oban.insert(:error_job, Error.new(%{load_rec_id: load_rec.id}))
+  |> Repo.transaction()
+end
+\end{lstlisting}
+\noindent\textbf{Dialyzer:}
+\begin{lstlisting}[breaklines=true]
+Legacy warning: The call 'Elixir.Ecto.Multi':update(#{'__struct__':='Elixir.Ecto.Multi', ...
+\end{lstlisting}
+\noindent\textbf{Typechecker:}
+\begin{lstlisting}[breaklines=true]
+asserted return type does not match the function body
+\end{lstlisting}
+\noindent The opacity finding is outside the typechecker's model, so it cannot reproduce it; it co-rejects the definition on a coexisting return-type mismatch instead.

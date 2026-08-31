@@ -1,0 +1,26 @@
+\section{Gradual type system transition from dynamic to static}
+
+% •	Typespecs in Elixir
+% •	Role of Dialyzer
+% •	Limitations (lack of precision, success typing issues, etc.)
+% •	Introduction to set-theoretic types
+
+Elixir is a dynamically typed functional programming language that is currently undergoing the integration of a gradual set-theoretic type system~\cite{elixir-lang}.
+Traditionally, Elixir has relied on its type specification directive, TypeSpecs, an Erlang-inspired type annotation system, to document code and support static analysis tools~\cite{elixir-typespecs}.
+In particular, Dialyzer serves as the de facto standard tool for analysing TypeSpecs and detecting discrepancies through success typing~\cite{lindahl2006practical}.
+
+However, TypeSpecs is not enforced by the compiler and therefore does not provide strong guarantees of type safety.
+Instead, it primarily serves as documentation and as optional input to external analysis tools such as Dialyzer.
+While Dialyzer is effective in avoiding false positives, it may produce warnings that are difficult to interpret and may lack precise information about the origin or cause of type inconsistencies.
+
+% Compensation: TypeSpecs were designed for success typing, not sound typing.
+To address these limitations, recent work on Elixir introduces a gradual set-theoretic type system known as Elixir Types~\cite{duboc2024}.
+This system aims to combine the flexibility of dynamic typing with the rigor of static typing. Its benefits can be understood along three main dimensions.
+First, it improves type safety guarantees by enabling more precise type inference and checking aligned with program behaviour.
+Second, it supports gradual typing through the inclusion of the \texttt{dynamic()} type, allowing parts of the program to remain dynamically checked at runtime.
+Third, it leverages set-theoretic constructs such as union, intersection, and negation types, enabling more expressive and compositional type definitions.
+
+In this context, an important challenge arises: how to migrate from the existing TypeSpecs to the new Elixir Types.
+To preserve semantics and maximise simplicity in the transition, this paper first investigates the translation of TypeSpecs into gradual set-theoretic types, identifying mismatches between the two systems and proposing approximation strategies where direct translation is not possible. 
+Then, we bring this formulisation to implementation; a prototype is developed to evaluate the feasibility and limitations of this approach in practice.
+After completing the implementation by passing test codes prescribed, we apply fine-tuning technique to train a large language model with translated types and pedict Elixir Types on untyped function definitions.

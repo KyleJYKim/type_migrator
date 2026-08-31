@@ -27,7 +27,14 @@ type_migrator-*.tar
 /.DS_Store
 
 /elixir
-/thesis
+
+/thesis/main.pdf
+/thesis/main.aux
+/thesis/main.fdb_latexmk
+/thesis/main.fls
+/thesis/main.log
+/thesis/main.synctex.gz
+/thesis/main.pdf
 
 /translation.aux
 /translation.fdb_latexmk
@@ -37,10 +44,12 @@ type_migrator-*.tar
 /translation.pdf
 
 /.tool-versions
-translation.pdf
 
 /lib/experiments
 /lib/test
 
 /logs
 /results
+
+/scripts
+/structtest

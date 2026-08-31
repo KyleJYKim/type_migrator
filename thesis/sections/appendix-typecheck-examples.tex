@@ -1,0 +1,49 @@
+\section*{Appendix. Typechecker-Only Warning Examples}
+\label{app:typecheck-examples}
+\sloppy
+
+Of the \num{3636} entries the typechecker rejects but Dialyzer accepts, 691 are return-type findings; the larger unreachable-clause, argument-mismatch, and map-key groups are treated in Subsection~\ref{sec:typecheck-only}.
+The return-type findings split into 390 whose annotation carries a \texttt{dynamic()} (no static verdict after root-hoisting), 125 \emph{cannot-verify} cases (the body's return flows from an intra-project or un-spec'd call that module-local inference assumes is \texttt{dynamic()}), and 176 purely-static disagreements.
+The purely-static group is where a true static verdict is possible: a genuine leak is a body that provably returns a value outside its declared type, which Dialyzer's optimism accepts.
+This appendix gives representative genuine leaks and one worked example of each recurring artefact category; it is illustrative rather than exhaustive.
+
+\subsection*{Representative genuine return-type leaks}
+Each returns a value the declared type excludes---typically a clause that leaks \texttt{nil} or an error tuple, or a spec that under-declares the returned atoms.
+
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}p{0.40\textwidth} >{\raggedright\arraybackslash}p{0.28\textwidth} >{\raggedright\arraybackslash}p{0.24\textwidth}@{}}
+\toprule \textbf{Function} & \textbf{Body returns} & \textbf{Declared} \\ \midrule
+\texttt{Scenic.PubSub.publish/2} & \texttt{:ok or \{:error, :not\_registered\}} & \texttt{:ok} \\
+\texttt{Ash.UUIDv7.generate/0} & \texttt{:error or binary()} & \texttt{binary()} \\
+\texttt{Timex.day\_name/1} & \texttt{nil or binary()} & \texttt{binary() or \{:error, :invalid\_weekday\_number\}} \\
+\texttt{Cldr.Calendar.Coptic.quarter\_of\_year/3} & \texttt{\{:error, :not\_defined\}} & \texttt{integer()} \\
+\texttt{Livebook.Teams.encrypt/2} & \texttt{nil or binary()} & \texttt{binary()} \\
+\bottomrule
+\end{tabular}
+\normalsize
+
+\subsection*{Artefact categories}
+Not every return disagreement is a genuine leak; the two recurring non-genuine kinds are the conservatism of module-local inference and its over-broadening.
+
+\paragraph{Cannot verify.} \texttt{Ash.\allowbreak{}DataLayer.\allowbreak{}rollback/\allowbreak{}3}.
+\begin{lstlisting}[language=Elixir,breaklines=true]
+def rollback(data_layer_module, resource, term) do
+  apply(data_layer_module, :rollback, [resource, term])
+end
+\end{lstlisting}
+\noindent Inferred \texttt{dynamic()}; declared \texttt{none()}. The body returns the result of a dynamic \texttt{apply/3} that inference cannot resolve, so the checker cannot establish the declared type, whereas Dialyzer's whole-program success typing resolves the callee.
+
+\paragraph{Over-broadened inference.} \texttt{Scenic.\allowbreak{}Color.\allowbreak{}to\_\allowbreak{}ga/\allowbreak{}1}.
+\begin{lstlisting}[language=Elixir,breaklines=true]
+def to_ga(g) when is_uint8(g) do
+  {@ga, {g, 255}}
+end
+def to_ga({g, a}) when is_uint8(g) and is_uint8(a) do
+  {@ga, {g, a}}
+end
+def to_ga({r, g, b}) when is_uint8(r) and is_uint8(g) and is_uint8(b) do
+  {@ga, {do_rgb_to_g({r, g, b}), 255}}
+  # ...
+\end{lstlisting}
+\noindent Inferred \texttt{\{:color\_\allowbreak{}ga,\allowbreak{} integer() or \{integer(),\allowbreak{} integer()\}\}}; declared \texttt{\{:color\_\allowbreak{}ga,\allowbreak{} \{integer(),\allowbreak{} integer()\}\}}. Inference adds a spurious union arm---a bare integer---that the body never returns.

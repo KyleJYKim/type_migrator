@@ -1,0 +1,93 @@
+\begin{figure} [H]
+   \begin{translationfig}
+      \dsb{\alpha} = \alpha
+      \nl
+      \dsb{\TST_1\,\,|\,\,\TST_2} = \gor{\dsb{\TST_1}}{\dsb{\TST_2}}
+      \nl
+      \dsb{\texttt{any()}} = \texttt{term()}
+      \nl
+      \dsb{\texttt{none()}} = \texttt{none()}
+      \nl
+      \dsb{\texttt{atom()}} = \texttt{atom()}
+      \nl
+      \dsb{\texttt{:}k} = \texttt{:}k
+      \nl
+      \dsb{\texttt{pid()}} = \texttt{pid()}
+      \nl
+      \dsb{\texttt{port()}} = \texttt{port()}
+      \nl
+      \dsb{\texttt{reference()}} = \texttt{reference()}
+      \nl
+      \dsb{\texttt{float()}} = \texttt{float()}
+      \nl
+      \dsb{\texttt{integer()}} = \texttt{integer()}
+      \nl
+      \dsb{\texttt{neg\_integer}} = \texttt{infty..-1}
+      \nl
+      \dsb{\texttt{non\_neg\_integer}} = \texttt{0..infty}
+      \nl
+      \dsb{\texttt{pos\_integer}} = \texttt{1..infty}
+      \nl
+      \dsb{\texttt{tuple()}} = \texttt{tuple()}
+      \nl
+      \dsb{\tuple{\ov{\TST}}} = \tuple{\dsb{\ov{\TST}}}
+      \nl
+      \dsb{\map{\texttt{\TSF$_1$,\,\,\dots,\,\,\TSF$_n$}}} = \textsf{\textsl{map}($\bigoplus_{i=1}^{n}\dsb{\TSF_i}$)}
+      \nl
+      \dsb{\texttt{[]}} = \texttt{empty\_list()}
+      \nl
+      \dsb{\texttt{nonempty\_maybe\_improper\_list(\TST$_1$, \TST$_2$)}} = \texttt{non\_empty\_list($\dsb{\TST_1}$, $\dsb{\TST_2}$)}
+   \end{translationfig}
+   \caption{Translation in Types}
+   \label{app:translation-in-types}
+\end{figure}
+
+\begin{figure} [H]
+   \ContinuedFloat
+   \begin{translationfig}
+      \dsb{\texttt{<<>>}} = \texttt{bitstring()}
+      \nl
+      \dsb{\texttt{<<\_::$n$>>}} =
+      \left\{
+         \begin{array}{ll}
+            \texttt{binary()} & \textsl{if}\,\,\,\,n \bmod 8 = 0
+            \nl
+            \texttt{bitstring()} & \textsl{otherwise}
+         \end{array}
+      \right.
+      \\ [5mm]
+      \dsb{\texttt{<<\_::\_*$n$>>}} =
+      \left\{
+         \begin{array}{ll}
+            \texttt{binary()} & \textsl{if}\,\,\,\,n \bmod 8 = 0
+            \nl
+            \texttt{bitstring()} & \textsl{otherwise}
+         \end{array}
+      \right.
+      \\ [5mm]
+      \dsb{\texttt{<<\_::$n$,\,\,\_::\_*$n$>>}} =
+      \left\{
+         \begin{array}{ll}
+            \texttt{binary()} & \textsl{if}\,\,\,\,n \bmod 8 = 0
+            \nl
+            \texttt{bitstring()} & \textsl{otherwise}
+         \end{array}
+      \right.
+      \\ [5mm]
+      \dsb{\texttt{(\fun{$\ov{\TST}}{\TST}$)}} = \texttt{(\fun{$\dsb{\ov{\TST}}$}$\dsb{\TST}$)}
+      \nl
+      \dsb{\texttt{(\fun{\dots}{\TST})}} =
+      \left\{
+         \begin{array}{ll}
+            \texttt{fun()} & \textsl{if}\,\,\,\,\dsb{\TST}\,\approx\,\texttt{term()}
+            \nl
+            \texttt{(\fun{ }{$\dsb{\TST}$})\,\,\texttt{ or }\,\,\dots\,\,\texttt{ or }\,\,(\fun{$\underbrace{\texttt{none(), \dots, none()}}_{255\text{  times}}$}{$\dsb{\TST}$})} & \textsl{otherwise}
+         \end{array}
+      \right.
+      \\ [7mm]
+      \dsb{n} = n\texttt{..}n
+      \nl
+      \dsb{n\texttt{..}n'} = n\texttt{..}n'
+   \end{translationfig}
+   \caption{Translation in Types (cont.)}
+\end{figure}

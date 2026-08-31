@@ -1,0 +1,307 @@
+\section{Implementation}
+
+The implementation is organised into three layered components.
+The first layer is the translator, which realises the formal semantics of the type translation process.
+The second layer is the migrator, which uses the translator to resolve user-defined types and generate concrete outputs.
+The third layer is the dataset producer, which automates translation across projects and records typecheck outcomes from Dialyzer and the new typechecker.
+
+\subsection{Implementation of translator}\label{sec:implementation-of-translator}
+
+The translator is the core component that converts Elixir abstract syntax tree of TypeSpec into the internal type representation used by our prototype.
+It is implemented primarily in \texttt{Migrator.Translator.Utils} with support from \texttt{Migrator.Translator.Approximator}.
+The translation pipeline is divided into three phases:
+\begin{enumerate}
+    \item \textit{AST acquisition}
+    \item \textit{Type normalisation}
+    \item \textit{Internal translation and approximation}
+\end{enumerate}
+
+\subsubsection{AST Acquisition}
+
+In the first phase, source files are parsed into quoted Elixir terms using \texttt{Code.string\_to\_quoted!/1}, wrapped by a function \texttt{safe\_string\_to\_quoted/1} for exceptions.
+This wrapper catches \texttt{SyntaxError}, \texttt{TokenMissingError}, and \texttt{MismatchedDelimiterError} exceptions and logs them as warnings, ensuring that only well-formed ASTs proceed to the following phases and that malformed files are gracefully skipped without aborting the overall translation run.
+
+\subsubsection{Type Normalisation}
+
+In the second phase, the translator normalises the TypeSpec syntax into an internal form; in principle, this is to remove unnecessary information, such as meta data, when it comes to translation.
+The \texttt{Utils.parse/2} function rewrites high-level constructs into uniform AST patterns expressed only with the primitive forms of the TypeSpec syntax specification.
+Elixir AST has a form of a triple-element tuple: \texttt{\{an atom or another tuple, a list of double-element tuples with metadata (e.g., line numbers), a list of arguments\}}.
+We keep this syntax at this phase while emptying the second element whenever possible and converting the built-in types and syntactic sugars into the primitive (basic) forms by recursively exploring argument types.
+
+Several expansion rules are worth noting.
+Numeric subtypes are reduced to range notation: \texttt{neg\_integer()} becomes \texttt{:infty..-1}, \texttt{non\_neg\_integer()} becomes \texttt{0..:infty}, and \texttt{pos\_integer()} becomes \texttt{1..:infty}, where \texttt{:infty} is a sentinel for an unbounded endpoint.
+Built-in collection shorthands are similarly expanded: \texttt{binary()} is rewritten into a bitstring pattern \texttt{<<\_::\_*8>>}, \texttt{charlist()} becomes \texttt{list(char())}, and \texttt{keyword(\TST)} unfolds into an explicit list-of-pairs form \texttt{[] | nonempty\_maybe\_improper\_list(\{atom(), \TST\}, [])}.
+The \texttt{struct()} type is expanded into a generic struct pattern carrying a sentinel key \texttt{\_\_struct\_top\_\_} alongside an open map of atom-keyed fields, allowing later code to distinguish typed structs from the unqualified \texttt{struct()} type, which the sentinel marks as the top of the struct hierarchy.
+
+Notice that we intentionally parses \texttt{binary()} to \texttt{<<\_::\_*8>>} even though later it is translated back to \texttt{binary()} again.
+That is because the purpose of the \texttt{Utils.parse/2} function is to deliver type syntax that only consists of primitive TypeSpec forms to \texttt{Utils.translate/2} and to rigorously show the process of translation.
+Therefore, we take every step explicitly putting aside performance details.
+
+
+Module references are also resolved during this phase.
+Any occurrence of \texttt{\_\_MODULE\_\_} inside a qualified type name is replaced with the string name of the enclosing module so that all remote type references carry a fully lengthened, context-independent identifier.
+Guard type variables are tagged with a special context marker \texttt{:\_\_guard\_type\_variable\_\_}, and user-defined type variables appearing in parametric type definitions are tagged with \texttt{:\_\_user\_type\_variable\_\_}, keeping them syntactically distinct even though they carry the same name as basic or built-in types.
+
+\subsubsection{Internal Type Representation}\label{sec:internal-type-repr}
+
+In the third phase, normalised type trees are converted into our internal type representation by the \texttt{translate/2} function.
+The representation is a tree of Elixir terms, i.e., atoms for ground types and tagged tuples for composite types, chosen so that types can be compared structurally with only essential information, accumulated in lists, and pattern-matched efficiently.
+We let $\ETR$ to range over the internal representation of Elixir terms in this section.
+
+Ground types are represented as plain atoms:
+\begin{center}
+\texttt{:term}, \texttt{:none}, \texttt{:atom}, \texttt{:integer}, \texttt{:float}, \texttt{:pid}, \texttt{:port},\\
+\texttt{:reference}, \texttt{:binary}, \texttt{:bitstring}, \texttt{:tuple}, \texttt{:open\_map}, \texttt{:fun}, \texttt{:empty\_list}
+\end{center}
+
+Composite types are tagged tuples whose first element identifies the constructor:
+
+\medskip
+\noindent\textbf{Union types} are stored as a right-leaning binary tree:
+\[
+  \TST_1 \mid \TST_2 \;\mapsto\; \texttt{\{:union, \{\($$\ETR_1$$\), \($$\ETR_2$$\)\}\}}
+\]
+so that a union of $n$ alternatives becomes a spine of nested \texttt{:union} nodes.
+Two helpers, \texttt{flatten\_from\_union\_to\_list} and \texttt{unflatten\_from\_list\_to\_union}, convert between the tree form and a flat list, which is the form used internally by the approximation algorithms.
+
+\medskip
+\noindent\textbf{Integer ranges} carry their endpoints directly:
+\[
+  n_1\mathtt{..}n_2 \;\mapsto\; \texttt{\{:interval, \{$n_1$, $n_2$\}\}}
+\]
+where either endpoint may be \texttt{:infty} to represent an unbounded half-line.
+Integer singleton types (e.g., the literal \texttt{97}) are encoded as unit intervals \texttt{\{:interval, \{97, 97\}\}}.
+
+\medskip
+\noindent\textbf{Atom singletons} are stored as \texttt{\{:atom, :$k$\}} for a literal atom \texttt{:$k$}.
+When an atom appears as a map key, its requiredness is tracked via the wrappers \texttt{\{:atom\_req, :$k$\}} for required keys and \texttt{\{:atom\_opt, :$k$\}} for optional keys.
+
+\medskip
+\noindent\textbf{Maps} have two variants.
+An open map (written \texttt{\%\{optional(any()) => any()\}} in TypeSpecs) is the ground type \texttt{:open\_map} and is the only open map type from TypeSpec.
+A closed map at first carries its field list:
+\begin{center}
+\texttt{\{:closed\_map, [\{$\ETR_{k_1}$, $\ETR_{v_1}$\}, \ldots, \{$\ETR_{k_1}$, $\ETR_{v_n}$\}]\}}
+\end{center}
+where each key $\ETR_{k_i}$ is itself a type descriptor showing whether or not a field is mandatory (e.g., \texttt{\{:atom\_req, :name\}} or \texttt{:integer}) and each value $\ETR_{v_i}$ is a translated type.
+Then these translated types are approximated by \texttt{Approximation.promote()} and \texttt{Approximation.map()} functions to eventually evaluate the left side types to be in the range of Elixir Types' key types $\ETK$.
+Which process involves wrapping optional fields whose value type is determined by merging with \texttt{\{:if\_set, $\ETR$\}}, distinguishing them from mandatory fields.
+We further explain approximation implementation in the next subsection.
+
+\medskip
+\noindent\textbf{Structs} share the field-list structure of closed maps but additionally record the module name:
+\begin{center}
+\texttt{\{:struct, \{ModuleName, [\{:$k$, $\ETR{v_1}$\}, \ldots]\}\}}
+\end{center}
+A special sentinel label \texttt{:\_\_struct\_top\_\_} is used to represent the bare \texttt{struct()} type, which matches any struct without naming a specific module.
+
+\medskip
+\noindent\textbf{Lists} have three forms: \texttt{:empty\_list} for \texttt{[]}, and
+\[
+  \texttt{\{:non\_empty\_list, \{$\ETR_\text{content}$, $\ETR_\text{termination}$\}\}}
+\]
+for a non-empty (possibly improper) list.
+The termination type is always \texttt{:empty\_list} for proper lists, but improper lists carry a termination type that is none other than \texttt{:empty\_list}.
+
+\medskip
+\noindent\textbf{Functions} distinguish fixed-arity from variable-arity forms:
+\begin{align*}
+  (\TST_{\text{in}_1}, \ldots, \TST_{\text{in}_n} \to \TST_\text{out})
+    &\;\mapsto\; \texttt{\{:fun, \{[$\ETR_{\text{in}_1}$, \ldots, $\ETR_{\text{in}_n}$], $\ETR_\text{out}$\}\}} \\
+  (\ldots \to \TST_\text{out})
+    &\;\mapsto\; \texttt{\{:fun, \{:all\_arity, $\ETR_\text{out}$\}\}}
+\end{align*}
+A bare \texttt{fun()} (any function, any output) translates to the ground type \texttt{:fun}.
+
+\medskip
+\noindent\textbf{User-defined and remote types} carry references that are resolved in later phases:
+\begin{align*}
+  \texttt{my\_type()}   &\;\mapsto\; \texttt{\{:user\_type, :my\_type\}}\\
+  \texttt{my\_type(t)}  &\;\mapsto\; \texttt{\{:user\_type, \{:my\_type, [t]\}\}}\\
+  \texttt{Mod.t()}      &\;\mapsto\; \texttt{\{:remote\_type, \{[Mod], :t\}\}}
+\end{align*}
+Type variables, t, introduced by parametric type definitions are represented as \texttt{\{:user\_type\_var, name\}}.
+This is distinguished from guard-constrained variables represented as \texttt{\{:guard\_type\_var, name\}} which is used in \texttt{when} clause.
+
+\subsubsection{Approximation}\label{sec:approximation}
+
+Because the new type system imposes constraints that TypeSpecs does not, some type expressions cannot be translated exactly.
+The \texttt{Migrator.Translator.Approximator} module implements a two-step approximation procedure that first promotes individual types into category groups that are key types of Elixir Types and then merges overlapping fields judging by their key types' subtype relationship.
+
+\paragraph{Union key splitting.}
+Before promotion or merging takes place, the \texttt{field\_translator} closure (anonymous function) in \texttt{translate/2} preprocesses each field of a map literal.
+If a field's key type is a union (for example, \texttt{optional($\ETR_{\ETK_1}$ | $\ETR_{\ETK_2}$) => $\ETR_V$}), the closure flattens the union and emits one field per branch: \texttt{\{$\ETR_{\ETK_1}$, [$\ETR_V$]\}} and \texttt{\{$\ETR_{\ETK_2}$, [$\ETR_V$]\}}.
+Same as the non-literal types all the field types whose key types are split from a union type are treated as optional including atom literal types which hence tagged as \texttt{\{:atom\_opt, :$k$\}}.
+
+\paragraph{Promotion.}
+The \texttt{Approximator.promote/1} function then wraps each field's key into a pair \texttt{\{category, [original\_key]\}}, where \texttt{category} is the broad Elixir type the key belongs to, and \texttt{[original\_key]} carries the precise key type for later subtype checking.
+The mapping is:
+\begin{align*}
+  \texttt{\{:closed\_map, \_\}} &\;\mapsto\; \texttt{\{:open\_map,  [$\ETR_{\text{original\_key}}$]\}} \\
+  \texttt{\{:struct, \_\}}      &\;\mapsto\; \texttt{\{:open\_map,  [$\ETR_{\text{original\_key}}$]\}} \\
+  \texttt{\{:tuple, \_\}}       &\;\mapsto\; \texttt{\{:tuple,     [$\ETR_{\text{original\_key}}$]\}} \\
+  \texttt{:empty\_list}         &\;\mapsto\; \texttt{\{:list,      [$\ETR_{\text{original\_key}}$]\}} \\
+  \texttt{\{:non\_empty\_list, \_\}} &\;\mapsto\; \texttt{\{:list, [$\ETR_{\text{original\_key}}$]\}} \\
+  \texttt{\{:fun, \_\}}         &\;\mapsto\; \texttt{\{:fun,   [$\ETR_{\text{original\_key}}$]\}} \\      
+  \texttt{\{:interval, \_\}}    &\;\mapsto\; \texttt{\{:integer,   [$\ETR_{\text{original\_key}}$]\}} \\
+  \texttt{\{:atom\_req, :$k$\}}    &\;\mapsto\; \texttt{\{:atom,      [\{:atom\_req, :$k$\}]\}} \\
+  \texttt{\{:atom\_opt, :$k$\}}    &\;\mapsto\; \texttt{\{:atom,      [\{:atom\_opt, :$k$\}]\}}
+\end{align*}
+Ground types that have no finer form (e.g.\ \texttt{:atom}, \texttt{:integer}) fall through and are wrapped as \texttt{\{$\ETR_{\text{ground}}$, [$\ETR_{\text{ground}}$]\}}.
+The purpose of this two-level structure is to allow the merge step to first perform a cheap category equality check before invoking the more expensive \texttt{unify\_types} operation.
+
+\paragraph{Map field merging.}
+As we have shown in the field type approximation specification, it is possible for two fields to have overlapping key types within a single map type.
+For example, \texttt{\%\{optional(atom()) => string(), required(:foo) => integer()\}} yields two fields whose keys, \texttt{:atom} and \texttt{\{:atom\_req, :foo\}}, both promote to the category \texttt{:atom}.
+The \texttt{Approximator.map/1} function folds the promoted field list into an accumulator $L$, and for each incoming field \ETF$_\text{new} = \{\{C_\text{new},\, O_\text{new}\},\, V_\text{new}\}$ it proceeds as follows with cascading strategy:
+
+\begin{enumerate}
+    \item \textbf{Category lookup.}
+          The algorithm searches $L$ for a field \ETF$_L = \{\{C_L,\, O_L\},\, V_L$\} whose category $C_L$ equals $C_\text{new}$ (or is \texttt{:term}) in order to judge if checking a subtype relationship is necessary.
+    \item \textbf{Original-key subtype check.}
+          If a matching category is found, \texttt{unify\_types/1} is called on the pair of original keys \{$O_\text{new},\, O_L$\} to determine whether the incoming original keys are subtypes of the existing ones.
+    \item \textbf{Merging decision.}
+          Four cases arise from the three Boolean flags (category is matched, category is generic \texttt{atom()}, and original keys are a subtype):
+          \begin{itemize}
+              \item Category matched, not the generic atom category, and $O_\text{new} \leq O_L$: the incoming field is entirely subsumed; discard \ETF$_\text{new}$ and leave $L$ unchanged.
+              \item Category matched, not the generic atom category, and $O_\text{new} \not\leq O_L$: the keys are disjoint or partially overlap but neither subsumes the other; merge the value lists by concatenation and update the original key list.
+              \item Category matched, is the generic atom category, and $O_\text{new} \leq O_L$: if no residual original keys remain after unification, absorb \ETF$_\text{new}$ into the existing \texttt{:atom} field; otherwise retain $L$ unchanged.
+              \item Category not matched: \ETF$_\text{new}$ introduces a complete disjoint key shape and is appended to $L$ as a new entry.
+          \end{itemize}
+    \item \textbf{Right-hand value merging.}
+          Once all fields are processed, each accumulated value list is deduplicated, subsumed entries are removed via \texttt{unify\_types/1}, and the survivors are joined into a union by applying \texttt{unflatten\_from\_list\_to\_union/1}.
+    \item \textbf{Optionality wrapping.}
+          Any value type of a field whose key type is not a required atom literal is wrapped in \texttt{\{:if\_set, \ldots\}}, marking it as a field that may be absent in a concrete closed-map value.
+\end{enumerate}
+
+\paragraph{Type unification and subtype checking.}
+The core predicate underlying both promotion and map merging is \texttt{unify\_types/1}, which takes a pair of original types, merges any elements that stand in a subtype relationship to a element from the accumulating list, and returns the updated list together with a Boolean flag indicating whether the merging type was entirely subsumed by the second.
+Its case analysis covers every pairing of the internal type constructors.
+Several cases are particularly noteworthy.
+
+\medskip
+\noindent\textbf{Integer intervals.}
+Given two intervals $[n_1, n_2]$ and $[m_1, m_2]$ (with \texttt{:infty} representing an unbounded endpoint), the helper \texttt{merge\_types} covers ten cases in total: one disjoint check followed by the nine non-disjoint cases that arise from the $3 \times 3$ comparison of the left endpoints ($n_1$ vs.\ $m_1$) and right endpoints ($n_2$ vs.\ $m_2$).
+The disjoint check is performed first via \texttt{Range.disjoint?/2}; the remaining nine cases group into three outcomes:
+\begin{itemize}
+    \item \textbf{Disjoint}: retain both intervals; not a subtype.
+    \item \textbf{$[n_1,n_2] \subseteq [m_1,m_2]$} (4 cases: $n_1 \geq m_1$ and $n_2 \leq m_2$, including the identical case): discard $[n_1,n_2]$; is a subtype.
+    \item \textbf{$[m_1,m_2] \subsetneq [n_1,n_2]$} (3 cases: $n_1 \leq m_1$ and $n_2 \geq m_2$, excluding identical): retain $[n_1,n_2]$ and discard $[m_1,m_2]$; not a subtype.
+    \item \textbf{Partial overlap} (2 cases: neither interval contains the other): approximate by the smallest enclosing interval $[\min(n_1,m_1),\, \max(n_2,m_2)]$; not a subtype.
+\end{itemize}
+The subtype flag is \texttt{true} only when the \emph{first} operand is contained in the second; when the second is the smaller interval, the flag is \texttt{false} even though one interval subsumes the other.
+Unbounded endpoints are handled by substituting a finite sentinel value (one below the global minimum or one above the global maximum of the four bounds) for the purpose of the disjoint and containment tests, then restoring \texttt{:infty} in the result.
+
+\medskip
+\noindent\textbf{Atom keys.}
+The required/optional distinction interacts with the generic \texttt{:atom} type through asymmetric rules:
+\texttt{\{:atom\_req, :$k$\}} and \texttt{\{:atom\_opt, :$k$\}} is a subtype of \texttt{:atom} (a specific required key is a special case of any atom), but the converse does not hold.
+Two distinct required singletons \texttt{\{:atom\_req, :$k_1$\}} and \texttt{\{:atom\_req, :$k_2$\}} are never in a subtype relation with each other; instead they are accumulated as separate candidates.
+A required singleton \texttt{\{:atom\_req, :$k$\}} is a subtype of \texttt{\{:atom\_opt, :$k$\}} (with the same key) because a field that is always present trivially satisfies the weaker optionality constraint.
+
+\medskip
+\noindent\textbf{Non-empty lists.}
+Two non-empty list types \texttt{\{:non\_empty\_list, \{\ETT$_1$, \ETT$_1$\}\}} and \texttt{\{:non\_empty\_list, \{\ETT$_1$, \ETT$_2$\}} are unified element-wise: the unification of content types and that of termination types are independent.
+If both pairwise results are subtypes, the first list type is subsumed; otherwise a single merged non-empty list is produced by rebuilding the content and termination types from their respective unification results.
+
+\medskip
+\noindent\textbf{Functions.}
+Function subtyping first checks if the arities differ; in which case the two function types are kept separate.
+If the arities match then it follows the contravariant and covariant rules for a list of inputs and an output, respectively.
+For two fixed-arity functions $f_1 : (\ov{\ETT}_1 \to \prm{\ETT_1})$ and $f_2 : (\ov{\ETT}_2 \to \prm{\ETT_2})$ with the same arity, $f_1$ is a subtype of $f_2$ if and only if $\ov{\ETT}_2 \leq \ov{\ETT}_1$ (inputs reversed) and $\prm{\ETT_1} \leq \prm{\ETT_2}$.
+A variable-arity function \texttt{\{:fun, \{:all\_arity, $\prm{\ETT}$\}\}} is treated as a supertype of any same output fixed arity function: if the output types unify, the fixed arity variant is absorbed.
+
+\medskip
+\noindent\textbf{Structs.}
+Two struct types are unified field-by-field: for each field of the first struct, the algorithm checks whether a matching field (by key and value subtyping) exists in the second.
+The special sentinel struct \texttt{\{:struct, \{:\_\_struct\_top\_, \_\}\}} representing the unqualified \texttt{struct()} type is always a supertype of any named struct, so any specific struct is subsumed by it.
+
+\subsection{Implementation of migrator}
+
+The migrator builds on the translator by resolving user-defined types and generating output artefacts.
+Its pipeline consists of three stages:
+\begin{enumerate}
+    \item \textit{User-defined type translation}
+    \item \textit{Spec translation}
+    \item \textit{Output construction}
+\end{enumerate}
+
+The first stage is implemented by the \texttt{Migrator.TypeTranslator} module.
+It scans input files for \texttt{@type}, \texttt{@opaque}, and \texttt{@typep} declarations and extracts each definition into a module-local table.
+Type variables are marked explicitly, then definitions are parsed and recursively expanded so that user-defined types may later be substituted during the Elixir Types construction stage.
+Recursive type definitions are detected by maintaining a stack of type names currently being expanded; if a name reappears on the stack, the definition is replaced by \texttt{:dynamic} to avoid non-termination.
+Expansion is iterated to a fixed point so that transitive references through chains of user-defined types are fully resolved.
+
+The second stage is implemented by the \texttt{Migrator.SpecTranslator} module, which we have described in Subsection~\ref{sec:implementation-of-translator}.
+
+The third stage is implemented by \texttt{Migrator.ElixirTypeConstructor} module.
+This component assembles the final result in the mode requested by the user: direct Elixir annotations, direct replacement with expanded user-defined types, internal \texttt{Descr} expressions, or compiler-level \texttt{Descr} with \texttt{@assert\_type\_form} assertions.
+It thus serves as the final rendering layer that converts translated types into code that can be written back into a target project from where the TypeSpec annotations were extracted.
+The mode we mainly use in our later experiments is the \texttt{Descr} mode with \texttt{@assert\_type\_form} assertions in order to perform type-check on the translated types.
+Therefore, we substitute \texttt{\$} used in the specification for signifying annotation for \texttt{@assert\_type\_form} in our experiments for data gathering.
+
+\subsection{Implementation of dataset producer}
+
+The dataset producer automates end-to-end evaluation across multiple Mix projects.
+Its pipeline is:
+\begin{enumerate}
+    \item \textit{Translation execution}
+    \item \textit{Dialyzer analysis}
+    \item \textit{Typechecker execution}
+\end{enumerate}
+
+Translation execution is orchestrated by the task defined in \texttt{lib/mix/tasks/run\_translation.ex}.
+This task configures logging and delegates to \texttt{TranslationRunner.main/1}, which traverses a directory of projects and applies the migrator to each source file.
+
+Dialyzer analysis is performed by \texttt{lib/mix/tasks/run\_dialyzer.ex}.
+This task sets up a file logger and invokes \texttt{DialyzerRunner.main/1} to run Dialyzer across the Mix projects from which we extracted TypeSpecs for translation in the previous stage, collecting warnings and type analysis results for the dataset.
+
+Typechecker execution is performed by \texttt{lib/mix/tasks/run\_typecheck.ex}.
+It similarly configures logging and calls \texttt{TypecheckRunner.main/1}, optionally with an explicit Elixir binary path (in our case the location of the compiler on which we can use assertions), to run the new compiler's typechecker across the same projects.
+The outputs of these tasks provide the empirical validation data used in the evaluation.
+
+% \subsection{Warning Extraction and Attribution}
+% \label{sec:impl-warning-attribution}
+
+% Both analysis stages reduce to the same two problems: recovering every warning from a tool's free-form text output, and attributing each warning to the exact dataset entry that produced it.
+% The fidelity of the entire evaluation depends on these two steps, so we describe them in detail.
+
+% \subsubsection{Typechecker Output Parsing}
+
+% The new compiler prints each type warning as a \texttt{warning:} header, a human-readable explanation, the marker \texttt{type warning found at:}, and a location line introduced by a box-drawing corner that carries the file, line, optional column, and a fully qualified \texttt{Module.function/arity}.
+% Three characteristics of this output must be handled for extraction to be complete.
+
+% \paragraph{Indented headers.}
+% The parser segments the output by splitting before each warning header.
+% Crucially, the compiler \emph{indents} the great majority of type-warning headers, so the split must tolerate leading horizontal whitespace---the regular expression \texttt{\textbackslash n(?=[\ \textbackslash t]*warning:)} rather than an anchor on column zero.
+% A column-anchored split silently coalesces all indented warnings into the few left-aligned blocks and, because only the first location per block is read, discards the rest; on a single large project this is the difference between recovering tens of warnings and recovering over a thousand.
+% After splitting, blocks not containing the substring \texttt{type warning} are dropped so that ordinary compiler diagnostics are excluded.
+
+% \paragraph{Location line.}
+% A single regular expression matches the corner prefix and captures, in order, the file path, the line, an optional column, and the \texttt{Module.function/arity}.
+% Three subtleties of this expression are each load-bearing.
+% The file capture is \emph{lazy} rather than greedy: a greedy capture would extend past the path and absorb the line number, because the optional column makes a trailing \texttt{:digit} look like a continuation of the file.
+% The column group is \emph{optional}, because the compiler omits the column in one of its two location formats.
+% Finally, the captured path may carry an \texttt{(app version)} prefix---emitted when the warning lies in a sub-application or dependency, as occurs when the Elixir standard library is type-checked as part of its own repository, where the path is reported as \texttt{(elixir 1.21.0-dev) lib/elixir/lib/enum.ex}---which is stripped before the path is used.
+% Omitting the strip silently drops every such warning, since the prefixed path matches no entry.
+
+% \paragraph{Message versus target.}
+% The stored message is the text preceding \texttt{type warning found at:}; the authoritative target is the \texttt{Module.function/arity} read from the location line.
+% The two are recorded separately because the message frequently names a \emph{callee} the body misuses rather than the enclosing function, whereas the target is exactly the function the compiler attributes the warning to.
+
+% \subsubsection{Dialyzer Output Parsing and Target Inference}
+
+% Dialyzer's output is segmented into blocks delimited by \texttt{lib/*.ex:N:} lines, with legacy-format blocks (prefixed \texttt{Legacy warning:}) reconstructed first.
+% Each block yields a file, line, category, and message.
+% The modern format tags a structured category directly; the legacy format does not, so for legacy blocks the category is \emph{inferred} from the message text by keyword matching (e.g.\ \emph{no local return}~$\mapsto$~\texttt{no\_return}, \emph{will never be called}~$\mapsto$~\texttt{unused\_fun}, \emph{unknown function}~$\mapsto$~\texttt{unknown\_function}), with internal whitespace normalised so the match is robust, and the first message word---which a naïve split would otherwise consume as the category---restored to the message.
+
+% Unlike the typechecker, Dialyzer never names the enclosing function: it reports only a file and line.
+% The target is therefore \emph{inferred} by re-parsing the source file, collecting the line range of every spec'd \texttt{def}/\texttt{defp} clause, and selecting the clause whose range contains the warning line.
+% This inference is sound for the corpus because the line ranges of spec'd functions do not overlap, and it is performed per source file so that the same line number in two different files cannot be confused.
+
+% \subsubsection{File-Disambiguated Matching}
+
+% Each warning is finally tagged with a file path expressed relative to the corpus root: the path of the Mix project being analysed (relative to the root) joined with the in-project path the tool reported.
+% This normalisation makes the path invariant between the translated tree (on which the typechecker runs) and the non-translated tree (on which Dialyzer runs), so both tools' warnings match the single dataset entry sharing that file.
+% Entries and warnings are then joined on the composite key \texttt{(file, module, function, arity)}.
+% Without the \texttt{file} component the key is not unique---196 keys recur across sub-projects of the same organisation---and a warning from one sub-project would be mis-attributed to its namesakes elsewhere; the file component reduces every such collision to the correct single target.

@@ -1,0 +1,180 @@
+\section{Translation from TypeSpecs to Elixir Types}
+
+In this section, we translate TypeSpecs walking through syntaxes introduced in the previous specifications.
+The previous sections show that TypeSpecs and Elixir Types describe many of the same runtime values.
+Both systems provide types for atoms, numbers, tuples, maps, lists, bitstrings, and functions.
+They also share the basic structure of function annotations: an input type is related to an output type, and type variables can be introduced with a \texttt{when} clause.
+This common ground makes a structural translation possible.
+For example, a TypeSpec union can often be translated to an Elixir Type union, and a tuple type can often be translated component-wise.
+
+However, the translation is not merely a change of notation.
+The two systems disagree in several places that matter for precision.
+TypeSpecs includes many literal forms, such as integer singletons, integer intervals, bitstring size literals, and function literals, while Elixir Types exposes a smaller set of user-facing type constructors.
+Conversely, the new Elixir type system is explicitly set-theoretic: it provides union, intersection, and negation as first-class type connectives, and it distinguishes precise types from the gradual type \texttt{dynamic()}.
+Moreover, map fields have different forms in the two systems as the set-theoretical type is more precise and unambiguous.
+TypeSpecs allows \texttt{required} and \texttt{optional} field declarations for arbitrary key types, but Dialyzer treats mandatory fields reliably only for literal keys.
+Elixir Types instead makes this distinction explicit through mandatory singleton fields and \texttt{if\_set} fields.
+
+These disagreements determine the shape of the translation.
+Where the source construct has an exact counterpart, the translation is direct.
+Where no exact counterpart exists, the translation relation is intentionally partial in this section, leaving approximation to the following section.
+This separation lets us state the precise fragment first and then extend it conservatively when total translation is required.
+
+To help formalising translation process, we define translation function $\dsb{\,\,}$, which maps TypeSpecs to Elixir Types, formally:
+
+\begin{figure} [H]
+   \begin{grammarfig}
+      \dsb{\,\,} \texttt{: TypeSpecs $\rightarrow$ Elixir Types}
+   \end{grammarfig}
+   \caption{Semantic of Translation}
+   \label{app:semantic-of-translation}
+\end{figure}
+
+We enclose TypeSpecs with $\dsb{\,\,}$, and let the translated types to be out of them.
+
+\subsection{Translation of Annotations}
+
+The translation of annotations is defined inductively over the structure of TypeSpec annotations.
+A TypeSpec annotation is a sequence of one or more \texttt{@spec} clauses for the functions with the same name and arity
+(Note that Dialyzer can analyse TypeSpec annotations with arity less than their function arity only when the unspecified types correspond to parameters with default values).
+Each clause carries a function expression that may be further guarded by type variable constraints introduced with a \texttt{when} keyword.
+The translation maps this sequence to a single Elixir Type annotation, prefixed by \texttt{\$}, whose signature is a conjunction of translated function types.
+
+\textbf{Figure~\ref{app:translation-in-annotations-1}} establishes the outermost annotation layer.
+A single \texttt{@spec \TSE} directive is translated to \texttt{\$\,$\dsb{\TSE}$}, where the \texttt{\$} prefix marks the result as an Elixir Type annotation substituting \texttt{@spec E} directive and $\dsb{}$ translates the expression, \TSE.
+When the annotation contains multiple \texttt{@spec} clauses, the second rule applies recursively: the already-accumulated prefix $\ov{\texttt{@spec\,}\TSE}$ is combined with the next clause \texttt{@spec\,$\prm{\TSE}$} by delegating to the expression-level translation $\dsb{\ov{\texttt{E}}\texttt{,\,}\prm{\texttt{E}}}$.
+The overline notation $\ov{\TSE}$ denotes a non-empty sequence of clauses; the translation therefore builds the target signature incrementally, one clause at a time.
+
+\input{figures/fig-translation-annotations.tex}
+
+\textbf{Figure~\ref{app:translation-in-annotations-2}} handles a single clause, \texttt{\$\,$\dsb{\TSE}$}, in isolation, which provides the base case for the expression-level translation.
+An unguarded clause $x(\ov{\TST_1})\texttt{\,\,::\,\,}\TST_2$ is mapped to the function type $\fun{\dsb{\ov{\TST_1}}}{\dsb{\TST_2}}$: argument types and the return type are each translated pointwise, and the divider in between them, \texttt{::}, becomes an arrow, \texttt{->} which is used for any other function types in Elixir Type notation.
+A guarded clause $x(\ov{\TST_1})\texttt{\,\,::\,\,}\TST_2\texttt{\,\,when\,\,}\ov{\alpha\texttt{:\,}\TST_3}$ is handled analogously, with the \texttt{when} clause preserved verbatim after translating each bound type $\TST_3$.
+The type variable names $\alpha$ are carried over unchanged; they now range over Elixir Type values but retain the same identifiers as the source.
+
+\textbf{Figure~\ref{app:translation-in-annotations-3}} extends the translation to a sequence whose new clause carries no \texttt{when} guard.
+The input is a pair $(\ov{\TSE},\,x(\ov{\prm{\TST_1}})\texttt{\,\,::\,\,}\prm{\TST_2})$ where $\ov{\TSE}$ is a sequence of preceding TypeSpec expression clauses.
+Two cases arise depending on whether the translated sequence of preceding expressions carries a \texttt{when} clause.
+If $\dsb{\ov{\TSE}} \approx \ETS\texttt{\,\,when\,\,}\ov{\alpha\texttt{:\,}\dsb{\TST_3}}$, the new clause is appended as an intersection with \texttt{and}, and the existing \texttt{when} guard is attached to it at the tail of it, so that the type variables scope over the earlier clauses as well as the new one.
+If the prefix carries no \texttt{when} clause, the new clause is simply conjoined: $\dsb{\ov{\TSE}}\texttt{\,\,and\,\,}\fun{\dsb{\ov{\prm{\ETT_1}}}}{\dsb{\prm{\ETT_2}}}$.
+This case reflects the fact that an unguarded new clause introduces no new type variables of its own, so no scoping adjustment is needed.
+
+\textbf{Figure~\ref{app:translation-in-annotations-4}} handles appending a new \texttt{when} clause when a new expression carries a \texttt{when} guard, $\ov{\prm{\alpha}\texttt{:\,}\prm{\TST_3}}$.
+Three sub-cases arise based on whether the existing translated expression carries a \texttt{when} guard and, if so, whether the variable names overlap with the incoming clause.
+First, if $\dsb{\ov{\TSE}} \approx \ETS\texttt{\,\,when\,\,}\ov{\alpha\texttt{:\,}\dsb{\TST_3}}$ and the two sets of type variables are disjoint ($\ov{\alpha} \cap \ov{\prm{\alpha}} = \emptyset$), the guards can be merged directly. 
+In other words, the names of type variables from the new \texttt{when} clause are all distinct from those in the existing clause.
+Hence, the new clause is appended with \texttt{and} and all type variable bindings from both guards are collected into the merged \texttt{when} clause.
+Second, if the two sets of type variables overlap ($\ov{\alpha} \cap \ov{\prm{\alpha}} \neq \emptyset$), the new clause's type variables are renamed to fresh names $\ov{\prm{\beta}}$ before merging, so that no variable from the existing scope is accidentally captured; the renamed clause is then appended under the combined \texttt{when} clause.
+Third, if the existing expressions carry no \texttt{when} clause at all, the new clause is simply appended together with its own guard: $\dsb{\ov{\TSE}}\texttt{\,\,and\,\,}\fun{\dsb{\ov{\prm{\ETT_1}}}}{\dsb{\prm{\ETT_2}}}\texttt{\,\,when\,\,}\ov{\prm{\alpha}\texttt{:\,}\dsb{\prm{\TST_3}}}$.
+These three cases together ensure that multi-clause annotations with heterogeneous guard structures are always translated to a single, well-scoped Elixir Type signature.
+
+
+\subsection{Translation of Basic Types}
+
+\input{figures/fig-translation-types.tex}
+
+Most entries in Figure~\ref{app:translation-in-types} are structural or notational translations.
+Type variables, union, \texttt{none()}, the atom types \texttt{atom()} and \texttt{:$k$}, the process handle types \texttt{pid()}, \texttt{port()}, and \texttt{reference()}, the numeric base types \texttt{float()} and \texttt{integer()}, the untyped and component-wise tuple forms, the empty-list constructor \texttt{[]}, the non-empty improper list \texttt{nonempty\_maybe\_improper\_list($\TST_1$, $\TST_2$)}, fixed-arity function types, and integer ranges $n$\texttt{..}$n'$ all translate component-wise, with at most a renaming of the constructor.
+The following cases deviate from a purely direct mapping and warrant comment.
+
+\textbf{Top type.}
+TypeSpecs names the top type \texttt{any()}, while Elixir Types names it \texttt{term()}.
+The rule $\dsb{\texttt{any()}} = \texttt{term()}$ is therefore a pure renaming with identical semantics.
+Note that TypeSpecs already defines \texttt{term()} as an alias for \texttt{any()} in its built-in type table, so the two names are interchangeable at the source level; the translation simply adopts the Elixir Type choice of name.
+
+\textbf{Ranged integer subtypes.}
+TypeSpecs provides three ranged shorthands for common half-bounded integer subsets: \texttt{neg\_integer()}, \texttt{non\_neg\_integer()}, and \texttt{pos\_integer()}.
+Elixir Types has no exact counterparts; it represents every integer subset uniformly as a range.
+The translation maps these to \texttt{infty..-1}, \texttt{0..infty}, and \texttt{1..infty} respectively, where \texttt{infty} is the special sentinel for the unbounded endpoint of an integer range.
+However, the interval types are only for internal developer level use; the users will not see these types but all as \texttt{integer()}.
+Valim addressed this as trade-off between precision and simplicity, and this is a design choice for simplicity in practice~\cite{elixir-type-precision}
+
+\textbf{Integer singletons.}
+An integer literal $n$ in TypeSpecs denotes a singleton type containing that value alone.
+Elixir Types has no standalone singleton notation: every integer type is a range.
+The rule $\dsb{n} = n\texttt{..}n$ represents the singleton as the degenerate range whose two endpoints coincide.
+Nevertheless, same as the ranged integer subtypes, this is also not available for users and we later translate them all to \texttt{integer()}.
+
+\textbf{Bitstring types.}
+TypeSpecs expresses precise bit-length constraints through the forms \texttt{<<\_::$n$>>}, \texttt{<<\_::\_*$n$>>}, and \texttt{<<\_::$n$, \_::\_*$n$>>}.
+However, this precision is rarely needed in practice; the bit-length forms are hardly used.
+Hence, Elixir Types exposes only two bitstring constructors: \texttt{binary()} for byte-aligned bitstrings (bit-lengths that are multiples of 8) and \texttt{bitstring()} for arbitrary bitstrings.
+The translation collapses each parametric form by testing divisibility by 8: when $n \bmod 8 = 0$ the bitstring is byte-aligned and the result is \texttt{binary()}; otherwise the result is \texttt{bitstring()}.
+In both cases the exact bit-length information is discarded, so the translated type is a conservative over-approximation of the source type.
+The unconstrained form \texttt{<<>>} translates to \texttt{bitstring()} as a direct renaming, since it denotes any bitstring with no size restriction.
+
+\textbf{Variable-arity function types.}
+The TypeSpec form $\texttt{(\fun{\dots}{\TST})}$ denotes a function of unspecified arity returning $\TST$.
+Set-theoretically, that becomes a function type that contains all the possible function types.
+Elixir Types requires each function type to have a fixed arity, so there is no direct counterpart.
+Two sub-cases arise depending on the return type.
+When $\dsb{\TST} \approx \texttt{term()}$, any function of any arity satisfies the specification and the result is \texttt{fun()}, the top function type in Elixir Types.
+When the return type is more specific, the translation expands to a union over all fixed arities from 0 to 255 --- the maximum arity permitted by the BEAM --- using \texttt{none()} as the placeholder argument type for each parameter position.
+This expansion is the only place in the basic type translation where the size of the output grows proportionally to the maximum arity.
+In practice, $\texttt{(\fun{\dots}{\TST})}$ arises most often through the \texttt{fun()} built-in, which TypeSpecs desugars to $\texttt{(\fun{\dots}{\texttt{any()}})}$; that instance falls into the first sub-case and produces simply \texttt{fun()}.
+
+
+
+\subsection{Translation of Fields}
+
+% Show map type semantics in TypeSpecs with examples.
+
+Let $\tau$ range over the right-hand side type of field types, that is, $\tau$ is either $\TST$ or $\ifset\TST$. 
+We consider lists whose elements are of the form \texttt{\ETK\,\,=>\,\,$\tau$}. 
+Given such a list $L$ we write $\ETK\in L$ if there exist $\tau$ such that the element \texttt{\ETK\,\,=>\,\,$\tau$} belongs to $L$. 
+We denote by \textsf{Empty} that maps all the non-singleton key types to \texttt{not\_set()}.
+
+First we define the translation of single field types. 
+If $\ETK_1,...,\ETK_n$ are pairwise distinct key types, we write \texttt{[$\bigvee_{i=1}^n \ETK_i\fto\tau$]} for the list \texttt{[$\ETK_1\fto\tau,\cdots,\ETK_n\fto\tau$]}. 
+Then the translation of single field types is defined in Figure~\ref{app:translation-in-field-types}:
+
+\begin{figure} [H]
+   \begin{translationfig}
+      \dsb{\texttt{required(\TST) => $\prm{\TST}$}} = 
+      \left\{
+         \begin{array}{ll}
+            \texttt{[\,:$k$\,\,=>\,\,$\dsb{\prm{\TST}}$\,]}
+            & \textsl{if}\,\,\,\,\dsb{\TST}\,\,\approx\,\,\texttt{:}k
+            \nl
+            \texttt{[\,}\bigvee_{i \in I}\ETK_i\fto\ifset{\dsb{\prm{\TST}}}\texttt{\,]}
+            & \textsl{if}\,\,\,\,\dsb{\TST}\,\,\approx\,\,\bigvee_{i \in I}\ETK_i\textsl{\,\,and\,\,}\dsb{\TST}\,\not\approx\,\texttt{:}k %(\ETK_i\text{'s are pairwise distinct}) 
+            \nl
+            \textsl{undefined} & \textsl{otherwise}
+         \end{array}
+      \right.
+      \nl \nl
+      \dsb{\texttt{optional(\TST) => $\prm{\TST}$}} = 
+      \left\{
+         \begin{array}{ll}
+            \texttt{[\,}\bigvee_{i \in I}\ETK_i\fto\ifset{\dsb{\prm{\TST}}}\texttt{\,]}
+            & \textsl{if}\,\,\,\,\dsb{\TST}\,\,\approx\,\,\bigvee_{i \in I}\ETK_i
+            \nl
+            \textsl{undefined} & \textsl{otherwise}
+         \end{array}
+      \right.
+   \end{translationfig}
+   \\[4mm] where all $\ETK_i$'s in $I$ are pairwise distinct.
+   \caption{Translation in Field Types}
+   \label{app:translation-in-field-types}
+\end{figure}
+
+After obtaining types in Elixir Types we can define merge function. 
+Given two field lists $L_1$ and $L_2$, we write $L_1 \oplus L_2$ the list obtained by adding to $L_1$ all the fields elements $\ETK\fto\tau$ of $L_2$. Formally:
+
+\begin{figure} [H]
+   \[\begin{array}{rcll}
+      L_1 \oplus \texttt{[\,]} &= & L_1 \\
+      L_1 \oplus \texttt{[}\,\ETK\fto\tau,\,\,L_2\,\texttt{]} &=& \texttt{[}\,\ETK\fto\tau,\,\,L_1\texttt{]} \oplus L_2  & \textsl{if }\ \ETK\not\in L_1 \\
+      L_1 \oplus \texttt{[}\,\ETK\fto\tau,\,\,L_2\,\texttt{]} &=& L_1 \oplus L_2 & \textsl{if }\ \ETK\in L_1 \\
+      L_1 \oplus \texttt{[}\,\texttt{:}k\fto\tau,\,\,L_2\,\texttt{]} &=& L_1 \oplus L_2 & \textsl{if }\ \texttt{atom()}\in L_1 \\
+      %L_1 \oplus L_2 &=& \textsl{undefined} & \textsl{otherwise}
+   \end{array}\]
+   \caption{Merge in Field Types}
+   \label{app:merge-in-field-types}
+\end{figure}
+
+%Notice that merging naturally reverses the order of field types, that is because field types in TypeSpecs are left-associative whereas those in Elixir Types are right-associative.
+
+We then finally define \textsf{map($L$)} as the map type whose field list is $L$. 
+Then we have $\dsb{\map{\texttt{\TSF$_1$,\,...,\,\TSF$_n$}}} =\textsf{\textsl{map}($\bigoplus_{i=1}^{n}\dsb{\TSF_i}$)}$. 
+If we want a saturated map type (i.e., a map type that specifies all the possible key types), then we have $\dsb{\map{\texttt{\TSF$_1$,\,...,\,\TSF$_n$}}} =\textsf{\textsl{map}($\bigoplus_{i=1}^{n}\dsb{\TSF_i}\oplus\texttt{Empty}$)}$.

@@ -1,0 +1,98 @@
+% --- Define the macros used in grammar ---
+\newcommand{\bnfeq}{::=}   % "bnf equals" symbol
+\newcommand{\bnfor}{\mid}  % "bnf or" symbol
+\newcommand{\ov}[1]{\overline{#1}} % overline shorthand
+\newcommand{\gnot}[1]{\texttt{not}\;#1}
+\newcommand{\gand}[2]{#1\;\texttt{and}\;#2}
+\newcommand{\gor}[2]{#1\;\texttt{or}\;#2}
+\newcommand{\nl}{\\ [2mm]}
+% Function type pretty-printer: (T1,..,Tn) -> T
+\newcommand{\fun}[2]{#1\,\texttt{->}\,#2}
+\newcommand{\map}[1] {\texttt{\%\{}\hspace{.07em}\mbox{\ensuremath{#1}}\hspace{.07em}\texttt{\}}}
+\newcommand{\tuple}[1] {\texttt{\{}\hspace{.07em}\mbox{\ensuremath{#1}}\hspace{.07em}\texttt{\}}}
+\newcommand{\OpenTuple}[1] {\texttt{\{}\hspace{.07em}\mbox{\ensuremath{#1}}\texttt{,}\,\texttt{..}\hspace{.07em}\texttt{\}}}
+% \newcommand{\dsb}[1]{\mathopen{\llbracket}#1\mathclose{\rrbracket}}
+\newcommand{\dsb}[1]{[\![\hspace{.07em}#1\hspace{.07em}]\!]}
+\newcommand{\rcd}[3]{\langle\!\langle\texttt{[#1];\,[#2];\,[#3]}\rangle\!\rangle}
+\newcommand{\prm}[1]{#1^{\prime}}
+\newcommand{\ifset}[1]{\texttt{if\_set(}{#1}\texttt{)}}
+\newcommand{\fto}{\;\texttt{=>}\;}
+\newcommand{\prokey}[2]{\texttt{#1}$^\texttt{#2}$}
+
+\newcommand{\orgtype}{\textit{s}}
+
+\newcommand{\ETR} {\mathbb{T}} % Elixir type representation in the code
+
+%%% Definitions %%%
+\newcommand{\FWE} {\texttt{E}}
+\newcommand{\FWL} {\texttt{L}}
+\newcommand{\FWP} {\texttt{P}}
+\newcommand{\FWG} {\texttt{G}}
+\newcommand{\FWD} {\texttt{D}}
+\newcommand{\FWC} {\texttt{C}}
+\newcommand{\FWB} {\texttt{B}}
+\newcommand{\FWA} {\texttt{A}}
+\newcommand{\FWT} {\texttt{T}}
+
+\newcommand{\EFn}[2][\ov{\FWP}\,\,\texttt{when}\,\,\FWG] {\texttt{fn}\,\,\ov{{#1} \,\texttt{->}\, {#2}}\,\,\texttt{end}}
+\newcommand{\EApp}[2] {#1\,\texttt{(}{#2}\texttt{)}}
+\newcommand{\ECase}[1] {\texttt{case}\,\,#1\,\,\,\ov{\FWP\,\,\texttt{when}\,\,\FWG\,\,\texttt{->}\,\,\FWE}}
+\newcommand{\ETuple}[1] {\texttt{\{}\,#1\,\texttt{\}}}
+\newcommand{\EElem}[2] {\texttt{elem}\texttt{(}#1, #2\texttt{)}}
+\newcommand{\EMap}[1][\ov{E\,\,\texttt{=>}\,\,E}] {\texttt{\%}\tuple{#1}}
+\newcommand{\EMapUpdate} {\texttt{\%}\tuple{E\,\,\texttt{|}\,\,E\,\,\texttt{=>}\,\,E}}
+\newcommand{\EMapKey} {E.k}
+\newcommand{\EMapGet} {E\, \texttt{[} E \texttt{]}}
+\newcommand{\EMapDelete} {\texttt{Map.delete}(E, L)}
+\newcommand{\EMapPut} {\texttt{Map.put}(E, L, E)}
+\newcommand{\EisInt}[1] {\mathtt{is\_integer}\texttt{(}{#1}\texttt{)}}
+\newcommand{\EisMap}[1] {\mathtt{is\_map}\texttt{(}{#1}\texttt{)}}
+\newcommand{\EisAtom}[1] {\mathtt{is\_atom}\texttt{(}{#1}\texttt{)}}
+\newcommand{\EisTuple}[1] {\mathtt{is\_tuple}\texttt{(}{#1}\texttt{)}}
+\newcommand{\EisMapKey}[2] {\mathtt{is\_map\_key}\,({#1},{#2})}
+\newcommand{\EisFunction}[2] {\mathtt{is\_function}\texttt{(}{#1,#2}\texttt{)}}
+\newcommand{\EisFun}[1] {\mathtt{is\_function}\texttt{(}{#1}\texttt{)}}
+\newcommand{\EtupleSize}[1] {\mathtt{tuple\_size}\texttt{(}{#1}\texttt{)}}
+
+%%% Definitions for TypeSpec %%%
+\newcommand{\TSA} {\texttt{A}}  % Annotations
+\newcommand{\TSE} {\texttt{E}}  % Expressions
+\newcommand{\TSP} {\texttt{P}}  % Patterns
+\newcommand{\TSG} {\texttt{G}}  % Guards
+\newcommand{\TSO} {\texttt{O}}  % Operators
+\newcommand{\TST} {\texttt{T}}
+\newcommand{\TSB} {\texttt{B}}  % Basic types
+\newcommand{\TSF} {\texttt{F}}  % Fields
+
+\newcommand{\TSAn}[1][\TSE] {\ov{\texttt{@spec}\,\,{#1}}}
+\newcommand{\TSFn}[2] {\texttt{$x$(}{#1}\texttt{)}\,\,\texttt{::}\,\,{#2}}
+
+%%% Definitions for Elixir Type %%%
+\newcommand{\ETA} {\texttt{A}}  % Annotations
+\newcommand{\ETS} {\texttt{S}}  % Signatures
+\newcommand{\ETP} {\texttt{P}}  % Patterns
+\newcommand{\ETG} {\texttt{G}}  % Guards
+\newcommand{\ETO} {\texttt{O}}  % Operators
+\newcommand{\ETT} {\texttt{T}}
+\newcommand{\ETB} {\texttt{B}}  % Base types
+\newcommand{\ETK} {\texttt{K}}  % Keys
+\newcommand{\ETF} {\texttt{F}}  % fields
+\newcommand{\Atom} {\textit{A}}  % atom()
+\newcommand{\SAtom} {\texttt{:$k$}}  % singleton atoms
+
+\newcommand{\ETSg}[1][\ETE] {\texttt{\$}\,\,{#1}}
+\newcommand{\ETFn}[2][\ov{\ETT}] {#1\,\texttt{->}\,#2}
+
+\newenvironment{grammarfig} 
+   {\begin{equation*}\begin{array}{lrcll}}
+   {\end{array}\end{equation*}}
+
+\newenvironment{translationfig}
+  {\noindent\begin{minipage}{\linewidth}
+   \begin{array}[t]{@{}lrcll@{}}}
+  {\end{array}\end{minipage}}
+
+\newenvironment{codefig}
+  {\begin{minipage}{\linewidth}
+   \begin{array}[t]{@{}lrcll@{}}}
+  {\end{array}\end{minipage}}

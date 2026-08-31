@@ -1,0 +1,148 @@
+\section{TypeSpecs Syntax Specification}
+
+\input{figures/fig-typespecs-types.tex}
+
+The syntax specification of TypeSpecs is provided in Figure~\ref{app:typespecs-syntax}~\cite{elixir-typespecs,erlang-typespecs}.
+
+An annotation consists of directive \texttt{@spec} followed by expression, \TSE.
+Since an annotation can be empty, one, or multi-clause, we describe it as a sequence by putting overline.
+
+An expression can be entailed by type variables with \texttt{when} keyword.
+Unlike the sequence in an expression, the type variable sequence does not mean that it can be empty because once signified with \texttt{when} the clause must contain at least one type variable (Note: The non-empty sequence with overline only applies to type variables).
+
+The types addressed in this specification are the most basic and atomic types of TypeSpec annotations, and they are not defined in terms of other types:
+
+\begin{itemize}
+    \item \texttt{$\alpha$}
+    represents a type variable, which can be instantiated to any type.
+    \item \texttt{\TST|\TST}
+    represents the union of two types, which includes all values that belong to either type.
+    \item \texttt{any()} 
+    is the top type that is a set (union) of all the types.
+    \item \texttt{none()}
+    is the bottom type that is an empty set.
+    \item \texttt{atom()} and \texttt{:$k$}
+    represent the type of all atoms and the singleton type of a specific atom, respectively.
+    \item \texttt{pid()}, \texttt{port()}, and \texttt{reference()}
+    represent the types of process identifiers, ports, and references, respectively.
+    \item \texttt{float()} and \texttt{integer()}
+    represent the type of all decimal point numbers and all digit numbers, respectively.
+    \item \texttt{neg\_integer()}, \texttt{non\_neg\_integer()}, and \texttt{pos\_integer()}
+    represent integers with specific interval ranges: \texttt{neg\_integer()} from -1 to negative infinity, \texttt{non\_neg\_integer()} from 0 to positive infinity, and \texttt{pos\_integer()} from 1 to positive infinity.
+    \item \texttt{tuple()} and \tuple{\ov{\TST}}
+    represent the type of all tuples and a tuple type with a sequence of element types, respectively.
+    Although \texttt{tuple()} is a supertype of any type represented by \tuple{\ov{\TST}}, it is necessary to contain both in the syntax specification because \texttt{tuple()} is a open tuple type that cannot be described by literal tuple types, e.g., \texttt{tuple()} can represent \texttt{tuple()} itself but \tuple{\ov{\TST}} cannot.
+    \item \map{\ov{\TSF}} 
+    represent a single map type with a sequence of field types. 
+    Notice that we don't include \texttt{map()} in the syntax specification because TypeSpecs only has closed map types, which means \texttt{map()} can be represented by unions of all the possible field types.
+    \item \texttt{[]} and \texttt{nonempty\_maybe\_improper\_list(\TST, \TST)}
+    represent the type of empty list and non-empty list, respectively.
+    The \textit{maybe improper} indicates that the termination type of a list can be either another list or any other type, which is the reason why the second argument of \texttt{nonempty\_maybe\_improper\_list} is not fixed to a list type.
+    \item \texttt{<<>>}, \texttt{<<\_::$n$>>}, \texttt{<<\_::\_*$n$>>}, and \texttt{<<\_::$n$, \_::\_*$n$>>}
+    represent the types of bitstrings in literal form.
+    The first one is an empty bitstring type, the second one is a non-empty bitstring type with a fixed size $n$, the third one is a non-empty bitstring type with a size that is a multiple of unit $n$, and the last one is a non-empty bitstring type that starts with a bitstring of a size $n$ followed by another bitstring.
+    \item \texttt{(\fun{$\ov{\TST}$}{\TST})} and \texttt{(\fun{\dots}{\TST})}
+    represent the types of function in literal form.
+    The first one is a function type with a fixed arity that takes a sequence of argument types and returns a return type, while the second one is a function type with an arbitrary arity that takes any number of arguments and returns a return type.
+    \item \texttt{$n$} and \texttt{$n$..$n'$}
+    represent the types of integers in literal form.
+    The first one is a singleton type that represents a specific integer $n$, while the second one is an interval type that represents all integers from $n$ to $n'$.
+\end{itemize}
+
+A field type can be either a required or optional; intuitively, required field types mandate values of the types to be present in a map, while optional field types allow them to be absent.
+Notwithstanding the fact that we can syntactically specify required or optional for any key types, the nature of a field is not determined by either keyword.
+In TypeSpecs with Dialyzer, mandatory types are literal types and all other types are considered optional.
+Moreover, prescribing a key type is not forced and this causes confusion in field type comprehension.
+We will discuss more about field types in translation and approximation sections, but for now it is sufficient to say that the field types are necessary to be in the syntax specification because they are the building blocks of map types, which are one of the most commonly used types in TypeSpecs.
+
+\subsection{TypeSpecs Built-in Types and Syntactic Sugar}
+
+TypeSpecs provides a variety of built-in types and syntactic sugars that are not explicitly defined.
+We include tables for the built-in types and syntactic sugars in Table~\ref{app:typespecs-builtin-types} and Table~\ref{app:typespecs-syntactic-sugars} for the completeness and smoothness in parsing and translation:
+
+\input{figures/fig-typespecs-sugar-builtin.tex}
+
+The grammar in Figure~\ref{app:typespecs-syntax} intentionally contains only the core TypeSpecs constructs. 
+However, TypeSpec programs usually use a larger surface language consisting of built-in type aliases and syntactic sugars. 
+These forms do not add new semantic categories; instead, they are expanded into the core syntax before translation. 
+We therefore treat the tables in Table~\ref{app:typespecs-builtin-types} and Table~\ref{app:typespecs-syntactic-sugars} as a normalisation layer between concrete TypeSpecs syntax and the formal translation rules.
+Built-in types are mostly derived names for common combinations of primitive types. 
+For instance, \texttt{term()} is equivalent to \texttt{any()}, \texttt{no\_return()} is equivalent to \texttt{none()}, and \texttt{number()} abbreviates \texttt{integer() | float()}. 
+Other built-ins describe common refinements, such as \texttt{arity()}, \texttt{byte()}, and \texttt{char()}, or common recursive data structures, such as \texttt{iolist()} and \texttt{iodata()}. 
+The list-related built-ins are particularly important because TypeSpecs distinguishes empty lists, non-empty lists, proper lists, and maybe-improper lists.
+Syntactic sugars are different from built-in types: they are alternative concrete notations for existing type expressions. 
+For example, \texttt{true}, \texttt{false}, and \texttt{nil} are parsed as the singleton atom types \texttt{:true}, \texttt{:false}, and \texttt{:nil}. 
+Similarly, \texttt{[\TST]} abbreviates \texttt{list(\TST)}, while \texttt{[\TST, ...]} abbreviates \texttt{nonempty\_list(\TST)}. 
+For maps, the field notation \texttt{$k$:\,\TST} expands to a singleton atom key, and struct notation expands to a map containing the distinguished \texttt{:\_\_struct\_\_} field.
+This separation keeps the translation relation small: the formal rules only need to translate the core syntax, while every built-in type or syntactic sugar is first expanded according to the tables.
+
+\section{Elixir Types Syntax Specification}
+
+\input{figures/fig-elixir-types.tex}
+
+The syntax specification of Elixir Types is provided in Figure~\ref{app:elixir-types-syntax} and is derived from Featherweight Elixir syntax by ~\cite{duboc2024}.
+
+This specification focuses on comparison with TypeSpecs for the translation defined in the following sections.
+An annotation consists of the directive \texttt{\$} followed by a signature, \ETS.
+Similarly to TypeSpecs, an annotation can be entailed by type variables with the \texttt{when} keyword.
+However, Elixir Types does not use multi-clause annotations in the same way as TypeSpecs.
+Instead, multiple signatures can be combined inside a single annotation with the set-theoretic connective \texttt{and}.
+
+The main difference from TypeSpecs is that the new Elixir type system is explicitly set-theoretic.
+Each type denotes a set of runtime values, and the type connectives are interpreted as set operations.
+The type \texttt{term()} denotes the set of all values, \texttt{none()} denotes the empty set, \texttt{or} denotes union, \texttt{and} denotes intersection, and \texttt{not} denotes complement.
+For example, \texttt{integer() or binary()} denotes the values that are either integers or binaries, while \texttt{term() and not nil} denotes all values except \texttt{nil}.
+In addition, Elixir Types contain the gradual type \texttt{dynamic()}.
+Unlike \texttt{term()}, which statically denotes all values, \texttt{dynamic()} marks parts of a type whose precision is intentionally unknown.
+This distinction is important for gradual checking, but in the translation from TypeSpecs it is usually preferable to generate precise types when the source annotation provides enough information.
+
+The types addressed in this specification are the core forms used by Elixir Type annotations:
+
+\begin{itemize}
+    \item \texttt{$\alpha$}
+    represents a type variable, which can be constrained in a \texttt{when} clause.
+    \item \texttt{term()}, \texttt{none()}, and \texttt{dynamic()}
+    represent the top type, the bottom type, and the gradual type, respectively.
+    \item \texttt{or}, \texttt{and}, and \texttt{not}
+    represent union, intersection, and negation.
+    These connectives make it possible to express precise combinations of types without introducing new ad-hoc type constructors.
+    \item \texttt{:$k$}
+    ranges over the key types that can appear as map keys.
+    These include atoms, singleton atoms, process identifiers, ports, references, numbers, bitstrings, binaries, tuples, open maps, functions, and lists.
+    \item \texttt{$n$..$n$}, \texttt{infty..$n$}, and \texttt{$n$..infty}
+    represent integer intervals.
+    These are treated as an internal representation rather than as ordinary user-facing syntax.
+    \item \tuple{\ov{\ETT}} and \tuple{\ov{\ETT},\texttt{...}}
+    represent closed and open tuple types, respectively.
+    A closed tuple fixes the number of elements, whereas an open tuple allows additional elements after the listed prefix.
+    \item \map{\ov{\ETF}} and \map{\texttt{...},\ov{\ETF}}
+    represent closed and open map types, respectively.
+    A closed map describes only the listed fields, whereas an open map may contain fields not explicitly listed.
+    \item \texttt{empty\_list()} and \texttt{non\_empty\_list(\ETT, \ETT)}
+    represent the empty list and non-empty list types.
+    The second argument of \texttt{non\_empty\_list} represents the tail type, which allows the syntax to describe both proper and improper lists.
+    \item \texttt{(\fun{$\ov{\ETT}$}{\ETT})}
+    represents a function type with a fixed sequence of argument types and a return type.
+\end{itemize}
+
+Field types in Elixir Types differ from TypeSpecs field types.
+A singleton atom field \texttt{:$k$\,=>\,\ETT} describes a mandatory field whose key must be present.
+For every other key type, the field has the form \texttt{\ETK\,=>\,if\_set(\ETT)}, meaning that values associated with keys in \ETK{} must have type \ETT{} whenever such fields are present.
+This distinction makes optionality explicit in the type language and avoids the ambiguity of TypeSpecs fields, where \texttt{required} and \texttt{optional} do not fully determine the behaviour observed by Dialyzer.
+
+
+\subsection{Elixir Type Built-in Types and Syntactic Sugar}
+
+\input{figures/fig-elixir-sugar-builtin.tex}
+
+As with TypeSpecs, the grammar in Figure~\ref{app:elixir-types-syntax} contains only the core forms of the language.
+The built-in types and syntactic sugars in Table~\ref{app:elixir-type-builtin-types} and Table~\ref{app:elixir-type-syntactic-sugars} are therefore treated as derived forms.
+The set-theoretic connectives make many derived types straightforward: for instance, \texttt{boolean()} expands to the union \texttt{:true or :false}, and \texttt{number()} expands to \texttt{integer() or float()}.
+List aliases are also definable from \texttt{empty\_list()} and \texttt{non\_empty\_list(\ETT, \ETT')}, which are the primitive list forms in the grammar.
+
+The syntactic sugars mostly provide compact notation for common open structures and map fields.
+For example, \texttt{\{...\}} denotes the open tuple type \texttt{tuple()}, and \texttt{\%\{...\}} denotes the open map type \texttt{open\_map()}.
+For map fields, \texttt{not\_set()} is a shorthand for \texttt{if\_set(none())}, and non-singleton key fields are implicitly optional through \texttt{if\_set}.
+Consequently, the translation can target the core Elixir Types syntax after desugaring, while still preserving the set-theoretic interpretation of the generated type.
+
+The translation rules defined in the next section therefore assume all TypeSpec annotations have been fully desugared, i.e., expanded; the implementation applies this normalisation as a parsing pass before applying the rules.

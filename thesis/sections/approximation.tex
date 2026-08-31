@@ -1,0 +1,107 @@
+\section{Total Approximating Translation of TypeSpecs into Elixir Types}
+
+The translation defined so far is partial since some TypeSpec types do not have their exact corresponding types in Elixir Types. 
+This is not a weakness of the Elixir Type system, but rather a consequence of the design choices made for Elixir Types, to keep it as simple as possible while still being useful. 
+However, it is possible to define a total translation from types in TypeSpecs to ones in Elixir Types by approximating the original types in TypeSpecs. 
+Total translation is useful in the context of migration, when we need to ensure that every type in TypeSpecs is represented in Elixir Types even approximately.
+
+More precisely, the previous translations are \textit{undefined} in the cases of translating field types; when $\dsb{\TST}$ in $\dsb{\texttt{required(\TST) => $\prm{\TST}$}}$ or $\dsb{\texttt{optional(\TST) => $\prm{\TST}$}}$ is not equivalent to a disjunction of pairwise distinct key types.
+
+In the rest of this section we give a conservative extension of the translation defined so far that is total, i.e., it is defined for every type in TypeSpecs. 
+The extension consists in defining approximations for the cases where the previous translation is undefined.
+
+\subsection{Approximation of Field Types}
+
+The merging case with conjunctive left-hand sides does not only perform merge function but also conduct approximation of types in TypeSpecs that are smaller than key types in Elixir Types.
+That is because while merge must take original intention of types in TypeSpecs into account, if we compare left-hand side types after blunt individual type approximation, in particular over-approximation, the transition could omit subtle type information.
+
+Keeping that in mind, we can safely write the promotion rule with approximation from TypeSpec types that are \textit{undefined} to key types in Elixir Types.
+Which rule essentially lets an approximated type carry its original type so that the merge function can use the extra information to minimise the loss of the original semantics in translation.
+
+To begin with, we approximate the left-hand side of a field type $\dsb{\TST}$ to $\ETK$, i.e., to its smallest supertype in Elixir key types.
+Then superscript the original type information to the approximated type, $\ETK^{\dsb{\TST}}$.
+In other words, $\ETK^{\dsb{\TST}}$ is the key type promoted from $\dsb{\TST}$. 
+This is important for the merge function when applied to approximated field types in terms of comparison.
+Consider merging \texttt{1..2\,\,\fto\,\,integer()} and \texttt{3..4\,\,\fto\,\,float()}. 
+Although the key types are disjunctive, if we approximate \texttt{1..2} and \texttt{3..4} without the original information, the key type comparison merely becomes of \texttt{integer()} with \texttt{integer()}, resulting in completely overwriting one for another.
+Whereas, with our promotion rule, the merge function can use the preserved information for the comparison keeping both right-hand side types in the given example.
+Hence, to rewrite the translation of field types after applying the promotion rule:
+
+\begin{figure} [H]
+   \begin{translationfig}
+      \dsb{\texttt{required(\TST) => $\prm{\TST}$}} = 
+      \left\{
+         \begin{array}{ll}
+            \texttt{[\,:$k^{:k}$\,\,=>\,\,$\dsb{\prm{\TST}}$\,]}
+            & \textsl{if}\,\,\,\,\dsb{\TST}\,\approx\,\texttt{:}k
+            \nl
+            \texttt{[\,}\bigvee_{i=1}^{n} \SAtom_{i}^{\SAtom_i} \fto \ifset{\dsb{\prm{\TST}}}
+            & \textsl{if}\,\,\,\,\dsb{\TST}\,\not\approx\,\texttt{:}k \textsl{ and } \dsb{\TST} = \bigvee_{i=1}^{n}\SAtom \vee \TST_0
+            \nl
+            \texttt{,\,} \bigvee_{\{\ETK\in\mathbb{K}^{+} \,|\,\dsb{\TST_0} \cap \ETK  \neq \emptyset\}}\ETK^{\dsb{\TST_0}}\fto\ifset{\dsb{\prm{\TST}}}\texttt{\,]}
+            & \textsl{and } \TST_0 \cap \texttt{atom()} = \textsl{( }\emptyset \textsl{ or } \texttt{atom()} \textsl{)} 
+            % \texttt{[\,}\bigvee_{\{\ETK\in\mathbb{K}^{+} \,|\,\dsb{\TST} \cap \ETK  \neq \emptyset\}}\ETK^{\dsb{\TST}}\fto\ifset{\dsb{\prm{\TST}}}\texttt{\,]}
+            % & \textsl{if}\,\,\,\,\dsb{\TST}\,\not\approx\,\texttt{:}k
+         \end{array}
+      \right.
+      \nl \nl
+      \dsb{\texttt{optional(\TST) => $\prm{\TST}$}} =  
+      \left.
+         \begin{array}{ll}
+            \texttt{[\,}\bigvee_{i=1}^{n} \SAtom_{i}^{\SAtom_i} \fto \ifset{\dsb{\prm{\TST}}}
+            & %\textsl{if}\,\,\,\,\dsb{\TST}\,\not\approx\,\texttt{:}k 
+            \textsl{where } \dsb{\TST} = \bigvee_{i=1}^{n}\SAtom \vee \TST_0
+            \nl
+            \texttt{,\,} \bigvee_{\{\ETK\in\mathbb{K}^{+} \,|\,\dsb{\TST_0} \cap \ETK  \neq \emptyset\}}\ETK^{\dsb{\TST_0}}\fto\ifset{\dsb{\prm{\TST}}}\texttt{\,]}
+            & \textsl{with } \TST_0 \cap \texttt{atom()} = \textsl{( }\emptyset \textsl{ or } \texttt{atom()} \textsl{)}
+         \end{array}
+      \right.
+   \end{translationfig}
+   \\[4mm] where $\mathbb{K}^{+}$ is a set of all the key types except singleton atom types, i.e., $\mathbb{K}^{+}$ is the set \{\texttt{atom()}, \texttt{pid()}, \texttt{port()}, \texttt{reference()}, \texttt{float()}, \texttt{integer()}, \texttt{bitstring()}, \texttt{binary()}, \texttt{tuple()}, \texttt{open\_map()}, \texttt{fun()}, \texttt{list()}\}
+   \caption{Approximated Translation in Field Types}
+   \label{app:approximated-translation-in-field-types}
+\end{figure}
+
+From this approximated translation, the merge function extends its definition further with the extra information.
+In the following definition, we substitute superscripted $\dsb{\TST}$ with $\orgtype$ for convenience.
+
+\begin{figure} [H]
+   \[\begin{array}{rclll}
+      \texttt{[}\,L_1\texttt{]} \oplus \texttt{[\,]} &=& \texttt{[}\,L_1\texttt{]} && \textsc{(M1)} \\
+      L_1 \oplus \texttt{[}\,\ETK^{\orgtype}\fto\tau,\,\,L_2\texttt{]} &=& \texttt{[}\,\ETK^{\orgtype}\fto\tau,\,\,L_1\,\texttt{]} \oplus L_2 & \textsl{if }\ \ETK\not\in L_1 & \textsc{(M2)} \\
+      L_1 \oplus \texttt{[}\,\ETK^{\orgtype}\fto\tau,\,\,L_2\texttt{]} &=& L_1 \oplus L_2 & \textsl{if }\ \ETK^{\prm{\orgtype}} \in L_1 \textsl{ and } \ETK \cap {\orgtype} \leq \ETK \cap \prm{\orgtype} & \textsc{(M3)} \\
+      L_1 \oplus \texttt{[}\,\ETK^{\orgtype}\fto\tau,\,\,L_2\texttt{]} &=& \texttt{[}\,\ETK^{\orgtype\,\vee\,\prm{\orgtype}}\fto\tau \texttt{ or }\prm{\tau},\,\,L_1 \setminus \ETK^{\prm{\orgtype}}\texttt{]} \oplus L_2  & \textsl{if }\ \ETK^{\prm{\orgtype}}\fto\prm{\tau} \in L_1 \textsl{ and } \ETK \cap \orgtype \nleq \ETK \cap \prm{\orgtype} & \textsc{(M4)} \\
+      L_1 \oplus \texttt{[}\,\SAtom^{\orgtype}\fto\tau,\,\,L_2\texttt{]} &=& L_1 \oplus L_2 & \textsl{if }\ \texttt{atom()}^{\prm{\orgtype}} \in L_1 \textsl{ and } \SAtom \leq \prm{\orgtype} & \textsc{(M5)} \\
+      L_1 \oplus \texttt{[}\,\SAtom^{\orgtype}\fto\ETT,\,\,L_2\texttt{]} &=& \texttt{[}\,\SAtom^{\prm{\orgtype}}\fto\prm{\ETT},\,\,L_1 \setminus \SAtom^{\prm{\orgtype}}\,\texttt{]} \oplus L_2 & \textsl{if }\ \SAtom^{\prm{\orgtype}}\fto\texttt{if\_set}(\prm{\ETT}) \in L_1 & \textsc{(M6)} \\
+      \\
+   \end{array}\]
+   \\[4mm] we use the following notation: (1) $\ETK^{\orgtype} \in L$ if $\,\exists\ \tau$ such that $\ETK^{\orgtype}\fto\tau \in L$; (2) $\ETK \in L$ if $\,\exists\ \orgtype$, $\tau$ such that $\ETK^{\orgtype}\fto\tau \in L$; and (3) $L \setminus \ETK$ for $L \setminus (\ETK^{\orgtype}\fto\tau)$ if $\,\exists\, \orgtype$, $\tau$ such that $\ETK^{\orgtype}\fto\tau \in L$.
+   \caption{Merge in Approximated Field Types}
+   \label{app:merge-in-approximated-field-types}
+\end{figure}
+
+While the rest of rules are modified to operate disjoint merge cases, both Rule \textsc{(M1)} and \textsc{(M2)}, two cases describing the complete disjoint, trivially behave the same as merging field types without the promotion rule.
+
+The disjoint merge cases are divided into two groups: Rule \textsc{(M3)} and \textsc{(M4)}, and Rule \textsc{(M5)} and \textsc{(M6)}.
+The former group defines the cases when the approximated key type of a merging field type is not a singleton atom key type.
+Conversely, the latter defines others when the key type is a singleton atom type.
+
+In Rule \textsc{(M3)} and \textsc{(M4)}, if a key type match is found in the merged list, we intersect its key type with its original type, and intersect the key type with another from the merging field type, in order to compare the result types and find their subtype relationship.
+When the subtype relationship is met, the merging field type is voided, which is the definition of Rule \textsc{(M3)}.
+Otherwise, we append the merging field type to the list with two union operations: a unification of superscripted original left-hand types from both fields; and that of right-hand types.
+Since Rule \textsc{(M4)} append a newly merged field to the list, the field type found in the list is eradicated in order not to carry duplicated fields.
+
+The bottom line of Rule \textsc{(M5)} is as same as Rule \textsc{(M3)}.
+It describes that a merging field type with any singleton atom key type is overwritten by a field type with \texttt{atom()} as its key type.
+This rule applies because it is always true that $s = \SAtom$ in $\SAtom^{s}$, and $\prm{s} = \texttt{atom()}$ in $\texttt{atom()}^{\prm{s}}$.
+
+The approach of Rule \textsc{(M6)} is different from the previous rules.
+This rule describes when attempted merging a required field type.
+If the merged list has an optional field type with the same singleton atom type as its key type, this field turns into a required field type and the merging field is removed.
+
+We revise the field type translation to $\dsb{\map{\texttt{\TSF$_1$,\,...,\,\TSF$_n$}}} = \textsf{\textsl{erase}(\textsl{map}($\bigoplus_{i=1}^{n}$$\dsb{\TSF_i}$))}$, where \textsl{erase} eradicates the superscripted original types and only leaves the allowed Elixir key types. Thus, by merging \textsf{Empty} to that end of merges, we obtain a saturated map, $\dsb{\map{\texttt{\TSF$_1$,\,...,\,\TSF$_n$}}} =\textsf{\textsl{erase}(\textsl{map}($\bigoplus_{i=1}^{n}$$\dsb{\TSF_i}$$\,\oplus\,\texttt{Empty}$))}$.
+
+In addition, although we take every map type as closed, \texttt{map()} in TypeSpecs is in fact an open map, i.e., \texttt{\%\{optional(any())} $\fto$ \texttt{any()\}}.
+Which is expanded to a list of every key type mapping to \texttt{term()} when translated, hence effectively overwriting all the following field types.
+This is all solid but listing every key type to the top type is definitely burdensome when displaying it.
+Then we denote this with triple dots in a map type: $\map{\dots}$; and also with preceding required field type: $\map{\dots, \SAtom => \ETT}$.

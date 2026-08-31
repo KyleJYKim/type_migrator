@@ -1,0 +1,149 @@
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath, amssymb, amsfonts}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{booktabs}
+\usepackage{siunitx}
+\usepackage{hyperref}
+\usepackage{float}
+\usepackage{textgreek}
+\usepackage{fancyhdr}
+\usepackage{mathptmx}
+\usepackage[absolute,overlay]{textpos}
+\usepackage{background}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+
+\renewcommand{\arraystretch}{1.3}
+% BIBLIOGRAPHY
+% Use apalike style for alphabetical order and author-year citations
+\usepackage{natbib}
+%\bibliographystyle{apalike}  
+
+\usepackage{mathtools}
+\usepackage[scaled]{beramono} % nice monospaced font for \texttt
+\usepackage{mathpartir} % for inference/grammar-like notation (optional)
+\usepackage[dvipsnames]{xcolor}
+\usepackage{stmaryrd}
+\usepackage{listings}
+
+% PAGE LAYOUT
+% \geometry{a4paper, margin=1in}
+\usepackage[
+  left=1.8cm,
+  right=1.8cm,
+  top=2cm,
+  bottom=2cm
+]{geometry}
+
+\definecolor{elxkeyword}{RGB}{0,0,120}
+\definecolor{elxcomment}{RGB}{100,100,100}
+\definecolor{elxstring}{RGB}{150,0,0}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+
+\lstdefinelanguage{Elixir}{
+  morekeywords={
+    def, defp, defmodule, defmacro,
+    do, end, fn,
+    case, cond, if, unless,
+    receive, after,
+    try, catch, rescue, else,
+    when, with,
+    true, false, nil,
+    and, or, not,
+    use, alias, require, import
+  },
+  sensitive=true,
+  morecomment=[l]{\#},
+  morestring=[b]",
+  alsoletter={?,!},
+}
+
+\lstset{
+   language=Elixir,
+   basicstyle=\ttfamily\small,
+   backgroundcolor=\color{backcolour},
+   numberstyle=\tiny\color{codegray},
+   keywordstyle=\color{elxkeyword}\bfseries,
+   commentstyle=\color{elxcomment}\itshape,
+   stringstyle=\color{elxstring},
+   breakatwhitespace=false,         
+   breaklines=true,                 
+   captionpos=b,                    
+   keepspaces=true,                 
+   numbers=left,                    
+   numbersep=5pt,                  
+   showspaces=false,                
+   showstringspaces=false,
+   showtabs=false,                  
+   tabsize=2,
+   frame=single,
+   columns=fullflexible,
+   escapeinside={(*@}{@*)}
+}
+
+% Add this configuration to set the font size for captions
+\captionsetup[figure]{font=footnotesize}
+\captionsetup[table]{font=footnotesize}
+% Number figures and tables with section number
+% \numberwithin{figure}{chapter}
+% \numberwithin{table}{chapter}
+
+\definecolor{elxkeyword}{RGB}{0,0,120}
+\definecolor{elxcomment}{RGB}{100,100,100}
+\definecolor{elxstring}{RGB}{150,0,0}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+
+\lstdefinelanguage{Elixir}{
+  morekeywords={
+    def, defp, defmodule, defmacro,
+    do, end, fn,
+    case, cond, if, unless,
+    receive, after,
+    try, catch, rescue, else,
+    when, with,
+    true, false, nil,
+    and, or, not,
+    use, alias, require, import
+  },
+  sensitive=true,
+  morecomment=[l]{\#},
+  morestring=[b]",
+  alsoletter={?,!},
+}
+
+\lstset{
+   language=Elixir,
+   basicstyle=\ttfamily\small,
+   backgroundcolor=\color{backcolour},
+   numberstyle=\tiny\color{codegray},
+   keywordstyle=\color{elxkeyword}\bfseries,
+   commentstyle=\color{elxcomment}\itshape,
+   stringstyle=\color{elxstring},
+   breakatwhitespace=false,         
+   breaklines=true,                 
+   captionpos=b,                    
+   keepspaces=true,                 
+   numbers=left,                    
+   numbersep=5pt,                  
+   showspaces=false,                
+   showstringspaces=false,
+   showtabs=false,                  
+   tabsize=2,
+   frame=single,
+   columns=fullflexible,
+   escapeinside={(*@}{@*)}
+}

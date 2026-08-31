@@ -1,0 +1,169 @@
+\section{Dataset Construction}
+\label{sec:dataset-construction}
+
+To evaluate the translation and to validate the output empirically, we constructed a dataset drawn from real world open-source Elixir projects.
+The dataset records extracted TypeSpec annotations, translated Elixir Type annotations, function definition, associated user-defined (or remote) types, and outcomes of Dialyzer and the new typechecker from the compiler.
+This section describes how the dataset is built, how each tool is invoked, and how the results are structured.
+
+\subsection{Overview}
+% And the repos (projects)?
+% Remove type_examples later.
+The dataset covers \textbf{383 repositories from 54 distinct owners} (GitHub organisations and individual maintainers, with three repositories hosted on other forges) and contains \textbf{\num{23073} translated function specifications}.
+Construction proceeds in three sequential stages driven by three Mix tasks:
+\begin{enumerate}
+    \item \textit{Translation execution} (\texttt{mix run\_translation}), which translates every \texttt{@spec} in the corpus and emits \texttt{dataset.jsonl}.
+    \item \textit{Dialyzer analysis} (\texttt{mix run\_dialyzer}), which runs Dialyzer on the translated projects and enriches each dataset entry with Dialyzer outcomes.
+    \item \textit{Typechecker execution} (\texttt{mix run\_typecheck}), which runs the new Elixir compiler's typechecker and enriches entries with its outcomes.
+\end{enumerate}
+Each stage reads and rewrites the same target dataset file so that the three stages compose into a single artefact.
+
+\subsection{Dataset Entry Schema}
+
+Each line of \texttt{dataset.jsonl} is a JSON object with the following fields:
+
+\begin{itemize}
+    \item \texttt{project}, \texttt{module}, \texttt{function}, \texttt{arity}: the identity of the function.
+    \item \texttt{file}: the source file path relative to the corpus root (e.g.\ \texttt{cldr/cldr47/lib/cldr.ex}). Because the same \texttt{(module, function, arity)} may occur in several sub-projects under one organisation, this field is what disambiguates a warning's true target; see Subsection~\ref{sec:warning-association}.
+    \item \texttt{spec}: the original \texttt{@spec} annotation as a string.
+    \item \texttt{elixir\_type}: the translated annotation produced by the migrator.
+    \item \texttt{type}: the list of \texttt{@type} definitions in scope for the function.
+    \item \texttt{definition}: the full function source reconstructed from the AST.
+    \item \texttt{spec\_lines}, \texttt{start\_line}, \texttt{end\_line}: source location metadata.
+    \item \texttt{dialyzer}: an object with fields \texttt{analysis} (\texttt{"success"} or \texttt{"failed"}), \texttt{pass} (Boolean), and \texttt{messages}. Each message records its \texttt{category}, \texttt{line}, \texttt{message} text, and an explicit \texttt{target} (the \texttt{Module.function/arity} the warning is attributed to).
+    \item \texttt{typecheck}: an object with fields \texttt{analysis}, \texttt{pass}, and \texttt{messages}, each message recording \texttt{target}, \texttt{line}, and \texttt{message}.
+\end{itemize}
+
+\subsection{Stage 1: Translation Execution}
+
+Translation is orchestrated by \texttt{TranslationRunner.main/1}.
+It begins with a full-corpus type-cache build: all source files are passed to \texttt{Migrator.TypeTranslator.process/1}, which scans every \texttt{@type}, \texttt{@opaque}, and \texttt{@typep} declaration across the repository and builds a module-indexed table of parsed type definitions.
+This global pre-pass is necessary so that user-defined types are available for substitution when TypeSpec annotations from individual files are translated later.
+
+Files are then processed concurrently using \texttt{Task.async\_stream} with one task per source file and a concurrency limit of \texttt{System.schedulers\_online()}, matching the number of logical CPU cores available at runtime.
+Each task is independent: it reads the source file, extracts specs, invokes the migrator, and produces a list of dataset entries without communicating with other tasks.
+Each task proceeds as follows.
+
+\paragraph{TypeSpec extraction.}
+The file is parsed into an AST and walked by a recursive extractor that traverses \texttt{defmodule}, \texttt{\_\_block\_\_}, \texttt{@spec}, \texttt{def}, and \texttt{defp} nodes.
+For each function that has a matching \texttt{@spec}, the extractor records a structured entry containing the spec text, input and output AST nodes, guard clauses, source line numbers, and the full function body reconstructed via \texttt{Macro.to\_string/1}.
+End-line positions are derived by walking the function's AST with \texttt{Macro.prewalk} and tracking the maximum line number seen.
+
+\paragraph{Elixir Type injection.}
+The migrator is invoked with the \texttt{:descr\_assert} output mode on the pre-modification file, producing a list of translated annotations keyed by the \texttt{@spec} line numbers.
+This is done before any file writes so that the line numbers used by the extractor and by the migrator are consistent.
+The migrator also inserts \texttt{@assert\_type\_form} lines on a line above corresponding TypeSpecs in the target source file; these are later consumed by the typechecker.
+
+\paragraph{Struct representation and its resolution limit.}
+\label{sec:struct-representation}
+A struct type is translated to a set-theoretic map keyed on \texttt{\_\_struct\_\_}.
+Because every Elixir module is represented on the BEAM by an \texttt{Elixir.}-prefixed atom---a full struct name is an atom, for example, a struct defined in a module named \texttt{Some} is fully expanded to \texttt{:"Elixir.Module"}~\cite{elixir-modules-atoms}; a bare \texttt{:"Plausible.Site"} is a different atom that a \texttt{\%Plausible.Site\{\}} pattern can never match.
+When the struct's fields are all resolvable, the type is emitted as a \emph{closed} map, faithful to the fact that a struct admits no unregistered keys.
+When the defining module lies outside the translation path, so its \texttt{defstruct} is unresolved, the exact closed type cannot be written, hence, the struct is switched to a open map and then intersected with (\texttt{dynamic()}) retaining \texttt{\_\_struct\_\_}-keyed field, consistent with the translator's treatment of every other unresolvable definition (a remote type outside the path is likewise replaced with \texttt{dynamic()}).
+Although switching to an open map is broadening, this is necessary because a struct type likely has its fields and since there is no way to find out the filed types, we choose a type that is compatible rather than leaving it incorrect.
+% Two residuals remain and are irreducible without a symbol table: a struct referenced through a local alias the translator cannot expand to its full module path, and a struct whose field set cannot be recovered.
+% These are the genuine cost of AST-based translation without a persistent lookup table (PLT), and their downstream effect on the typechecker is quantified in Subsection~\ref{sec:typecheck-only}.
+
+\paragraph{Annotation matching.}
+Translated annotations are joined to spec entries by matching on the \texttt{@spec} line number.
+Each entry also records its \texttt{file} (the source path relative to the corpus root), which later disambiguates warnings whose \texttt{(module, function, arity)} is not unique across the organisation's sub-projects.
+The result for each file is a list of entries ready for serialisation.
+
+\paragraph{Fault tolerance.}
+Each file task is wrapped in \texttt{with\_retry/2}, which re-attempts the task up to three times on exception and logs a warning on each failure.
+Tasks that exceed a 60-second timeout are killed and omitted from the output.
+
+The entries from all tasks are collected and written to \texttt{results/dataset.jsonl} as newline-delimited JSON.
+
+\paragraph{DatasetWriter.}
+For runs that accumulate results incrementally, a \texttt{DatasetWriter} GenServer provides concurrent write access to the file.
+Write requests arrive as asynchronous \texttt{cast} messages so that callers are never blocked.
+Before each write, the server loads the existing file, computes a deduplication key of \texttt{(project, module, function, arity)} for each incoming entry, removes any existing entries with matching keys, and then writes the merged content atomically.
+A synchronous \texttt{flush} call, used at shutdown, drains the message queue before the process terminates.
+
+\subsection{Stage 2: Dialyzer Analysis}
+
+Dialyzer analysis is performed by \texttt{DialyzerRunner.main/1}.
+The runner loads the existing dataset to determine which projects are present, then discovers all Mix project roots under the translation output directory by globbing for \texttt{mix.exs} files and filtering out umbrella sub-applications to avoid double-counting.
+
+\paragraph{Dependency injection.}
+Before running Dialyzer, the runner checks whether \texttt{dialyxir} is already listed as a dependency in the project's \texttt{mix.exs}.
+If it is absent, the runner injects \texttt{\{:dialyxir, "\textasciitilde> 1.4", only: [:dev, :test], runtime: false\}} into the dependency list using a regular-expression replacement.
+This allows Dialyzer to be invoked through \texttt{mix dialyzer} regardless of the original project configuration.
+
+\paragraph{Project processing.}
+Each project is processed concurrently.
+The runner invokes \texttt{mix deps.get}, \texttt{mix compile}, and \texttt{mix dialyzer} in sequence using \texttt{System.cmd/3}.
+If dependency resolution or Dialyzer itself fails, the project is marked as skipped and its entries receive \texttt{"analysis":"failed"} in the dataset.
+
+\paragraph{Warning extraction.}
+Dialyzer's output is parsed in two passes to handle the two output formats produced by different versions of dialyxir.
+The first pass detects legacy-format blocks introduced by the string \texttt{"Legacy warning:"} and normalises them.
+The second pass operates on the structured section beginning at \texttt{"Total errors:"}.
+Within each section, warning blocks are delimited by lines matching the pattern \texttt{lib/*.ex:N:} and are parsed with a regular expression that extracts the file path, line number, warning category, and message text.
+The modern dialyxir format tags each warning with a structured category (\texttt{no\_return}, \texttt{call}, \texttt{pattern\_match}, and so on); the legacy format does not, so for legacy blocks the category is inferred from the message text and the full message is preserved (Subsection~\ref{sec:warning-association} details this normalisation).
+
+Because Dialyzer reports only a file and line, never the enclosing function, each warning is mapped back to a \texttt{(module, function, arity)} target by re-parsing the source file and locating the spec'd clause whose line range contains the warning line.
+The warning's file is recorded relative to the corpus root so that it can be matched against the entry's \texttt{file} field.
+
+\paragraph{Dataset enrichment.}
+After all projects have been processed, the runner iterates through the base entries and, for each entry, finds the Dialyzer warnings whose \texttt{(file, module, function, arity)} match the entry's identity.
+The \texttt{file} component is essential: an organisation such as \texttt{cldr} ships several release versions as separate sub-projects, each defining the same \texttt{Cldr.\,*} functions, and a key omitting the file would attach a warning from one version to all of them.
+An entry passes if no matching warnings exist.
+The enriched entries are written back to \texttt{dataset.jsonl}.
+
+\subsection{Stage 3: Typechecker Execution}
+
+Typechecker execution is performed by \texttt{TypecheckRunner.main/2}.
+The key difference from the Dialyzer stage is that the new Elixir compiler's typechecker is invoked via a custom Elixir binary built from the development branch of the next Elixir version (1.21.0-dev) rather than through a standard Mix plugin, since the current stable 1.19.* releases do not expose the typechecker.
+The runner prepends the directory of the custom binary to the shell \texttt{PATH} before invoking \texttt{mix compile}, so that the typechecking compiler is used in place of the system Elixir installation.
+
+\paragraph{Warning parsing.}
+The typechecker emits warnings in the format \texttt{warning: <message>} followed by a location line beginning with a box-drawing corner prefix that records the file path, line number, and a fully qualified \texttt{Module.function/arity} identifier.
+Unlike Dialyzer's line-only output, this location line names the target function authoritatively, so no source re-parsing is needed to attribute a typecheck warning.
+Three properties of the compiler's output must be handled for the parse to be complete and correct, and are detailed in Subsection~\ref{sec:warning-association}: most warning headers are \emph{indented}, the location line carries an optional column and an occasional \texttt{(app version)} prefix, and the human-readable message is stored separately from the authoritative target.
+
+\paragraph{Arity mismatch.}
+Although Dialyzer allows omitting an optional argument's type, the new compiler does not support such behaviour yet, hence, it mandates including an optional argument's type and fails when a spcification does not contain the full argument types, evoking an arity mismatch error.
+To increase quantity of our dataset, we visited every airty failure and added a \texttt{dynamic()} type as a filler.
+
+\paragraph{Dataset enrichment.}
+Matched warnings are joined to dataset entries by the \texttt{(file, module, function, arity)} key, following the same file-disambiguated pattern as the Dialyzer stage.
+The final \texttt{dataset.jsonl} contains complete records with both tool outcomes, each carrying its explicit \texttt{target}, for every translated function.
+
+\subsection{Warning Association}
+\label{sec:warning-association}
+
+The scientific value of the dataset rests on every warning being attributed to the function that actually produced it, since the downstream training signal pairs a function definition with the verdicts on that definition.
+Two properties of the corpus make naïve attribution unsafe, and the construction addresses both.
+
+\paragraph{File-disambiguated keys.}
+The \texttt{project} field denotes a GitHub organisation, and within one organisation the same \texttt{(module, function, arity)} frequently recurs: the \texttt{cldr} organisation alone ships four release versions as independent Mix projects, each defining \texttt{Cldr.validate\_script/1} and many others.
+Across the corpus, 195 \texttt{(project, module, function, arity)} keys are shared by two or more distinct source files (\num{683} entries in total).
+Keying warning attribution on identity alone would broadcast a warning emitted by one version to every same-named entry.
+Both stages therefore key on \texttt{(file, module, function, arity)}, where each warning's file is normalised to the same corpus-root-relative form as the entries'.
+The relative path is invariant between the translated and non-translated source trees, so a Dialyzer warning (computed on the non-translated tree) and a typecheck warning (computed on the translated tree) both match the single entry whose \texttt{file} they share.
+
+\paragraph{Target provenance.}
+The two tools locate the target differently, and the dataset records the result explicitly in each message's \texttt{target} field.
+Dialyzer emits only \texttt{file:line}; its target is \emph{inferred} as the spec'd function whose source line range contains the warning line.
+The typechecker emits a \texttt{Module.function/arity} location line; its target is taken authoritatively from that line.
+In both cases the message text often names a \emph{callee} (e.g.\ a function the body calls incorrectly) rather than the enclosing function; recording an explicit \texttt{target} alongside the message text removes any ambiguity for downstream consumers about which definition a verdict describes.
+
+%% This is a convenient tool that is used for cleaning up annotations in some cases.
+% \subsection{Annotation Cleanup}
+
+% Before the analysis stages run, the \texttt{AnnotationCleaner} module removes all \texttt{@assert\_type\_form} lines that were injected into source files during translation.
+% It applies a line-filter to every \texttt{.ex} file under the project directory, excluding the migrator's own source tree, ensuring that the analysis tools operate on clean source without the injected annotations interfering with compilation or warning attribution.
+
+%% This also helps to obserb the gathered data, but not essentially neccessray for data construction.
+% \subsection{Dataset Analysis Report}
+
+% The \texttt{DatasetParser} module reads the completed \texttt{dataset.jsonl} and generates a self-contained \LaTeX\ report.
+% Entries are classified into four groups: those where both tools passed, those where both warned, those where only Dialyzer warned, and those where only the new typechecker warned.
+
+% For entries that triggered warnings, a rule-based classifier assigns a human-readable category and explanation.
+% Dialyzer warnings are classified into categories such as opaqueness violation, no-local-return, call-will-not-succeed, contract violation, pattern-match coverage, and unknown function, based on the warning category tag and the presence of keywords in the message text.
+% Typechecker warnings are classified as return-type mismatch, incompatible argument types, or general type inconsistency.
+% Entries containing \texttt{dynamic()} in the translated annotation receive a separate sub-category indicating that annotation imprecision may have masked or caused the warning.
+
+% The report includes a summary table with per-project breakdowns of how many specs were successfully analysed and how many triggered warnings from each tool, a warning-category index grouped by frequency, and per-entry listings showing the original spec, translated annotation, function body, and tool messages side-by-side.

@@ -1,0 +1,272 @@
+\section{Background}
+
+Elixir is a dynamically and strongly typed functional programming language built on top of the Erlang virtual machine (BEAM)~\cite{elixir-lang,erlang-armstrong}.
+It is designed for building scalable and maintainable applications, particularly in the domain of concurrent and distributed systems.
+
+The dynamic typing in Elixir allows developers to write code without having to specify types explicitly, which can lead to faster development and greater flexibility.
+Nevertheless, this flexibility can lead to potential runtime errors due to the strongly typed nature, which could have been caught at compile time if a static type system were in place.
+As the community grows, the yearn for a more robust type system that can provide stronger guarantees about type safety and catch more errors at compile time has become increasingly evident.
+To meet this demand, the Elixir community has adopted a variety of tools and features to enhance type safety, including TypeSpecs and Dialyzer for static analysis.
+Even though these tools have been helpful in improving code quality, they have limitations in terms of expressiveness and the ability to capture complex type relationships.
+On top of that, the lack of a static type system that could force type checking at compile time has motivated the exploration of more advanced type systems, i.e., Elixir Types.
+
+In this section, we will provide an overview of TypeSpecs and Dialyzer, and then introduce Elixir Types as a more expressive type system that addresses the limitations of the existing tools.
+
+\subsection{TypeSpecs}
+TypeSpecs is a distinct notation for declaring types and specifications based on Erlang with attributes such as \texttt{@spec}, \texttt{@type}, \texttt{@opaque}, and \texttt{@typep}~\cite{elixir-typespecs,erlang-typespecs}.
+As the name suggests, \texttt{@spec} is the one that specifies the types of function parameters and return values:
+
+\begin{lstlisting}[language=Elixir, firstnumber=last]
+@spec id(any()) :: any()
+def id(x), do: x
+\end{lstlisting}
+
+This snippet shows a simple form of \texttt{@spec} usage where the function \texttt{id/1} takes a parameter of type \texttt{any()} and returns a value of the same type.
+In particular, \texttt{@spec} can be used with guards that is specified by entailing \texttt{when} clause:
+
+\begin{lstlisting}[language=Elixir, firstnumber=last]
+@spec id(my_guard1) :: my_guard2 when my_guard1: any(), my_guard2: any()
+def id(x), do: x
+\end{lstlisting}
+
+This specification tells that the function \texttt{id/1} takes \texttt{my\_guard1} and returns \texttt{my\_guard2} where the both guard variables are \texttt{any()}.
+
+As the guard variable types are used to describe a type (mind the name "guard" that it does not actually guard anything, but works as a type variable in a local scope), the rest of the attributes are used in the same manner. The type definition attributes are to define custom types, which we may call user-defined types.
+The following snippet shows the typing of user-defined types and a usage case in \texttt{@spec} annotation:
+
+% (*@\label{ln:map-opt-a-to-bin-a-to-int}@*)
+\begin{lstlisting}[language=Elixir, firstnumber=last]
+@type my_type :: any()
+@opaque my_opaque :: my_type
+@typep my_typep :: my_opaque
+
+@spec id(my_typep) :: my_typep
+def id(x), do: x
+\end{lstlisting}
+
+The difference between these definitions lies in their visibility:
+\texttt{@type} defines a public type that can be used both within the module where it is defined and outside of it;
+\texttt{@opaque} defines an opaque type whose definition is hidden from other modules, meaning that it can be used everywhere but its internal definition is invisible outside of the module; and
+\texttt{@typep} defines a private type that can only be used within the module.
+
+On top of that, type definitions can come with parameters as such:
+\begin{lstlisting}[language=Elixir, firstnumber=last]
+@type my_list(some) :: list(some)
+
+@spec id(my_list(any())) :: my_list(any())
+def id(x), do: x
+\end{lstlisting}
+
+The usage is the same as the basic user-defined types, but this requires specifying its parameter type in the annotation.
+
+Moreover, one can use parameter's name in a spcification:
+\begin{lstlisting}[language=Elixir, firstnumber=last]
+@spec id(x :: any()) :: any()
+def id(x), do: x
+\end{lstlisting}
+
+This is saying that \texttt{id/1} takes a parameter \texttt(x) which type is \texttt(any()).
+
+Essentially, all these attributes allow developers to create clear and maintainable code by providing explicit type information, which can be leveraged by tools like Dialyzer for static analysis and error detection.
+
+\subsection{Dialyzer}
+
+Dialyzer is the de facto standard static analysis tool that originally comes from Erlang~\cite{lindahl2006practical}.
+Its analysis is based on success typing~\cite{lindahl2006practical}, which guarantees the absence of false positives, meaning that if Dialyzer creates a warning, it corresponds to a definite type inconsistency in the code.
+It is designed to analyse code to detect type errors, unreachable code, and discrepancies with TypeSpecs and inferred types.
+
+\subsubsection{Examples of Discrepancy Analysis}
+Let us consider the following corresponding three examples to illustrate its capabilities:
+
+\begin{lstlisting}[language=Elixir, firstnumber=last]
+@spec add_one(integer()) :: integer()
+def add_one(x), do: x + "1"
+\end{lstlisting}
+
+In this example, Dialyzer detects a definite type error when the function attempts to add an integer and a string. 
+It infers that the operator \texttt{+} expects numeric operands, and therefore reports a type error. 
+Since this operation will always fail at runtime, the warning is guaranteed to correspond to a real issue.
+
+\begin{lstlisting}[language=Elixir, firstnumber=last]
+@spec check(boolean()) :: :ok | :error
+def check(x) do
+  if x == true do
+    :ok
+  else
+    if x == false do
+      :error
+    else
+      :unknown
+    end
+  end
+end
+\end{lstlisting}
+
+Dialyzer can identify code branches that can never be executed based on type information.
+
+With this code, the variable \texttt{x} is specified to be of type \texttt{boolean()}, which can only be \texttt{true} or \texttt{false}, that concludes the final branch returning \texttt{:unknown} unreachable. 
+Dialyzer finds that this branch can never be executed and reports it as dead code.
+
+\begin{lstlisting}[language=Elixir, firstnumber=last]
+@spec always_true() :: true
+def always_true(), do: :ok
+\end{lstlisting}
+
+In this case, TypeSpecs declares that the function returns the atom \texttt{true}, while the implementation returns \texttt{:ok}. 
+Dialyzer infers the return type as \texttt{:ok}, which contradicts the specification, and reports a type discrepancy.
+
+Such discrepancies indicate that either the specification is incorrect or the implementation does not conform to its intended behaviour, and therefore require attention from the users to resolve the potential bugs in the code.
+
+\subsubsection{Examples of limitations}
+
+Although Dialyzer is helpful for identifying type issues early in the development process, the conservative approach that avoids false positives comes at the cost of missing some type errors.
+Especially those that involve complex type relations, or dynamic features of Elixir.
+To best explain these limitations, we can look at examples where Dialyzer fails to detect type errors:
+
+\begin{lstlisting}[language=Elixir, firstnumber=last]
+@spec maybe_add(integer() | binary()) :: integer()
+def maybe_add(x) do
+  if is_integer(x) do
+    x + 1
+  else
+    x + 1
+  end
+end
+\end{lstlisting}
+
+The function \texttt{maybe\_add/1} is specified to accept either an integer or a binary (string), but it attempts to add 1 to the input regardless of its type.
+Dialyzer does not report an error here because it cannot conclusively determine that the operation will fail at runtime, in other words, it cannot guarantee that the branch where a binary is passed will \textit{always} be executed, and thus it does not raise a warning.
+However, this code will indeed raise a runtime error when a binary is passed, since adding an integer to a string is not valid in Elixir.
+
+\begin{lstlisting}[language=Elixir, firstnumber=last]
+@spec get_age(list(%{atom() => binary()})) :: integer()
+def get_age(person) do
+  hd(person).age + 1
+end
+\end{lstlisting}
+
+The function assumes that the head of the list is a map containing the key \texttt{:age} with an integer value.
+There are two types of potential runtime errors: if the map is empty, the \texttt{hd/1} function raises an argument error, and if the key is missing, the dot access raises a key error; and even if a member exists the plus operation does not match with the specification.
+Since Dialyzer cannot guarantee that the list will always contain a map with the required key, it does not report this as a definite error, even though it is a potential source of runtime errors. Likewise the wrong operation is not reported since the value is not guranteed not to be \texttt{integer()} or \texttt{float()}
+
+\begin{lstlisting}[language=Elixir, firstnumber=last]
+@spec apply_fun((integer() -> integer()), any()) :: integer()
+def apply_fun(f, x) do
+  f.(x)
+end
+\end{lstlisting}
+
+The function \texttt{apply\_fun/2} expects a function that operates on integers.
+However, the argument \texttt{x} is of type \texttt{any()}, which may not be an integer.
+This may lead to runtime errors if a non-integer value is passed.
+Due to the generality of the types involved, Dialyzer is not able to detect this issue.
+
+
+These examples highlight a fundamental limitation of Dialyzer.
+While its success typing approach guarantees the absence of false positives, it may fail to detect certain classes of errors, particularly those involving unions of types, partial data structures, and higher-order functions.
+As a result, the inferred types may be overly general, and potential runtime errors may remain undetected.
+
+This limitation motivates us to explore more expressive type systems: set-theoretic types, which aim to capture more precise relationships between values and enable stronger guarantees about program behaviour.
+
+\subsection{Elixir Types}
+
+Elixir Types is a gradual type system based on the semantic subtyping~\cite{frisch2008semantic} that utilises set-theoretic types~\cite{duboc2024} to provide a more precise and expressive way to describe the types of functions and data structures.
+It is designed to be sound, meaning that if a program type checks successfully, it is guaranteed to be free of type errors at runtime, that is, no false negative opposed to Dialyzer.
+
+The type system requires two main features to type check the code: explicit type annotations and local type inference.
+The latter is achieved through a phic type system with a more sophisticated local type inference mechanism.
+Which means that while the type system looks for explicit type annotations on functions, it can also deduce the types of function bodies and their interactions based on the code structure and the operations performed on the data.
+This can capture complex type relationships and constraints that Dialyzer may miss.
+
+\subsubsection{Gradual type system}
+
+What gradual type system means is that the type system allows for both static and dynamic typing~\cite{siek2006gradual}, enabling users to choose the degree of static type checking.
+For this reason, Elixir Types introduces a special type called \texttt{dynamic()}, which essentially puts the type-checker in a "dynamic mode": for any expression represented by or intersected with type \texttt{dynamic()}, the type system does not perform static checks and let a type to be determined at runtime.
+By default, the new type system replaces absence of type annotations with \texttt{dynamic()}, which gives leniency to users who are not ready to fully commit to static typing.
+Another power of this approach is that its presence in the type system guarantees that when an expression is of a given type, it will either diverge, return a value of the given type, or fail on a runtime type check verification.
+
+In the perspective of transitioning from untyped to typed code, this allows smooth type adoption for existing users: as users are already familiar with dynamic features of Elixir, they can incrementally add type systems without having to rewrite their entire well-working codebase.
+Which is a significant advantage, for that it lowers the barrier to entry for accepting a more robust type system and encourages gradual improvement of code quality over time without causing unwanted errors by forcing the type system.
+
+Moreover, it enables the use of set-theoretic types, which can express unions, intersections, and negations of types, providing richness in describing the behaviour of functions and data structures.
+This allows developers to write more precise type annotations and catch a wider range of type errors at compile time, ultimately leading to safer and more maintainable code.
+
+\subsubsection{Set-theoretic types}
+
+Set-theoretic types~\cite{frisch2008semantic,castagna2014polymorphic} provide a powerful way to express complex type relationships using operations like union, intersection, and negation.
+These types satisfy the commutativity and distributivity properties of their counter-part in the set-theoretic operations.
+We illustrate these types as follows:
+
+\begin{description}
+\item[Union types] can represent a value that can be of multiple types.
+For example, an \texttt{integer()} type is a set of union types of all the integer types hence a value annotated with \texttt{integer()} can be an integer, and \texttt{number()} is defined as \texttt{integer() or float()}, which represents a set of all the integer types and float types.
+The function types can also be defined as union types, for instance, the type of a function that takes an integer and returns an integer can be represented as \texttt{(integer() -> integer())}, and the type of a function that takes either an integer or a float and returns correspondingly either an integer or a float can be represented as \texttt{((integer() -> integer()) or (float() -> float()))}.
+
+\item[Intersection types] can represent a value that must satisfy multiple type constraints simultaneously.
+For example, the type of a value that is both an integer and a float can be represented as \texttt{integer() and float()}, which results in the empty set, \texttt{none()}.
+Although the representation of intersection types for value types is intuitive, that of intersection types for function types is more nuanced.
+Instead of intersecting each inputs and outputs, it expresses a function that must take both terms of an intersection type.
+Hence, an intersection type of functions \texttt{(integer() -> integer) and (float() -> float())} is not \texttt{none() -> none()} but it represents the type of a function that must contain both \texttt{(integer() -> integer())} and \texttt{(float() -> float())} as subtypes.
+
+\item[Negation types] can represent the absence of certain types, that is, the complement of a type.
+For example, the type of a value that is not an integer can be typed with a set of all the types that are not integers, denoted as \texttt{not integer()}.
+Notice that it is another way of representing \texttt{term() and not integer()} (n.b., we use \texttt{term()} instead of \texttt{any()} here because the Elixir Types uses \texttt{term()}), which is more intuitive to understand as the set of all the terms that are not integers.
+Therefore, in consecutive of the previous example, the type of value \texttt{number() and not integer()} can be represented as \texttt{float()}, which is the set of all the numbers that are not integers, and thus only contains floats.
+We can also use negation types to express function types, however, it is trivial to show the use of negated function types, because we do not have to describe what is not necessary for a function type to be (i.e., \texttt{(integer() -> integer())} is the same as \texttt{(integer() -> integer() and not float() -> float())}, since the function type is already specific enough to exclude any other function types).
+
+\end{description}
+
+This expressiveness allows developers to capture more nuanced type relationships and constraints that may arise in practice, leading to better type safety and more accurate type checking.
+
+
+% \subsubsection{Utilisation of existing Elixir features}
+
+% Elixir Types is designed to leverage existing Elixir features, such as pattern matching and guards combined with type narrowing, to provide more precise type information and enable more powerful type checking.
+
+% For instance, pattern matching can be used to specify different types for different branches of a function, allowing for more granular type specifications that can capture the behaviour of functions more accurately.
+% Guards can also be used to refine types based on runtime conditions, enabling the type system to capture more complex type relationships
+
+
+\subsubsection{Tackling limitations of Dialyzer on TypeSpecs}
+
+We have seen that Dialyzer can miss certain type errors due to its conservative approach to avoid false positives.
+Elixir Types, with its more expressive type system, can capture these errors by providing more precise type annotations and leveraging set-theoretic types to express complex type relationships.
+Let us revisit the examples of limitations in Dialyzer and see how Elixir Types can address them:
+
+\begin{lstlisting}[language=Elixir, firstnumber=last]
+$ (integer() or binary()) -> integer()
+def add(x) do
+  if is_integer(x) do
+    x + 1
+  else
+    x + 1
+  end
+end
+\end{lstlisting}
+
+By the annotation, the type system knows that the function accepts either an integer or a binary, but it infers that the second branch of the function is not valid for a binary input.
+The type system can infer this by recognising that the operation \texttt{+} is only valid for integers and floats, and thus it can determine that the second branch will always fail when a binary is passed, producing an incompatibility error.
+
+\begin{lstlisting}[language=Elixir, firstnumber=last]
+$ list(%{atom() => if_set(binary())}) -> integer()
+def get_age(person) do
+  hd(person).age + 1
+end
+\end{lstlisting}
+
+What the type system sees first is that the list type can be either empty or non-empty.
+Since the function does not handle the empty list case, the type system raises an error.
+To observe potential errors lying behind, we can first rewrite the annotation as: \texttt{\$ list(\%{atom() => if\_set(binary())}) and not empty\_list() -> integer()}.
+With the negation operator, we can express that the input list must be non-empty, which allows the type system to infer that the \texttt{hd/1} function will always succeed, and thus it can proceed to check the rest of the function body.
+Then, it can infer that if the dot access is valid for a map containing the key \texttt{:age}, which is not guaranteed by the annotation because the specified key type is \texttt{atom()}.
+Thus, by finally rewriting it to \texttt{\$ list(\%{age: binary()}) and not empty\_list() -> integer()}, the type system can determine that the \texttt{+} operation will fail when the value is a binary, producing an incompatibility error.
+
+\begin{lstlisting}[language=Elixir, firstnumber=last]
+$ (integer() -> integer()), term() -> integer()
+def apply_fun(f, x) do
+  f.(x)
+end
+\end{lstlisting}
+
+With the set operations, the type system can deduce that \texttt{term()} breaks down to \texttt{integer() or not integer()}.
+Therefore, it can capture that the function application will fail when \texttt{x} is not an integer, producing an incompatibility error.

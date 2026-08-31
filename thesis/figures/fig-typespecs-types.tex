@@ -1,0 +1,30 @@
+\begin{figure} [H]
+   \begin{grammarfig}
+      \textbf{Annotations} & \FWA &\bnfeq& 
+      \TSAn 
+      \\
+      \textbf{Expressions} & \TSE &\bnfeq& 
+      \TSFn{\ov{\TST}}{\TST} \bnfor 
+      \TSFn{\ov{\TST}}{\TST}\,\,\texttt{when}\,\,\ov{\texttt{$\alpha$:}\,\TST}
+      \\[2mm]
+      \textbf{Types} & \TST &\bnfeq&
+      \texttt{$\alpha$} \bnfor \texttt{\TST|\TST} 
+      \\ &&\bnfor& \texttt{any()} \bnfor \texttt{none()}
+      \\ &&\bnfor& \texttt{atom()} \bnfor \texttt{:$k$}
+      \\ &&\bnfor& \texttt{pid()} \bnfor \texttt{port()} \bnfor \texttt{reference()}
+      \\ &&\bnfor& \texttt{float()} \bnfor \texttt{integer()} 
+      \\ &&\bnfor& \texttt{neg\_integer()} \bnfor \texttt{non\_neg\_integer()} \bnfor \texttt{pos\_integer()}
+      \\ &&\bnfor& \texttt{tuple()} \bnfor \tuple{\ov{\TST}} \bnfor \map{\ov{\TSF}} 
+      \\ &&\bnfor& \texttt{[]} \bnfor \texttt{nonempty\_maybe\_improper\_list(\TST, \TST)} 
+      \\ &&\bnfor& \texttt{<<>>} \bnfor \texttt{<<\_::$n$>>} \bnfor \texttt{<<\_::\_*$n$>>} \bnfor \texttt{<<\_::$n$, \_::\_*$n$>>}
+      \\ &&\bnfor& \texttt{(\fun{$\ov{\TST}$}{\TST})} \bnfor \texttt{(\fun{...}{\TST})}
+      \\ &&\bnfor& \texttt{$n$} \bnfor \texttt{$n$..$n'$}
+      \\
+      \textbf{Fields} & \TSF &\bnfeq&
+      \texttt{required(\TST)\,=>\,\TST} \bnfor \texttt{optional(\TST)\,=>\,\TST}
+      \end{grammarfig}
+   \small(where $x$ ranges over expression variables, $\alpha$ ranges over type variables, 
+   $n$ ranges over integers with $n<n'$, and $k$ ranges over atom names.)
+   \caption{TypeSpecs}
+   \label{app:typespecs-syntax}
+\end{figure}

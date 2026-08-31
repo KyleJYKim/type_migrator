@@ -1,0 +1,56 @@
+\section*{Appendix. Dialyzer-Only Warning Examples}
+\label{app:dialyzer-examples}
+\sloppy
+
+This appendix gives representative Dialyzer-only entries---functions on which Dialyzer raises a warning but the new typechecker raises none---one from each of the three groups of Subsection~\ref{sec:dialyzer-only}: a whole-program category (\texttt{no\_return}), a locally-checkable category (\texttt{pattern\_match}), and an opacity category (\texttt{opaque\_match}). Each block shows the function definition and the Dialyzer message (type dumps elided); the reason the typechecker does not reproduce a given category is established in Subsection~\ref{sec:dialyzer-only}.
+
+\paragraph{\texttt{no\_return} (whole-program).} On \texttt{Mobilizon.\allowbreak Web.\allowbreak WebFingerController.\allowbreak host\_meta/\allowbreak 2}:
+\begin{lstlisting}[language=Elixir,breaklines=true]
+def host_meta(conn, _params) do
+  xml = WebFinger.host_meta()
+  conn |> put_resp_content_type("application/xrd+xml") |> send_resp(200, xml)
+end
+\end{lstlisting}
+\noindent\textbf{Dialyzer warns:}
+\begin{lstlisting}[breaklines=true]
+Function host_meta/2 has no local return.
+\end{lstlisting}
+
+\paragraph{\texttt{pattern\_match} (locally checkable).} On \texttt{Mobilizon.\allowbreak Service.\allowbreak Activity.\allowbreak Utils.\allowbreak maybe\_inserted\_at/\allowbreak 0}:
+\begin{lstlisting}[language=Elixir,breaklines=true]
+def maybe_inserted_at do
+  if @env == :test do
+    %{}
+  else
+    %{"inserted_at" => DateTime.utc_now()}
+  end
+end
+\end{lstlisting}
+\noindent\textbf{Dialyzer warns:}
+\begin{lstlisting}[breaklines=true]
+Legacy warning: The test 'dev' == 'test' can never evaluate to 'true'
+\end{lstlisting}
+\noindent Dialyzer constant-folds the module attribute \texttt{@env} (\texttt{:dev} at compile time) and finds the \texttt{:test} branch dead; the module-local typechecker does not constant-fold it, so it leaves the branch reachable.
+
+\paragraph{\texttt{opaque\_match} (opacity).} On \texttt{Livebook.\allowbreak Teams.\allowbreak WebSocket.\allowbreak send/\allowbreak 4}:
+\begin{lstlisting}[language=Elixir,breaklines=true]
+def send(conn, websocket, ref, frame) when is_frame(frame) do
+  with {:ok, websocket, data} <- Mint.WebSocket.encode(websocket, frame),
+       {:ok, conn} <- Mint.WebSocket.stream_request_body(conn, ref, data) do
+    {:ok, conn, websocket}
+  else
+    {:error, %Mint.HTTP1{} = conn, exception} when is_exception(exception) ->
+      {:error, conn, websocket, Exception.message(exception)}
+  end
+end
+\end{lstlisting}
+\noindent\textbf{Dialyzer warns:}
+\begin{lstlisting}[breaklines=true]
+Attempted to pattern match against the internal structure of an opaque term.
+Type:
+Mint.HTTP.t() | Mint.WebSocket.t()
+Pattern:
+%Mint.HTTP1{}
+This breaks the opaqueness of Mint.HTTP.t() | Mint.WebSocket.t().
+\end{lstlisting}
+\noindent The new type system does not model \texttt{@opaque} types, so it has no opacity boundary to violate.

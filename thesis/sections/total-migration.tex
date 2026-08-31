@@ -1,0 +1,171 @@
+% \section{Total Migration: Case Studies}
+%     - The migration pipeline: target discovery → inference → injection
+%       → mix compile in original project context.
+%     - 2-3 selected projects: report migration rate
+%       (compile-pass + no-type-warning / total untyped functions).
+%     - Per-project failure breakdown:
+%         a. Predicted type triggers a type warning
+%         b. Predicted type fails to compile (syntax / unresolved reference)
+%         c. Predicted type compiles cleanly
+%     - Compare intrinsic distance (4.5) vs extrinsic compile-pass rate.
+%       Does the distance metric predict migration success?
+
+% \section{Discussion}
+%     - What worked, what didn't.
+%     - Where the model's failures concentrate (structs, dep types, atom-vs-binary).
+%     - Limitations: held-out projects vs in-project, dataset size,
+%       no dependency-resolution at training time.
+
+% \section{Summary}
+%     - Reframe: checker-verified supervision produced two models; the
+%       no-gradual model reached 65.2% safe-and-precise typecheck vs the
+%       both-pass model's 38.3% (Subsection~\ref{sec:extrinsic-eval}),
+%       and X% end-to-end migration on case-study projects; the pipeline is
+%       demonstrably functional.
+
+The intrinsic evaluation of Section~\ref{sec:compatibility-eval} measures prediction quality against verified reference annotations.
+Total migration poses the complementary question: for functions that carry \emph{no} annotation at all---and therefore no reference---can the model supply annotations that the typechecker accepts?
+This chapter defines the migration task, introduces the \emph{cascading weakening strategy} used to guarantee coverage, and reports case studies on real projects.
+
+\section{Task and Setting}
+\label{sec:migration-task}
+
+A \emph{migration target} is a function definition in the corpus with no associated \texttt{@spec}.
+Such functions are invisible to the translation pipeline of Chapter~\ref{ch:implementation}: with no TypeSpec to translate, they remain unannotated after translation, and Dialyzer accepts them vacuously.
+In the projects studied, migration targets constitute the majority of all function definitions.
+
+The migration state is what we term \emph{State A}: each target project retains the translated \texttt{@assert\_type\_form} annotations produced by the prototype for every function that had a \texttt{@spec}, and the model supplies annotations only for the remaining untyped functions.
+This mirrors the intended deployment: existing developer-written specifications are translated mechanically; the model fills the gaps.
+Total migration is achieved when every function in the project carries an annotation accepted by the new typechecker.
+
+Because no reference type exists for a migration target, the reference-based metric of Section~\ref{sec:compatibility-eval} does not apply.
+The only available correctness signal is the typechecker itself, invoked through \texttt{mix compile} in the original project context, where dependencies resolve and remote types are visible.
+We therefore adopt the typechecker as the migration oracle:
+\[
+\mathsf{accept}(f, \tau) \iff \text{\texttt{mix compile} emits no type warning and no compile error for } f \text{ annotated with } \tau.
+\]
+
+\section{The Cascading Weakening Strategy}
+\label{sec:cascade}
+
+A single-shot prediction pipeline would leave every rejected prediction unmigrated.
+Instead, we exploit the structure of the set-theoretic type system: any annotation can be \emph{weakened}---moved upward in the precision order---by deterministic syntactic transformations, and the maximally weakened annotation is accepted unconditionally.
+The strategy is therefore to generate once at full precision and, on rejection, apply successive weakenings until the oracle accepts.
+Crucially, the model is invoked exactly once per target; all subsequent levels are rewrites of its output, not regenerations.
+
+\paragraph{Cascade levels.}
+Let $\tau_0$ be the raw model output for a target $f$.
+The cascade defines a sequence of candidate annotations $\tau_0, \tau_1, \tau_2, \tau_3$:
+
+\begin{description}
+    \item[Level 0 (full precision).]
+    $\tau_0$ as generated, after syntactic validation.
+    If $\tau_0$ is malformed (unbalanced brackets, truncated generation), a repair pass truncates the type to its last syntactically complete top-level union arm; if no complete arm exists, the entry skips directly to Level~3.
+
+    \item[Level 1 (struct compaction).]
+    $\tau_1 = \mathcal{C}(\tau_0)$, where the compaction operator $\mathcal{C}$ rewrites every struct-shaped map to its compact form, retaining only the struct tag:
+    \[
+    \mathcal{C}\bigl(\texttt{\%\{}k_1 \Rightarrow t_1, \ldots, \texttt{:\_\_struct\_\_} \Rightarrow \texttt{:"M"}\texttt{\}}\bigr)
+    \;=\;
+    \texttt{\%\{:\_\_struct\_\_} \Rightarrow \texttt{:"M"\}}.
+    \]
+    Compaction removes the field-level commitments that are the dominant source of struct-shape errors (Section~\ref{sec:qualitative}), including hallucinated field sets, while preserving the nominal identity of the struct.
+
+    \item[Level 2 (positional gradualization).]
+    $\tau_2 = \mathcal{G}(\tau_1)$, where the gradualization operator $\mathcal{G}$ replaces each input position of the function type with \texttt{dynamic()} and widens the output to the union of the output with \texttt{dynamic()}:
+    \[
+    \mathcal{G}\bigl(\texttt{(} \iota_1, \ldots, \iota_n \rightarrow \omega \texttt{)}\bigr)
+    \;=\;
+    \texttt{(dynamic()}, \ldots, \texttt{dynamic()} \rightarrow \omega\texttt{)}.
+    \]
+    Inputs are replaced with \texttt{dynamic()} rather than \texttt{term()} deliberately: widening an input to \texttt{term()} strengthens the obligation on the function body (it must now be verified against arbitrary inputs), whereas \texttt{dynamic()} discharges the obligation by consistency, which is the intended role of the gradual type.
+    The output $\omega$ is retained at this level, preserving the model's return-shape prediction, which the intrinsic evaluation shows to be the more reliable component.
+
+    \item[Level 3 (full gradual fallback).]
+    $\tau_3 = \texttt{(dynamic()}, \ldots, \texttt{dynamic()} \rightarrow \texttt{dynamic())}$.
+    This annotation is accepted unconditionally, guaranteeing that the cascade terminates with every target migrated.
+    Entries resolved at Level~3 carry no information from the model; they are counted as coverage without precision.
+\end{description}
+
+Each level is a deterministic function of the previous one, so the cascade requires no additional model inference and no randomness; the entire migration of a project is reproducible from the Level-0 predictions alone.
+
+\paragraph{Batched execution.}
+Because the oracle operates at project granularity (one \texttt{mix compile} verifies all annotations simultaneously), the cascade is executed in rounds rather than per function:
+all targets are annotated at Level~0 and the project is compiled once; the warning and error output is parsed to attribute failures to individual functions; failed targets are rewritten to Level~1 and the project recompiled; and so on.
+A full migration therefore costs at most four compilations per project, independent of the number of targets.
+Algorithm~\ref{alg:cascade} summarises the procedure.
+
+\begin{algorithm}
+\caption{Cascading migration of a project $P$}
+\label{alg:cascade}
+\begin{algorithmic}[1]
+\State $T \gets$ functions of $P$ without \texttt{@spec} \Comment{target discovery}
+\State $\mathit{pred} \gets$ model predictions for all $f \in T$ \Comment{single inference pass}
+\State $\mathit{level}[f] \gets 0$ for all $f \in T$
+\For{$\ell = 0$ \textbf{to} $3$}
+    \State annotate each unresolved $f \in T$ with $\tau_\ell(f)$; \texttt{mix compile} $P$
+    \State $W \gets$ functions attributed a type warning or compile error
+    \For{$f \in T \setminus W$ unresolved}
+        \State mark $f$ resolved at level $\ell$
+    \EndFor
+\EndFor
+\State \Return level distribution $\{\,f \mapsto \mathit{level}[f]\,\}$
+\end{algorithmic}
+\end{algorithm}
+
+\section{Outcome Classification and Metrics}
+\label{sec:migration-metrics}
+
+The primary result of a migration run is not a single pass rate but the \emph{level distribution}: the fraction of targets resolved at each cascade level.
+The distribution refines a binary migration rate into a precision profile:
+\begin{itemize}
+    \item \textbf{L0 rate}: targets migrated at full model precision---the strongest outcome;
+    \item \textbf{L1 rate}: targets whose field-level struct commitments failed but whose nominal and shape structure was accepted;
+    \item \textbf{L2 rate}: targets for which only the predicted return shape survived;
+    \item \textbf{L3 rate}: targets migrated with no usable model contribution.
+\end{itemize}
+The cumulative migration rate at every level is 100\% by construction; the informative quantity is how much of that coverage is achieved at high precision.
+We additionally record, at each level, the split between the two failure modes---type warnings (the annotation is well-formed but inconsistent with the body) and compile errors (the annotation is syntactically or referentially invalid)---since the former reflects model imprecision and the latter reflects generation pathology.
+
+Two annotations are reported per track: the same cascade is run once with the Track~1 (precision-trained) adapter and once with the Track~2 (coverage-trained) adapter, allowing the precision--coverage trade-off observed intrinsically in Section~\ref{sec:two-track} to be re-examined under deployment conditions.
+The hypothesis suggested by the intrinsic results is that Track~1 resolves more targets at Level~0 on precisely-typed code but pushes more targets to Levels~2--3, while Track~2 exhibits a flatter distribution.
+
+\section{Case Studies}
+\label{sec:migration-case-studies}
+
+The cascade was executed on \emph{N} projects selected to span the difficulty spectrum identified in the per-subproject analysis:
+one standard-library-style codebase (\texttt{elixir-lang/X}), one framework-heavy codebase (\texttt{ScenicFramework/Scenic}), and one application codebase (\texttt{Y}).
+Table~\ref{tab:migration-results} reports the level distributions.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{llrrrrrr}
+\toprule
+\textbf{Project} & \textbf{Track} & \textbf{Targets} & \textbf{L0} & \textbf{L1} & \textbf{L2} & \textbf{L3} & \textbf{L0+L1} \\
+\midrule
+\texttt{project-A} & 1 & X & X\% & X\% & X\% & X\% & X\% \\
+                   & 2 & X & X\% & X\% & X\% & X\% & X\% \\
+\texttt{project-B} & 1 & X & X\% & X\% & X\% & X\% & X\% \\
+                   & 2 & X & X\% & X\% & X\% & X\% & X\% \\
+\texttt{project-C} & 1 & X & X\% & X\% & X\% & X\% & X\% \\
+                   & 2 & X & X\% & X\% & X\% & X\% & X\% \\
+\bottomrule
+\end{tabular}
+\caption{Cascade level distribution per project and track. L0+L1 aggregates the outcomes in which the model's structural prediction survives.}
+\label{tab:migration-results}
+\end{table}
+
+% Placeholder subsections to fill after the runs:
+% \paragraph{Failure-mode breakdown.} warnings vs compile errors per level.
+% \paragraph{Track comparison.} does the intrinsic precision/coverage trade-off
+%   reproduce under the compiler oracle?
+% \paragraph{Examples.} one L0, one L1-recovered, one L3 case with commentary.
+
+\section{Relation to the Intrinsic Metric}
+\label{sec:migration-vs-intrinsic}
+
+The cascade oracle and the reference-based metric of Section~\ref{sec:compatibility-eval} measure different properties, and their disagreement is informative.
+An annotation strictly wider than the function's true type is imprecise under the reference metric yet accepted by the checker; conversely, an annotation more precise than a loose reference may be rejected.
+For the subset of test-set functions with references, we re-ran the cascade (with the typechecker, not the reference, as oracle) and cross-tabulated cascade level against the tier assigned by the subtype metric.
+% Table placeholder: tier (rows) x resolved level (columns).
+A strong concentration of tier-1/tier-2 predictions at Level~0 would validate the intrinsic metric as a proxy for deployability; systematic divergence would delimit what reference-based evaluation can and cannot predict about migration outcomes.
