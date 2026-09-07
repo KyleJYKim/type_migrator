@@ -1,13 +1,19 @@
-\section{Implementation}
+\section{Implementation of theory}
 
 The implementation is organised into three layered components.
 The first layer is the translator, which realises the formal semantics of the type translation process.
 The second layer is the migrator, which uses the translator to resolve user-defined types and generate concrete outputs.
 The third layer is the dataset producer, which automates translation across projects and records typecheck outcomes from Dialyzer and the new typechecker.
 
-\subsection{Implementation of translator}\label{sec:implementation-of-translator}
+\paragraph{Environment and reproducibility.}
+The entire pipeline was run locally on a single machine---an Apple~M1 (macOS) with 8~GB of RAM.
+Because the two analyses require incompatible preparation of the same source, the corpus is materialised as two independent copies of every project: a \emph{translation--typecheck} copy, whose source the migrator (run under Elixir~1.19.5 on Erlang/OTP~28.1) annotates with the injected Elixir Types and \texttt{@assert\_type\_form} directives and which the typechecker then compiles with the customised 1.21.0-dev compiler; and a \emph{Dialyzer} copy, left otherwise source-unmodified and analysed under the same Elixir~1.19.5.
+Each copy fetches its own dependencies with \texttt{mix deps.get}, so both type resolution and Dialyzer see real dependency sources, and a project whose dependencies fail to fetch is skipped from that copy.
+Recording this build closure matters for reproducibility: which remote types and cross-module callees resolve depends on what each copy fetched, hence, a fraction of the tool disagreements analysed later are properties of the environment rather than of the code.
 
-The translator is the core component that converts Elixir abstract syntax tree of TypeSpec into the internal type representation used by our prototype.
+\subsection{Translator}\label{sec:implementation-of-translator}
+
+The translator is the core component that converts extracted AST of TypeSpecs into the internal type representation used by our prototype.
 It is implemented primarily in \texttt{Migrator.Translator.Utils} with support from \texttt{Migrator.Translator.Approximator}.
 The translation pipeline is divided into three phases:
 \begin{enumerate}
@@ -216,7 +222,7 @@ A variable-arity function \texttt{\{:fun, \{:all\_arity, $\prm{\ETT}$\}\}} is tr
 Two struct types are unified field-by-field: for each field of the first struct, the algorithm checks whether a matching field (by key and value subtyping) exists in the second.
 The special sentinel struct \texttt{\{:struct, \{:\_\_struct\_top\_, \_\}\}} representing the unqualified \texttt{struct()} type is always a supertype of any named struct, so any specific struct is subsumed by it.
 
-\subsection{Implementation of migrator}
+\subsection{Migrator}
 
 The migrator builds on the translator by resolving user-defined types and generating output artefacts.
 Its pipeline consists of three stages:
@@ -240,9 +246,9 @@ It thus serves as the final rendering layer that converts translated types into 
 The mode we mainly use in our later experiments is the \texttt{Descr} mode with \texttt{@assert\_type\_form} assertions in order to perform type-check on the translated types.
 Therefore, we substitute \texttt{\$} used in the specification for signifying annotation for \texttt{@assert\_type\_form} in our experiments for data gathering.
 
-\subsection{Implementation of dataset producer}
+\subsection{Dataset producer}
 
-The dataset producer automates end-to-end evaluation across multiple Mix projects.
+The dataset producer automates end-to-end analysis across multiple Mix projects.
 Its pipeline is:
 \begin{enumerate}
     \item \textit{Translation execution}
@@ -258,7 +264,7 @@ This task sets up a file logger and invokes \texttt{DialyzerRunner.main/1} to ru
 
 Typechecker execution is performed by \texttt{lib/mix/tasks/run\_typecheck.ex}.
 It similarly configures logging and calls \texttt{TypecheckRunner.main/1}, optionally with an explicit Elixir binary path (in our case the location of the compiler on which we can use assertions), to run the new compiler's typechecker across the same projects.
-The outputs of these tasks provide the empirical validation data used in the evaluation.
+The outputs of these tasks provide the empirical validation data used in the analysis.
 
 % \subsection{Warning Extraction and Attribution}
 % \label{sec:impl-warning-attribution}

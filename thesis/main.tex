@@ -3,9 +3,9 @@
 \input{setup}
 \input{macros}
 
-% Chapter numbering restarts in each part, so qualify it with the part
-% number (I.1, I.2, II.1, ...) to keep cross-part references unambiguous.
-\renewcommand{\thechapter}{\Roman{part}.\arabic{chapter}}
+% Chapters number continuously across parts (1, 2, 3, ...), with no part
+% prefix; section numbers follow (1.1, 2.3, ...). Parts do not reset the
+% chapter counter, so cross-part references stay unambiguous.
 
 \input{Frontespizio in inglese}
 
@@ -41,12 +41,11 @@
 \setcounter{secnumdepth}{2}
 
 \part{Translating TypeSpecs into Elixir Types}
-\setcounter{chapter}{0}
 
 \chapter{Formalisation}
 \label{ch:formalisation}
-This chapter provides rigorous type syntax formalisation both TyepSpecs and Elixir Types in order to produce theoretical translation equations.
-Our formalisation starts with TypeSpecs syntax from existing Typespecs reference~\cite{elixir-typespecs,erlang-typespecs}, which lists not only the basic types but also the built-in types and syntactic sugars.
+This chapter provides rigorous type syntax formalisation both TypeSpecs and Elixir Types in order to produce theoretical translation equations.
+Our formalisation starts with TypeSpecs syntax from existing TypeSpecs reference~\cite{elixir-typespecs,erlang-typespecs}, which lists not only the basic types but also the built-in types and syntactic sugars.
 The syntax specification of Elixir Types is then provided based on the Featherweight Elixir~\cite{duboc2024}.
 Finally, we introduce the translation equations and discriminate the types that are not able to be directly translated, which leads us to suggest approximation of translation.
 
@@ -54,34 +53,33 @@ Finally, we introduce the translation equations and discriminate the types that 
 \input{sections/translation.tex}
 \input{sections/approximation.tex}
 
-\chapter{Implementation of Theory}
+\chapter{Implementation and Analysis}
 \label{ch:implementation}
 This chapter demonstrates the translation we have formalised in the previous chapter.
 
-We first build a prototype that translates TypeSpecs and produces Elixir Types in the form on which we can run the new compiler in Elixir version 1.21.0-dev.
+We first build a prototype that translates TypeSpecs based on Elixir's abstract syntax tree (AST) and produces Elixir Types in which form customised to be consumed by the new compiler (version 1.21.0-dev).
 This prototype also involves collecting and translating user-defined types or remote types that are defined by directives \texttt{@type}, \texttt{@opaque}, and \texttt{@typep} in order to expand them in TypeSpecs.
 The following section runs Dialyzer and the new compiler's typechecker on various codebases that are used in the real world. Which process produces the raw dataset.
-Then, we analyse the raw dataset, evaluating the warning messages and success rate with quality.
-The final evaluation eventually helps creating a feasible dataset that we can use applying to an LLM for our final total migration.
+Then, we analyse the raw dataset, examining the warning messages and success rate with quality.
+The final analysis eventually helps building a feasible dataset that we can use for applying to large language models in the next part.
 
 \input{sections/implementation.tex}
 \input{sections/dataset-construction.tex}
-\input{sections/dataset-evaluation.tex}
+\input{sections/dataset-analysis.tex}
 
 \part{Inferring Elixir Types with Large Language Models}
-\setcounter{chapter}{0}
 
 \chapter{Type Prediction with LLMs}
-The translation pipeline of Chapter~\ref{ch:formalisation} converts existing TypeSpec annotations into Elixir Types, and the analysis of Chapter~\ref{ch:implementation} characterises how the \num{14187} translated annotations are analysed under the two checkers: \num{7498} (52.8\%) are accepted by both, while the rest are dominated by translation-time \texttt{dynamic()} approximation and the typechecker's conservative module-local inference, with only a small residue of genuine type errors.
+The translation pipeline of Chapter~\ref{ch:formalisation} converts existing TypeSpec annotations into Elixir Types, and the analysis of Chapter~\ref{ch:implementation} characterises how the \num{23073} translated annotations are analysed under the two checkers: \num{18688} (81.0\%) are accepted by both, while the rest are dominated by translation-time \texttt{dynamic()} approximation and the typechecker's conservative module-local inference, with only a small residue of genuine type errors.
 Yet translation only reaches functions that \emph{already} carry TypeSpecs.
 Most production Elixir code carries none: in the application code of our corpus, only \num{15694} \texttt{@spec} annotations accompany \num{119901} \texttt{def} and \texttt{defp} clauses, so the large majority of functions go unspec'd.
 Developers omit the optional \texttt{@spec} directives; Dialyzer still analyses these functions by inferring success typings~\cite{lindahl2006practical}, but with no declared contract there is no developer's intended type to hold the body to.
 A complete migration to the typed environment is therefore not addressed by translation alone; the remaining, dominant, fraction of the codebase requires that an annotation be \emph{inferred}.
 
 This chapter investigates whether a large language model fine-tuned on the corpus of translated, typechecker-accepted annotations can supply such inferences with enough fidelity to drive the migration.
-The supervised signal is the by-product of the agreement study (Subsection~\ref{sec:downstream-implications}): the \num{7498} \emph{both-pass} entries that the typechecker accepts, together with their \num{2771}-entry \emph{dynamic-free} subset of purely static annotations---a distinction that matters because, as that study shows, a \texttt{dynamic()}-laden acceptance is not a static guarantee.
+The supervised signal is the by-product of the agreement study (Subsection~\ref{sec:downstream-implications}): the \num{18688} \emph{both-pass} entries that both tools accept, which after a length filter form the training corpus detailed in Subsection~\ref{sec:llm-data-prep}.
 Each entry pairs a function definition with an Elixir Type annotation the typechecker accepts as consistent with that definition, and the supervised task is to recover that annotation from the definition.
-Whether to train on the precise dynamic-free subset or the larger gradual-inclusive pool is itself an open question, which we answer empirically through a two-track study.
+We pursue two model families in parallel on this both-pass pool---a large decoder-only model and a much smaller encoder--decoder, fine-tuned on the same annotations---and compare how well each architecture supports the prediction task.
 
 % We define \emph{total migration} as the state in which every function in a project carries an Elixir Type annotation accepted by the new typechecker.
 % Under this definition the LLM's role is to fill the gap left by translation: where an existing \texttt{@spec} can be translated, the prototype of Chapter~\ref{ch:implementation} does so; where none exists, the model predicts one.
@@ -89,10 +87,10 @@ Whether to train on the precise dynamic-free subset or the larger gradual-inclus
 
 \input{sections/llm-type-prediction.tex}
 
-\chapter{Total Migration}
-\label{ch:total-migration}
-
-\input{sections/total-migration.tex}
+% Total Migration chapter dropped from the thesis
+% \chapter{Total Migration}
+% \label{ch:total-migration}
+% \input{sections/total-migration.tex}
 
 \clearpage
 \phantomsection

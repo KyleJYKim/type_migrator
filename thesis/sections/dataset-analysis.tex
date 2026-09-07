@@ -1,5 +1,5 @@
-\section{Dataset Evaluation}
-\label{sec:evaluation}
+\section{Dataset Analysis}
+\label{sec:analysis}
 
 \subsection{Hypothesis}
 \label{sec:hypothesis}
@@ -15,11 +15,14 @@ Formally:
 \end{gather*}
 We expect the implications to hold together with the strict superset expectation that the typechecker fails on substantially more definitions than Dialyzer.
 
-To judge whether the hypothesis holds we examine the \emph{intersection} of the two tools' warnings, that is the fraction of both warned by Dialyzer and the typechecker over only Dialyzer-warned.
+To judge whether the hypothesis holds we examine the \emph{intersection} of the two tools' warnings, that is the fraction of both warned by Dialyzer and the typechecker over only Dialyzer-warned:
+\begin{gather*}
+  \frac{\text{Dialyzer fails} \;\wedge\; \text{Typechecker fails}}{\text{Dialyzer fails}} \approx 1.0
+\end{gather*}
 The closer the fraction to one confirms the hypothesis: the new system preserves Dialyzer's discrimination and exceeds it.
 Where the fraction yields less than one, we then reason about the residual, i.e., the entries Dialyzer warns on but the typechecker does not.
 
-The evaluation addresses three questions:
+The analysis addresses three questions:
 \begin{enumerate}
     \item To what extent is the typechecker stricter than Dialyzer, and how much of Dialyzer's discrimination does it subsume?
     \item Where the subsumption breaks down, why does Dialyzer catch an error that the typechecker does not, and is that a fundamental disagreement or a limitation of the present state of either the typechecker or the translation?
@@ -30,29 +33,34 @@ The evaluation addresses three questions:
 \label{sec:overall-results}
 
 The dataset construction described in Section~\ref{sec:dataset-construction} produced \num{23073} translated function specifications.
-Dialyzer ran to completion on all of them; the new typechecker analysed \num{22621} and could not analyse the remaining 452, whose host projects fail to compile under the custom compiler (a dependency that the development-branch compiler rejects aborts the whole project; see Section~\ref{sec:dataset-construction}).
-The cross-comparison below is therefore over the \num{22621} entries both tools resolved, with the 452 reported separately.
+Dialyzer analysed \num{22982} of them and failed on 91; the new typechecker analysed \num{22621} and could not analyse the remaining 452, whose host projects fail to compile under the custom compiler (a dependency that either tool rejects aborts the whole project; see Section~\ref{sec:dataset-construction}).
+The 91 Dialyzer could not analyse are a subset of those 452 --- entries neither tool could analyse --- so both tools return a verdict on the same \num{22621} entries.
+The cross-comparison below is therefore over those \num{22621} entries both tools resolved, with the 452 reported separately.
 Table~\ref{tab:overall-results} summarises the outcomes:
 
 \begin{table}[h]
     \centering
     \begin{tabular}{lrr}
         \toprule
-        \textbf{Outcome} & \textbf{Count} & \textbf{\% of total} \\
+        \textbf{Outcome}             & \textbf{Count} & \textbf{\% of total} \\
         \midrule
-        Both tools passed                   & \num{18688} & 81.0\% \\
+        Dialyzer passed              & \num{22685} & 98.3\% \\
+        Dialyzer failed              & \num{297}   & 1.3\% \\
+        Dialyzer null                & \num{91}    & 0.4\% \\
         \midrule
-        Typechecker-only warned             & \num{3636} & 15.8\% \\
-        Dialyzer-only warned                &     98   &  0.4\% \\
-        Both tools warned                   &    199   &  0.9\% \\
+        Typechecker passed           & \num{18786} & 81.4\% \\
+        Typechecker failed           & \num{3835}  & 16.6\% \\
+        Typechecker null             & \num{452}   & 2.0\% \\
         \midrule
-        Typechecker could not analyse       &    452   &  2.0\% \\
+        Both tools passed            & \num{18688} & 81.0\% \\
+        Both tools failed            & \num{199}   & 0.9\% \\
+        Both tools null              & \num{91}    & 0.4\% \\
         \midrule
-        Dialyzer passed (total)             & \num{22685} & 98.3\% \\
-        Typechecker passed (total)          & \num{18786} & 81.4\% \\
+        Typechecker-only failed      & \num{3636}  & 15.8\% \\
+        Dialyzer-only failed         & \num{98}    & 0.4\% \\
         \bottomrule
     \end{tabular}
-    \caption{Tool outcomes across \num{23073} translated function specifications. The typechecker rejects \num{3835} entries (16.6\%) against Dialyzer's 297 (1.3\%); a further 452 it could not analyse.}
+    \caption{Tool outcomes across \num{23073} translated function specifications. A \emph{null} outcome means the tool could not analyse the entry because its host project failed to compile --- for the typechecker, under the custom development compiler. Dialyzer's 91 nulls are a subset of the typechecker's 452, the entries neither tool could analyse; percentages are of the \num{23073} total.}
     \label{tab:overall-results}
 \end{table}
 
@@ -64,13 +72,13 @@ Second, where the two tools fail, they overlap substantially but not completely.
 \paragraph{Subsumption rate on failures.}
 Dialyzer warned on 297 entries in total; the typechecker also warned on 199 of them, giving a subsumption rate on failures of $199/297 \approx 67.0\%$.
 The remaining 98 Dialyzer-warned entries (the Dialyzer-only set) are the cases where the first implication appears to break down.
-However, as Subsection~\ref{sec:dialyzer-only} establishes, none of these 98 represents a case in which the typechecker disagrees with Dialyzer; each is attributable to an analysis the typechecker does not perform, to a feature (\texttt{@opaque}-type enforcement) it does not yet model, or to precision lost during translation.
+However, as Subsection~\ref{sec:dialyzer-only} establishes, none of these 98 represents a case in which the typechecker disagrees with Dialyzer; each is attributable to an analysis the typechecker does not perform, to a feature (\texttt{@opaque}-type enforcement) it does not yet model, or to precision lost during approximation.
 
 \paragraph{Verdict.}
-The data support the hypothesis's subsumption clause but qualify its strict-superset reading.
+The results support the hypothesis' subsumption clause but do not qualify its strict-superset reading.
 The new typechecker does warn on far more definitions than Dialyzer, just as predicted; but, as Subsection~\ref{sec:typecheck-only} shows, most of that excess is translation residuals --- struct patterns the translator could not fully resolve from the AST and positions widened to \texttt{dynamic()} --- rather than superior error detection.
 The first implication, that if Dialyzer warns the typechecker warns too, holds directly for 67.0\% of Dialyzer's warnings, and none of the remaining cases is a real disagreement.
-Of the 98 entries Dialyzer catches but the typechecker does not, each is attributable to a whole-program check the typechecker does not perform, a finding it makes locally but that translation masked with \texttt{dynamic()}, or an \texttt{@opaque}-abstraction violation the type system does not yet model, none a genuine type-theoretic disagreement (Subsection~\ref{sec:dialyzer-only} gives the breakdown).
+Of the 98 entries Dialyzer catches but the typechecker does not, each is attributable to a whole-program check the typechecker does not perform, finding it makes locally but that translation masked with \texttt{dynamic()}, or an \texttt{@opaque}-abstraction violation the type system does not yet model, none a genuine type-theoretic disagreement (Subsection~\ref{sec:dialyzer-only} gives the breakdown).
 In short, the two analyses are complementary rather than nested: where both resolve the same types the typechecker reproduces Dialyzer's findings, but each also flags a class the other cannot, namely Dialyzer the whole-program properties and intra-project calls the typechecker leaves as \texttt{dynamic()}, and the typechecker a core of purely-static body-level return leaks that Dialyzer's optimism accepts (Subsection~\ref{sec:typecheck-only}).
 
 \subsection{Approximation via \texttt{dynamic()}}
@@ -176,9 +184,23 @@ At face value this is the strict-superset clause of the hypothesis; on inspectio
 The findings divide by kind into unreachable clauses or patterns (\num{1677}), argument mismatches at a call site (914), return-type mismatches (691), map-key accesses (217), and a residue of other checks (137).
 
 \paragraph{Unreachable-clause findings (\num{1677}).}
-The largest group is dominated by a translation artefact rather than genuine dead code: \num{1308} of the \num{1677} reject a struct pattern the translated type cannot satisfy, and every one is a residue of translating structs from the AST without a symbol table (Subsection~\ref{sec:struct-representation}).
-In 752 the translated struct type lists only some of the struct's fields, so the closed map excludes valid structs and a \texttt{\%Mod\{\}} pattern is rejected; in 556 the translator resolved the struct through a short or aliased name it could not expand to the full module path (\texttt{\%ViewPort\{\}} for \texttt{Scenic.ViewPort}), so the asserted \texttt{\_\_struct\_\_} atom differs from the pattern's.
-Neither is a type-theoretic disagreement: both are the cost of AST-based translation without a persistent lookup table, and both would be removed by expanding the translation scope to the defining modules.
+The largest group is not the typechecker over-warning but the typechecker \emph{correctly} rejecting a wrong translated type: \num{1308} of the \num{1677} reject a struct pattern against a translated struct type that is \emph{disjoint} from the real struct, every one a residue of translating structs from the AST without a symbol table (Subsection~\ref{sec:struct-representation}).
+In 752 the translated struct type lists only some of the struct's fields, so the closed map excludes valid structs and a \texttt{\%Mod\{\}} pattern cannot match; in 556 the translator could not expand an aliased struct name to its full module path, so the asserted \texttt{\_\_struct\_\_} atom names a different module than the pattern's.
+A verified instance is \texttt{Scenic.Components.button/3}, whose clause head pattern-matches the struct:
+\begin{lstlisting}[language=Elixir, firstnumber=last]
+def button(%Graph{} = g, data, options) do
+  add_to_graph(g, Component.Button, data, options)
+end
+\end{lstlisting}
+The compiler resolves \texttt{\%Graph\{\}} to \texttt{\%Scenic.Graph\{\}} (\texttt{:"Elixir.Scenic.Graph"}), disjoint from the translated argument's \texttt{:"Elixir.Graph"}, so the typechecker reports the clause unreachable; Dialyzer, reading the original spec, accepts the same clause, confirming the code is correct and the fault is the translation.
+The warning is thus \emph{valid} --- a sound deduction from the type it was handed --- yet it exposes a translation defect rather than a program fault, so it is neither a type-theoretic disagreement nor genuine error detection; both the field-set and alias residuals would be removed by resolving structs against their defining modules.
+Whether the defect surfaces at all, however, depends on the body: only a struct the body \emph{exercises}---through a pattern or a field access---is caught. The same \texttt{:"Elixir.Graph"} defect in \texttt{Scenic.Primitives.rrect/3}, which merely forwards its argument, produces no warning and is admitted into the both-pass pool, sound but unfaithful to the specification:
+\begin{lstlisting}[language=Elixir, firstnumber=last]
+def rrect(graph_or_primitive, rrect, opts \\ []) do
+  rounded_rectangle(graph_or_primitive, rrect, opts)
+end
+\end{lstlisting}
+The \num{1308} counted here are therefore only the \emph{exercised} residuals; an unknown further number pass silently into the pool.
 The remaining 369 are non-struct, and they include the genuine dead code the typechecker surfaces and Dialyzer accepts: a clause matching an atom outside the scrutinee's type (\texttt{:dev\_blue} where the value is only \texttt{:dev\_green} or \texttt{:prod}), a defensive fall-through made redundant by an exhaustive earlier match, a right-hand \texttt{||} branch that can never run because the left side is always truthy, or a constantly-true-or-false guard.
 For a codebase moving off Dialyzer onto the new checker, this reachability and exhaustiveness feedback is precisely the kind of static signal the transition is meant to add.
 
@@ -193,8 +215,8 @@ The remaining 176 are purely static, no \texttt{dynamic()} on either side, so a 
 These purely-static leaks are the legitimate content of the strict-superset clause; representative cases are given in the appendix ``\nameref{app:typecheck-examples}''.
 
 \paragraph{Interpretation.}
-The headline ``\num{3636} warnings Dialyzer misses'' overstates the typechecker's advantage.
-The unreachable-clause group is dominated by struct-representation residuals of AST-based translation (\num{1308} of \num{1677}), not error detection, and the return-type group by \texttt{dynamic()}-masked and cannot-verify cases that carry no static verdict (515 of 691).
+The headline ``\num{3636} warnings Dialyzer misses'' overstates the typechecker's advantage --- not because the typechecker is wrong (its warnings are valid) but because most are correct responses to a faulty \emph{input}, the translated type, rather than detections of a faulty \emph{program}.
+The unreachable-clause group is dominated by struct-representation residuals of AST-based translation (\num{1308} of \num{1677}), where the checker rejects a disjoint struct type, and the return-type group by \texttt{dynamic()}-masked and cannot-verify cases that carry no static verdict (515 of 691).
 What the typechecker alone genuinely catches is the 176 purely-static return leaks Dialyzer's optimism accepts and the 369 non-struct unreachable-clause findings its reachability checking surfaces.
 The two analyses are thus better described as \emph{complementary} than nested for now: Dialyzer flags the whole-program properties and intra-project calls the typechecker leaves as \texttt{dynamic()}, and the typechecker both the return leaks Dialyzer's optimism accepts and the dead code its reachability checking surfaces.
 As the migration target shifts from Dialyzer to the new checker, these two classes, the return leaks and the reachability findings, are what the codebase stands to gain.

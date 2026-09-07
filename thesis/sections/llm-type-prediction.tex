@@ -19,7 +19,7 @@ Each training entry consists of:
 \end{itemize}
 
 These fields are assembled into a structured prompt with delimiter sections (\texttt{\#\#\# Module:}, \texttt{\#\#\# Types in scope:}, \texttt{\#\#\# Definition:}, \texttt{\#\#\# Argument patterns:}, \texttt{\#\#\# Return expressions:}, \texttt{\#\#\# Elixir type:}), with the target annotation placed last.
-The two grounding blocks make explicit, at the input, exactly the code evidence that the honest-labelling transforms of Subsection~\ref{sec:honest-labelling} rely on at the target: a type is expected only where a pattern, guard, or tail constructor supports it.
+The two grounding blocks make explicit, at the input, exactly the code evidence a faithful annotation should rest on: a type is expected only where a pattern, guard, or tail constructor supports it.
 Training is plain next-token prediction over this whole text (the standard \emph{autoregressive} objective): at each position the model predicts the next token from all the tokens before it, so that, given the prompt up to \texttt{\#\#\# Elixir type:}, it learns to continue with the correct annotation.
 
 This formulation differs from prior work in three respects.
@@ -28,49 +28,36 @@ Second, the task is type \emph{generation} rather than the type \emph{correction
 There is no observed (potentially incorrect) type in the input, only the function definition; the model must produce the annotation from scratch.
 Third, the language is Elixir on the BEAM, an under-represented target in code-LLM training corpora compared with Python or TypeScript, on which most existing type-prediction work has been conducted.
 
-\subsection{Dataset Preparation and the Two-Track Design}
+\subsection{Dataset Preparation}
 \label{sec:llm-data-prep}
-\label{sec:two-track}
 
-The evaluation in Section~\ref{sec:evaluation} established two candidate training pools, each justified by a different goal.
-The first, which we call the \emph{both-pass} pool, keeps every entry on which both Dialyzer and the typechecker pass; it is the largest checker-accepted pool but admits annotations whose translation contains \texttt{dynamic()}.
-The second, the \emph{no-gradual} pool, additionally removes any entry whose target annotation contains \texttt{dynamic()}, retaining only precise labels.
-Because \texttt{dynamic()} is overwhelmingly an artefact of unresolved remote types rather than a deliberate gradual-typing choice (Subsection~\ref{sec:approximation-via-dynamic}), these two pools embody two opposing hypotheses about what a model \emph{should} be taught to produce.
-Rather than choose between them a priori, we train one model on each and compare them directly, in a \emph{two-track} study:
+We train on the \emph{both-pass} pool: every entry on which both Dialyzer and the set-theoretic typechecker accept the translated annotation.
+This is the largest checker-accepted pool, and it admits annotations whose translation contains \texttt{dynamic()}---overwhelmingly an artefact of unresolved remote types rather than a deliberate gradual-typing choice (Subsection~\ref{sec:approximation-via-dynamic}), but a type the checker nonetheless accepts as safe.
+A length filter is applied before the split: entries whose function definition exceeds 2{,}000 characters or whose target annotation exceeds 1{,}000 characters are removed, as these pathological cases (e.g.\ \texttt{Regex.replace/4}, whose translation expands to over 250~KiB\footnote{Its third argument is typed \texttt{(... -> String.t())}, a variable-arity function whose non-\texttt{term()} return type the translation expands into a union over every fixed arity the BEAM permits, from 0 to 255 (Chapter~\ref{ch:formalisation}); a 616-character definition thereby yields an annotation of over 250~KiB.}) would dominate batch composition without proportionate learning signal.
 
-\begin{itemize}
-    \item \textbf{Track~1 (no-gradual)}: both tools pass, no \texttt{dynamic()} in the target. \num{4113} entries.
-    \item \textbf{Track~2 (both-pass)}: both tools pass, \texttt{dynamic()} permitted. \num{7649} entries (= Track~1 plus \num{3536} gradual-containing entries).
-\end{itemize}
-A length filter is applied to both pools before the split: entries whose function definition exceeds 2{,}000 characters or whose target annotation exceeds 1{,}000 characters are removed, as these pathological cases (e.g.\ \texttt{Regex.replace/4}, whose translation expands to over 250~KiB\footnote{Its third argument is typed \texttt{(... -> String.t())}, a variable-arity function whose non-\texttt{term()} return type the translation expands into a union over every fixed arity the BEAM permits, from 0 to 255 (Chapter~\ref{ch:formalisation}); a 616-character definition thereby yields an annotation of over 250~KiB.}) would dominate batch composition without proportionate learning signal.
-This filter removes \num{1455} entries from the \num{9104}-entry both-pass pool, leaving \num{7649}, but only 31 from its \num{4144}-entry dynamic-free subset, leaving \num{4113}.
-Because the \texttt{dynamic()}-laden translations are precisely the ones that balloon in size, almost all of that cut (\num{1424} of \num{1455}) falls on gradual entries, so the gradual-containing residue is \num{3536} rather than the \num{4960} the unfiltered \num{9104} and \num{4144} pools would imply.
-
-\paragraph{Subproject-stratified, aligned split.}
-Both tracks are partitioned by a project-stratified split: evaluating on functions from a project that also appears in training would over-estimate generalisation.
+\paragraph{Subproject-stratified split.}
+The dataset is partitioned by a project-stratified split: evaluating on functions from a project that also appears in training would over-estimate generalisation.
 The \texttt{project} field denotes a GitHub organisation, not a codebase (an organisation such as \texttt{mbta} hosts more than a hundred independent repositories), so we split by \emph{subproject}, defined as \texttt{project/module\_root} where \texttt{module\_root} is the top-level segment of the Elixir module path (e.g.\ \texttt{mbta/AlertProcessor}).
-To keep the two tracks directly comparable, a \emph{single} subproject split is computed once over Track~2's subproject universe (the superset, since Track~1~$\subseteq$~Track~2) and applied to both tracks at a 70/15/15 target ratio.
-The split assignment is a deterministic hash of each subproject name (a salted MD5 reduced modulo 100), rather than a shuffle of the universe, so that a subproject keeps its assignment across dataset regenerations: the test set is stable even as the corpus grows, which is what makes results comparable across training rounds.
-This guarantees that the two tracks see the same subprojects in the same split and that no subproject leaks across train, validation, and test in either track.
-The universe contains 247 subprojects (177 train / 28 validation / 42 test), yielding the entry counts in Table~\ref{tab:llm-splits}.
+The split assignment is a deterministic hash of each subproject name (a salted MD5 reduced modulo 100), rather than a shuffle of the universe, so that a subproject keeps its assignment across dataset regenerations at a 70/15/15 target ratio: the test set is stable even as the corpus grows, which is what makes results comparable across training rounds.
+No subproject leaks across train, validation, and test.
+This yields the splits in Table~\ref{tab:llm-splits}.
 
 \begin{table}[h]
 \centering
-\begin{tabular}{lrrr}
+\begin{tabular}{lrr}
 \toprule
-\textbf{Track} & \textbf{Train} & \textbf{Validation} & \textbf{Test} \\
+\textbf{Split} & \textbf{Entries} & \textbf{Subprojects} \\
 \midrule
-Track~1 (no-gradual) & \num{2951} & 762 & 400 \\
-Track~2 (both-pass)  & \num{5416} & \num{1321} & 912 \\
+Train      & \num{9888} & 279 \\
+Validation & \num{3484} & 60 \\
+Test       & \num{2127} & 64 \\
 \bottomrule
 \end{tabular}
-\caption{Two-track splits under the shared subproject partition (hash-based assignment, salt 42).}
+\caption{The canonical both-pass dataset under the salt-42 subproject split.}
 \label{tab:llm-splits}
 \end{table}
 
-\paragraph{The common test set.}
-Because both tracks share the split, Track~2's test set (912 entries) is a \emph{superset} of Track~1's (400 entries), the latter being exactly its dynamic-free subset.
-We therefore evaluate \emph{both} models on Track~2's 912-entry test set: this is the only directly comparable evaluation, since it places both models on identical held-out functions, including the 512 whose reference target is gradual.
+Of the \num{2127} held-out test references, \num{1639} (\num{77.1}\%) are gradual (their deterministic translation resorted to \texttt{dynamic()}, Subsection~\ref{sec:approximation-via-dynamic}); the remaining \num{488} are fully concrete.
 
 \subsection{Model and Training}
 \label{sec:llm-training}
@@ -88,7 +75,6 @@ We therefore apply QLoRA~\cite{qlora}: the base model is loaded in 4-bit NormalF
 The LoRA rank is 32 with $\alpha = 64$ and a dropout of 0.05, giving roughly 80~M trainable parameters out of the 7~B base.
 
 \paragraph{Training configuration.}
-Both tracks are trained with an \emph{identical} configuration so that any difference in the models is attributable to the training data, not the procedure.
 Training uses the HuggingFace \texttt{TRL} \texttt{SFTTrainer} with sequence packing at a maximum length of 1{,}024 tokens.
 The effective batch size is 16 (per-device batch size 2 with 8 gradient accumulation steps).
 The learning rate is $2 \times 10^{-4}$ with cosine decay and a 5\% warmup ratio, weight decay 0.01, and bfloat16 mixed precision.
@@ -99,15 +85,13 @@ Training runs for two epochs on a single GPU; eval-time batch size is reduced to
 All training runs were carried out on the LIP6 Convergence cluster, where each job was allocated through Slurm a single NVIDIA~A100 GPU, 8 CPU cores, and host RAM.
 Most runs used a half-GPU MIG slice (the \texttt{a100\_3g.40gb} profile, 40~GB) rather than a full A100; the 4-bit QLoRA configuration keeps the 7~B base model together with its LoRA adapters and optimiser state comfortably within the 40~GB budget, so the full \texttt{a100\_7g.80gb} profile was needed only occasionally, and no run approached its time or memory limit.
 The compatibility evaluation, which requires the compiler with the typechecker rather than a GPU, was run separately on a local workstation.
-Every label variant (raw gradual, compaction, hedging) is trained with the same procedure, so that any difference between them is attributable to the training targets alone.
 
 \paragraph{Training behaviour.}
-Both tracks converge cleanly with no instability.
-Track~1 trains on \num{2951} entries and Track~2 on \num{5416} (a 1.8$\times$ larger but noisier set, since Track~2's targets include the gradual annotations, a harder objective to fit).
-Consistent with this, Track~2 reaches a lower training loss but a higher best-validation loss, and its validation loss bottoms early and drifts up thereafter; best-checkpoint-by-validation-loss selection guards against this for every model.
+The model converges cleanly with no instability.
+The validation loss bottoms early and drifts up thereafter, so best-checkpoint-by-validation-loss selection retains the optimum rather than the final weights.
 % TODO: fill in the exact per-run figures from the final cluster logs
 % (optimiser steps, wall-clock time, initial/final training loss, best
-% validation loss) for Track~1, Track~2, and each honest-labelling variant.
+% validation loss).
 
 \paragraph{Reproducibility.}
 All training artefacts (configuration, prompt template, every dataset split, and the final adapter weights) are versioned with the seeds used at each stage (salt 42 for the hash split, seed 42 for the trainers).
@@ -134,101 +118,68 @@ This is the appropriate success criterion for a migration setting: an annotation
 
 \paragraph{Computation.}
 Each prediction and reference is parsed into a \texttt{Descr} value and the two are submitted to \texttt{compatible?/2}; parsing collapses whitespace and union-arm ordering and rewrites any \texttt{|} to \texttt{or} (the model occasionally emits the TypeSpec union symbol out of pretraining habit, though the target system writes unions only as \texttt{or}).
-A prediction that fails to parse is counted as not compatible (reported separately as \emph{null}); such cases are rare, below \num{2}\% throughout.
+A prediction that fails to parse is counted as not compatible (reported separately as \emph{null}).
 
-\paragraph{With gradual versus without gradual.}
-Both models were evaluated on the common \num{912}-entry test set with greedy decoding under a grammar constraint that restricts output to well-formed set-theoretic types.
-Table~\ref{tab:llm-twotrack} reports the compatibility of each track.
+\paragraph{Exact match.}
+Alongside compatibility we report the \emph{exact-match} rate: the fraction of predictions that denote the identical type to the reference, decided by the same type algebra so that a difference of union-arm ordering or map-field ordering does not count against a prediction.
+Exact match is strictly stronger than compatibility---it additionally requires equal \emph{precision}, not merely safety---and we use it only as a precision indicator, never as the primary criterion, for the reason given above.
 
-\begin{table}[h]
-\centering
-\begin{tabular}{lr}
-\toprule
-\textbf{Model (raw translation labels)} & \textbf{Compatible} \\
-\midrule
-Without gradual (Track~1, no-gradual)   & 32.8\% \\
-With gradual (Track~2, both-pass)       & \textbf{50.4\%} \\
-\bottomrule
-\end{tabular}
-\caption{Compatibility of the two tracks on the common \num{912}-entry test set, each trained on the raw translated labels of its pool.}
-\label{tab:llm-twotrack}
-\end{table}
+\paragraph{Results.}
+The model is evaluated on the common \num{2127}-entry test set with greedy decoding under a grammar constraint that restricts output to well-formed set-theoretic types.
+It attains \num{40.4}\% compatibility (\num{860} of \num{2127}), an exact-match rate of \num{8.6}\%, and a null rate of \num{0.4}\%.
+The remainder of this section asks how far this result depends on the model's architecture and scale, by comparing against a much smaller encoder--decoder.
 
-The with-gradual model is far more compatible (\num{50.4}\% versus \num{32.8}\%).
-The reason is structural: \num{512} of the \num{912} test references are themselves gradual (the deterministic translation resorted to \texttt{dynamic()} for them, Subsection~\ref{sec:approximation-via-dynamic}), and the no-gradual model, trained never to emit \texttt{dynamic()}, cannot supply a compatible answer for a reference that expects one; the with-gradual model can.
-Under a metric that credits a \texttt{dynamic()} answer as safe, being \emph{permitted} to produce the gradual type is therefore a direct advantage on exactly the half of the test set the no-gradual model cannot reach.
-This settles the two-track question that motivated the design: for compatibility, admitting gradual types dominates, and the remainder of this section takes the with-gradual (both-pass) pool as its base and asks how to make its labels \emph{honest}.
+\subsection{Architecture Comparison: A Smaller Encoder--Decoder}
+\label{sec:llm-architecture}
 
-\subsection{Honest Labelling: Compaction and Hedging}
-\label{sec:honest-labelling}
-
-The with-gradual model of Table~\ref{tab:llm-twotrack} trains on the raw translated annotations, and those labels carry a systematic dishonesty.
-Each reference is a translation of a hand-written \texttt{@spec}, so it may state argument and return types the function's \emph{own code} gives no evidence for: a return arm produced only by an opaque call to another function, or an argument whose type is fixed by the specification but never constrained by the clause patterns, guards, or body.
-A model trained to reproduce such a label is being taught to recover information it cannot derive from the input, that is, to memorise the specification.
-On the held-out test set this inflates exact matches, but it is precision that cannot survive the actual migration setting, where no specification exists (Chapter~\ref{ch:total-migration}).
-We therefore evaluate two label transforms, each applied only to the training targets (the test references are left untouched, so all three variants are scored on identical ground truth), that rewrite a label to what the code can honestly support:
-
-\begin{itemize}
-    \item \textbf{Compaction} generalises a shape the prompt does not ground: a struct expansion whose fields are not shown in scope collapses to its open nominal form \texttt{\%\{..., :\_\_struct\_\_ => :"Name"\}}, and an ungrounded plain map or keyword shape to its generic \texttt{open\_map()} or \texttt{\{atom(), term()\}} form.
-    \item \textbf{Hedging} replaces with \texttt{dynamic()} exactly the positions the code cannot evidence: a return-union arm with no visible constructor in any clause tail (its value comes only from an opaque call), and an argument position that is a bare variable in every clause, unconstrained by any guard and used in the body only as a pass-through. An argument the body \emph{does} constrain (\texttt{x + 1}, \texttt{x.field}, a \texttt{case} subject) is locally derivable and is left concrete.
-\end{itemize}
-
-Because a hedged \texttt{dynamic()} is compatible with any reference, hedging trades reference-exact precision for safety without ever teaching the model to assert what it cannot justify.
-Table~\ref{tab:llm-honest} reports compatibility for the raw gradual labels and for each transform, all on the both-pass pool and the common \num{912}-entry test set.
+The canonical model is a QLoRA adaptation of a 7~B decoder-only base.
+To ask how much of the result is owed to that architecture and scale rather than to the task and data, we compare against \texttt{CodeT5+-770M}~\cite{codet5p}, an encoder--decoder model an order of magnitude smaller, which we \emph{fully} fine-tune rather than adapt.
+Both models train on the same canonical both-pass dataset with the same prompt and are scored on the identical \num{2127}-entry test set, so any difference is attributable to the model, not the data.
+One asymmetry must be stated: the Qwen decoding is grammar-constrained to well-formed set-theoretic types, whereas the CodeT5+ decoding is \emph{unconstrained}, because the constrained-decoding library does not support its tokenizer; we therefore report each model's null rate.
 
 \begin{table}[h]
 \centering
-\begin{tabular}{lr}
+\begin{tabular}{lrrr}
 \toprule
-\textbf{Training-label transform (both-pass pool)} & \textbf{Compatible} \\
+\textbf{Model} & \textbf{Compatible} & \textbf{Exact match} & \textbf{Null} \\
 \midrule
-Gradual (raw translation)                       & 50.4\% \\
-Gradual + compaction                            & 63.8\% \\
-Gradual + hedging                               & \textbf{69.2\%} \\
+Qwen2.5-Coder-7B (QLoRA, constrained) & \num{40.4}\% & \num{8.6}\% & \num{0.4}\% \\
+CodeT5+-770M (full FT, unconstrained) & \textbf{\num{52.5}\%} & \textbf{\num{30.1}\%} & \num{4.2}\% \\
 \bottomrule
 \end{tabular}
-\caption{Compatibility on the common \num{912}-entry test set under the honest-labelling transforms. Hedging denotes hedging of both return arms and argument positions; hedging return arms alone reaches \num{62.3}\%, with argument hedging supplying the remainder.}
-\label{tab:llm-honest}
+\caption{Architecture comparison on the common \num{2127}-entry test set; both models trained on the canonical both-pass dataset with the same prompt.}
+\label{tab:llm-architecture}
 \end{table}
 
-Both transforms lift compatibility substantially over the raw gradual baseline, and hedging is the stronger of the two, reaching \num{69.2}\% against compaction's \num{63.8}\%.
-The gain from hedging decomposes cleanly: hedging return arms alone accounts for \num{62.3}\%, and hedging argument positions supplies the rest.
-The two transforms are complementary in what they honour, one at the level of shapes and one at the level of positions, but hedging is the more principled: compaction still commits to a (generalised) shape, whereas hedging refuses to commit anywhere the code is silent, which is precisely the property the migration setting requires.
-Its cost, a lower reference-exact rate, falls almost entirely on the memorised precision described above and so is precision the migration setting could never have obtained in the first place.
-
-For these reasons we adopt the \textbf{gradual + hedging} model as the basis for full migration (Chapter~\ref{ch:total-migration}): it is the most compatible of the trained variants, and, uniquely among them, its output is honest by construction, committing to a type only where the function's own code justifies it and falling back to \texttt{dynamic()} elsewhere, exactly the behaviour required when no reference annotation exists to memorise.
+The smaller encoder--decoder is the stronger model on both axes.
+It is more compatible (\num{52.5}\% versus \num{40.4}\%, a \num{12.0}-point margin) and far more precise, matching the reference exactly on \num{30.1}\% of entries against \num{8.6}\% for Qwen---\num{3.5} times as many---while decoding without the grammar constraint and at roughly a tenth of the parameters.
+The one cost of the missing constraint appears in the null column (\num{4.2}\% against \num{0.4}\%), but it does not close the gap: crediting all \num{89} null predictions as compatible would raise CodeT5+ to \num{56.6}\%, still above Qwen.
+Full fine-tuning of a task-matched encoder--decoder thus outperforms parameter-efficient adaptation of a much larger decoder-only model on this task.
 
 \subsection{Qualitative Analysis}
 \label{sec:llm-qualitative}
 \label{sec:qualitative}
 
-Inspecting individual predictions makes the trade-off concrete and exposes where the two metrics (intrinsic distance and extrinsic typecheck) agree and disagree. All examples below are drawn verbatim from the two tracks' outputs on the common test set.
+Inspecting individual predictions makes the behaviour behind the aggregate numbers concrete. All examples below are drawn verbatim from the models' outputs on the common test set.
 
-\paragraph{The precision gap in one function.}
-The function \texttt{DBConnection.Holder.put\_state/2} has reference type \texttt{(term(), term() -> :ok)}.
-Track~1 predicts exactly \texttt{(term(), term() -> :ok)}, an exact match that typechecks.
-Track~2 predicts \texttt{(dynamic(), term() -> :ok)}: it also typechecks, but it has replaced the first concrete input with the gradual type where the reference, and Track~1, kept it concrete.
-Both predictions count as a typecheck ``pass''; only Track~1's counts as safe-\emph{and}-precise.
-This single entry is the overall result in miniature.
+\paragraph{Exact matches a string comparison would miss.}
+Some predictions differ textually from the reference yet denote the identical type, which the type algebra credits as an exact match where a naive string comparison would not.
+\texttt{Membrane.RTP.Packet.PayloadType.dynamic?/1} has reference \texttt{(integer() or integer() -> :true or :false)}; the canonical model predicts \texttt{(integer() -> :true or :false)}, collapsing the redundant union \texttt{integer() or integer()} to the identical \texttt{integer()}.
+The two denote the same value set, so the prediction counts as exact, and it typechecks.
 
 \paragraph{Recovering precision the translator lost.}
-On targets whose \emph{reference} is gradual, Track~1 frequently supplies a precise type that the deterministic translation could not.
-\texttt{Pleroma.Bookmark.destroy/2} has reference \texttt{(dynamic(), dynamic() -> :ok or \{:error, term()\})} (the translator widened both arguments to \texttt{dynamic()} because their types came from unresolved remote types), yet Track~1 predicts \texttt{(integer(), integer() -> :ok or \{:error, :not\_found\})}, which typechecks cleanly and even sharpens the error atom.
-The model has effectively reconstructed information the translation discarded, which is why Track~1 still attains 45.0\% safe-and-precise on the with-dynamic subset where exact match against the reference is by definition impossible.
+On targets whose \emph{reference} is gradual, the model frequently supplies a precise type the deterministic translation could not.
+\texttt{AshStateMachine.Charts.mermaid\_flowchart/1} has reference \texttt{(dynamic() -> dynamic())} --- the translation widened both positions to \texttt{dynamic()} because their types came from unresolved remote types --- yet the model predicts \texttt{(atom() -> binary())}, which typechecks.
+The prediction is \emph{more} precise than the reference it is scored against: the model has reconstructed information the translation discarded, which is why it remains compatible on much of the gradual-reference subset where an exact match against the reference is by definition impossible.
 
-\paragraph{Structural equivalents at $d = 0$.}
-Some predictions differ textually from the reference yet describe the identical type, and the structural distance metric correctly scores them perfect.
-\texttt{Orbit.Ocs.Parser.TschMessage.\allowbreak get\_delete\_status/1} has reference \texttt{(binary() -> :deleted or :undeleted)}; Track~1 predicts \texttt{(binary() -> :undeleted or :deleted)}, the same union with its two arms written in the opposite order.
-Both denote the same value set, the metric assigns $d = 0$, and the prediction typechecks.
-
-\paragraph{Near-misses the typechecker catches.}
-A revealing class of cases is rated ``close'' ($d = 1$) by the intrinsic metric but \emph{rejected} by the typechecker, precisely the gap that motivates the extrinsic evaluation.
-\texttt{Plausible.Exports.\allowbreak delete\_s3\_export!/1} has reference \texttt{(integer() -> :ok)}; Track~1 predicts \texttt{(binary() -> :ok)}.
-Structurally the two are one leaf apart (same arity, same return, a single input swapped), so the distance metric scores $d = 1$; but the function indexes an export by an integer id, so the \texttt{binary()} input draws a type warning and the prediction fails extrinsically.
-This is the recurring integer-versus-binary confusion, and it shows that a structurally-close prediction is not necessarily a safe one.
-
-\paragraph{Failures at $d = 3$.}
-The clearest failures miss a value the body actually returns, and they fail under both metrics.
-\texttt{Pleroma.Web.ActivityPub.Relay.get\_actor/0} has reference \texttt{( -> \%\{:\_\_struct\_\_ => :"Pleroma.User"\} or :nil)} (the function returns either a user struct or \texttt{:nil}), while Track~1 predicts \texttt{( -> \%\{:\_\_struct\_\_ => :"User"\})}, dropping the \texttt{:nil} alternative.
-Missing an entire return alternative earns $d = 3$, and the prediction also fails to typecheck, since the body can return \texttt{:nil}.
-The codes with non-obvious control flow and struct types remain the dominant source of both intrinsic and extrinsic failures.
+\paragraph{Where the larger model fails and the smaller succeeds.}
+The architecture comparison of Subsection~\ref{sec:llm-architecture} shows up in individual predictions.
+\texttt{Postgrex.ReplicationConnection.encode\_lsn/1} has reference \texttt{(integer() -> \{:ok, binary()\} or :error)}.
+Qwen collapses the two result arms into a single ill-formed tuple \texttt{\{:ok or :error, dynamic()\}} with a spurious \texttt{empty\_list()} alternative, a shape the function never returns, and the typechecker rejects it; CodeT5+ reproduces the reference exactly.
+The same precision gap appears on return structure: \texttt{Integer.extended\_gcd/2} has reference \texttt{(integer(), integer() -> \{integer(), integer(), integer()\})}, and Qwen discards the tuple's element structure, collapsing the return to a bare \texttt{tuple()} that admits tuples the function never returns and is therefore rejected, whereas CodeT5+ reproduces the three-integer tuple exactly.
+In both cases Qwen misjudges the precision the code actually determines --- over-committing to a concrete shape the body never produces (\texttt{encode\_lsn}), or discarding structure the body fixes (the \texttt{extended\_gcd} tuple) --- and a single mis-typed position is enough for the typechecker to reject the whole annotation.
+Such precision errors are concentrated on functions with non-obvious control flow or opaque struct constructors, exactly the code where the ground-truth shape is hardest to read off the source alone, and they are the dominant source of incompatible predictions for both models.
+The smaller encoder--decoder is consistently less prone to it.
+We are deliberately cautious about the cause: CodeT5+ and Qwen differ in more than their encoder --- also in fine-tuning regime (full versus low-rank adaptation), pretraining corpus and objective, and parameter count --- so this single comparison cannot attribute the gap to any one factor.
+One plausible contributor is architectural: an encoder--decoder reads the whole function definition bidirectionally before the decoder fixes any output position, a fuller view of the code's evidence than a strictly left-to-right, decoder-only pass affords, and CodeT5+ is pretrained end-to-end for exactly this kind of understanding-then-generation task~\cite{codet5p}.
+Isolating the encoder's contribution --- for instance by fully fine-tuning a decoder-only model of comparable scale under an otherwise identical regime --- is left to future work.
