@@ -179,6 +179,7 @@ Which means that while the type system looks for explicit type annotations on fu
 This can capture complex type relationships and constraints that Dialyzer may miss.
 
 \subsubsection{Gradual type system}
+\label{sec:gradual-type-system}
 
 What gradual type system means is that the type system allows for both static and dynamic typing~\cite{siek2006gradual}, enabling users to choose the degree of static type checking.
 For this reason, Elixir Types introduces a special type called \texttt{dynamic()}, which essentially puts the type-checker in a "dynamic mode": for any expression represented by or intersected with type \texttt{dynamic()}, the type system does not perform static checks and let a type to be determined at runtime.

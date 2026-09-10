@@ -20,7 +20,7 @@ To judge whether the hypothesis holds we examine the \emph{intersection} of the 
   \frac{\text{Dialyzer fails} \;\wedge\; \text{Typechecker fails}}{\text{Dialyzer fails}} \approx 1.0
 \end{gather*}
 The closer the fraction to one confirms the hypothesis: the new system preserves Dialyzer's discrimination and exceeds it.
-Where the fraction yields less than one, we then reason about the residual, i.e., the entries Dialyzer warns on but the typechecker does not.
+Where the fraction yields less than one, we then reason about the \emph{residual}, i.e., the entries Dialyzer warns on but the typechecker does not.
 
 The analysis addresses three questions:
 \begin{enumerate}
@@ -67,18 +67,17 @@ Table~\ref{tab:overall-results} summarises the outcomes:
 Two observations stand out.
 First, the typechecker is decisively the stricter of the two analyses: it rejects \num{3835} entries (16.6\% of the corpus) where Dialyzer rejects only 297 (1.3\%), a thirteen-fold difference.
 The set-theoretic typechecker's pass rate (81.4\%) sits below Dialyzer's (98.3\%).
-Second, where the two tools fail, they overlap substantially but not completely.
+Second, where the both tools fail, they overlap substantially but not completely.
 
 \paragraph{Subsumption rate on failures.}
 Dialyzer warned on 297 entries in total; the typechecker also warned on 199 of them, giving a subsumption rate on failures of $199/297 \approx 67.0\%$.
 The remaining 98 Dialyzer-warned entries (the Dialyzer-only set) are the cases where the first implication appears to break down.
-However, as Subsection~\ref{sec:dialyzer-only} establishes, none of these 98 represents a case in which the typechecker disagrees with Dialyzer; each is attributable to an analysis the typechecker does not perform, to a feature (\texttt{@opaque}-type enforcement) it does not yet model, or to precision lost during approximation.
+However, as Subsection~\ref{sec:dialyzer-only} establishes, none of these 98 represents a case in which the typechecker disagrees with Dialyzer; each is attributable to an analysis outside its scope (whole-program reachability or cross-module resolution), to a feature (\texttt{@opaque}-type enforcement) it does not yet model, or to precision lost during approximation.
 
 \paragraph{Verdict.}
 The results support the hypothesis' subsumption clause but do not qualify its strict-superset reading.
 The new typechecker does warn on far more definitions than Dialyzer, just as predicted; but, as Subsection~\ref{sec:typecheck-only} shows, most of that excess is translation residuals --- struct patterns the translator could not fully resolve from the AST and positions widened to \texttt{dynamic()} --- rather than superior error detection.
-The first implication, that if Dialyzer warns the typechecker warns too, holds directly for 67.0\% of Dialyzer's warnings, and none of the remaining cases is a real disagreement.
-Of the 98 entries Dialyzer catches but the typechecker does not, each is attributable to a whole-program check the typechecker does not perform, finding it makes locally but that translation masked with \texttt{dynamic()}, or an \texttt{@opaque}-abstraction violation the type system does not yet model, none a genuine type-theoretic disagreement (Subsection~\ref{sec:dialyzer-only} gives the breakdown).
+The first implication holds: the typechecker reproduces 67.0\% of Dialyzer's warnings directly, and none of the residual 98 is a genuine type-theoretic disagreement (Subsection~\ref{sec:dialyzer-only}).
 In short, the two analyses are complementary rather than nested: where both resolve the same types the typechecker reproduces Dialyzer's findings, but each also flags a class the other cannot, namely Dialyzer the whole-program properties and intra-project calls the typechecker leaves as \texttt{dynamic()}, and the typechecker a core of purely-static body-level return leaks that Dialyzer's optimism accepts (Subsection~\ref{sec:typecheck-only}).
 
 \subsection{Approximation via \texttt{dynamic()}}
@@ -87,18 +86,35 @@ In short, the two analyses are complementary rather than nested: where both reso
 Out of the \num{23073} entries, \textbf{\num{13910} (60.3\%)} contain at least one \texttt{dynamic()} sub-expression in the translated annotation.
 This widening is the single most consequential approximation in the translation, and it is the mechanism behind a large share of the residual disagreement analysed below.
 
-When, for example, the definition of a remote type \texttt{Module.type\_name()} is not available at translation time (because the module lives in a dependency outside the translation path), the translator conservatively replaces the reference with \texttt{dynamic()}.
-Because \texttt{dynamic()} is compatible with every type, the resulting annotation is no stronger than the original specification with respect to its unresolved components: the typechecker, checking a body against an argument typed \texttt{dynamic()}, cannot derive a contradiction that Dialyzer derives from the original concrete contract.
+When the definition of a remote type \texttt{Module.type\_name()} is unavailable at translation time---the module lives in a dependency outside the translation path---the translator conservatively replaces the reference with \texttt{dynamic()}.
+Because \texttt{dynamic()} is compatible with every type (the ``dynamic mode'' of ``\nameref{sec:gradual-type-system}''), the annotation is no stronger than the original specification at its unresolved positions: checking a body against a \texttt{dynamic()} argument, the typechecker cannot derive the contradiction Dialyzer derives from the original concrete contract.
+The system always hoists \texttt{dynamic()} to the root of its enclosing container~\cite{elixir-set-theoretic-types}, rewriting a nested \texttt{\{:ok, dynamic()\}} to the \emph{equal} type \texttt{dynamic(\{:ok, term()\})}.
+This normalises the surface form without coarsening the check: only the widened leaf is masked, while the tag \texttt{:ok} is still required, so \texttt{dynamic(\{:error, term()\})} does not match \texttt{\{:ok, integer()\}}.
+The masking is thus \emph{leaf-granular}---a \texttt{dynamic()} suppresses a mismatch only at the position it occupies, leaving every concrete position around it fully checked.
 
-A subtlety of the new system sharpens this picture: \texttt{dynamic()} is always hoisted to the root of its enclosing container~\cite{elixir-set-theoretic-types}.
-When the translation produces a nested gradual type such as \texttt{\{:ok, dynamic()\}}, Elixir rewrites it to \texttt{dynamic(\{:ok, term()\})}: the whole tuple becomes gradual, not merely its second element.
-The widening is thus coarser than its textual position suggests: a single unresolved remote type anywhere inside a structure makes the entire structure gradual, so the masking analysed below operates at the granularity of the enclosing tuple, map, or list rather than the individual leaf.
-The same property carries an important converse: an annotation containing \emph{no} \texttt{dynamic()} at all is checked as a fully static type: ``if the user provides their own types, and those types are not \texttt{dynamic()}, then Elixir's type system behaves as a statically typed one''~\cite{elixir-set-theoretic-types}.
-A dynamic-free annotation is therefore a genuinely static, fully checked specification, which is exactly why the precise training pool (Subsection~\ref{sec:downstream-implications}) and the safe-and-precise criterion require \texttt{dynamic()} to be \emph{entirely absent} rather than merely rare.
-The direct consequence is the one to keep in mind when reading a \emph{pass}: where the annotation carries \texttt{dynamic()} the typechecker accepts trivially, so a pass certifies only the concrete positions and leaves open whether the static type would pass or warn. For a wholly \texttt{dynamic()} annotation, such as the opacity cases of Subsection~\ref{sec:dialyzer-only}, a pass is no static verdict at all.
+How coarse the approximation is therefore depends on \emph{what} the translator could not resolve. Two cases occur in the corpus, shown here on a map field:
+\begin{lstlisting}[language=Elixir, numbers=none]
+# a field's value type is unknown but its key type is an atom literal: only the value is widened,
+# the map stays closed, and the key set and sibling fields are still checked
+%{:id => integer(), :url => dynamic()}
+# hoisted internal form: the value's dynamic() lifts to the root, :url becomes term()
+dynamic(%{:id => integer(), :url => term()})
 
-The prevalence of \texttt{dynamic()} does not invalidate the translation; it quantifies how much of the corpus carries cross-module type references that cannot be refined without expanding the translation scope to the full dependency tree.
-Its effect runs in both directions and is made precise in the next two subsections: it suppresses some Dialyzer-detectable errors (Subsection~\ref{sec:dialyzer-only}), yet \num{2747} of the \num{3835} typechecker-rejected entries (72\%) still carry a \texttt{dynamic()} and are rejected regardless, showing that the widening is far from a blanket suppression of the typechecker.
+# a whole field type is unknown -- its key type is unresolved too: the field type is emitted as dynamic() => dynamic(),
+# whose dynamic() key expands to every key domain, opening the map and masking the field type entirely
+%{dynamic() => if_set(dynamic())}
+# hoisted internal form: the dynamic() key becomes term() (every key domain), the map is open
+dynamic(%{term() => if_set(dynamic())})
+\end{lstlisting}
+In the first form, the key \texttt{:url} is a literal that needs no resolution, so closedness survives and only one value is masked; this is the common struct case, where the field names are known from \texttt{defstruct} while a field's type is out of scope.
+In the second, the key itself is an unresolved type, so the emitted \texttt{dynamic()} key is expanded through \texttt{to\_domain\_keys/1} to cover every key domain as the compiler ingests the \texttt{@assert\_type\_form} annotation; the map is then no longer closed and admits any key.
+A whole-field approximation is thus strictly coarser than a value-only one---it forfeits not just a value but the map's shape.
+
+The converse bounds how a \emph{pass} should be read: an annotation with \emph{no} \texttt{dynamic()} is checked as a fully static type---``if the user provides their own types, and those types are not \texttt{dynamic()}, then Elixir's type system behaves as a statically typed one''~\cite{elixir-set-theoretic-types}.
+Where the annotation does carry \texttt{dynamic()}, those positions are accepted trivially, so a pass certifies only the concrete positions; for a wholly \texttt{dynamic()} annotation, such as the opacity cases of Subsection~\ref{sec:dialyzer-only}, a pass is no static verdict at all.
+
+The prevalence of \texttt{dynamic()} does not invalidate the translation---as a gradual type it is a sound approximation, deferring an unresolved position to a runtime check rather than falsifying it statically~\cite{duboc2024}---but instead quantifies how much of the corpus carries cross-module type references that cannot be refined without expanding the translation scope to the full dependency tree.
+The widening cuts both ways, one direction per following subsection: it suppresses some Dialyzer-detectable errors (Subsection~\ref{sec:dialyzer-only}), yet \num{2747} of the \num{3835} typechecker-rejected entries (72\%) carry a \texttt{dynamic()} and are rejected regardless (Subsection~\ref{sec:typecheck-only})---leaf-granular masking, not a blanket suppression of the typechecker.
 
 \subsection{Dialyzer-Only Warnings: Why Dialyzer Catches What the Typechecker Cannot \emph{Yet}}
 \label{sec:dialyzer-only}
@@ -130,7 +146,7 @@ A representative entry for each category, namely the function and the Dialyzer m
 \texttt{opaque\_match}         &  1 & A pattern inspects the internal structure of an \texttt{@opaque} term. & no (opacity) \\
 \bottomrule
 \end{tabularx}
-\caption{Dialyzer warning categories among the 98 Dialyzer-only entries. \textbf{N} is the number of entries carrying each category; an entry with warnings in several categories appears in more than one row, so the column sums to more than 98. The final column indicates whether the typechecker performs an analysis that can produce the same finding. \emph{partial (local)} marks a category the typechecker checks inside a function body and therefore reproduces when both tools resolve the same types (Subsection~\ref{sec:both-warned}), but misses here because translation widened the relevant type to \texttt{dynamic()}; \emph{no} marks a finding outside its analysis altogether, requiring \emph{whole-program} reasoning (call-graph reachability or dead code), \emph{cross-module} resolution, or an \emph{opacity} model it does not have.}
+\caption{Dialyzer warning categories among the 98 Dialyzer-only entries. \textbf{N} is the number of entries carrying each category; an entry whose warnings span several categories appears in more than one row, so the column sums to 105, not 98 (7 of the 98 entries carry warnings in two categories). This remains below the 134 raw warnings quoted above, because an entry may also carry several warnings within a single category. The final column indicates whether the typechecker performs an analysis that can produce the same finding. \emph{partial (local)} marks a category the typechecker checks inside a function body and therefore reproduces when both tools resolve the same types (Subsection~\ref{sec:both-warned}), but misses here because translation widened the relevant type to \texttt{dynamic()}; \emph{no} marks a finding outside its analysis altogether, requiring \emph{whole-program} reasoning (call-graph reachability or dead code), \emph{cross-module} resolution, or an \emph{opacity} model it does not have.}
 \label{tab:dialyzer-cats}
 \end{table}
 
@@ -143,17 +159,22 @@ Classifying the 98 entries by \emph{why} the typechecker does not reproduce the 
 None of the three is a case where the typechecker, given the same information and feature set, type-theoretically disagrees with Dialyzer. We treat each in turn.
 
 \paragraph{Whole-program analyses outside its scope (59 entries).}
-By design the new typechecker performs \emph{module type inference}: it infers and checks each function using the current module, the standard library, and dependencies, while assuming that calls to other modules \emph{within the same project} have type \texttt{dynamic()}; its inference is best-effort, warning only on definite failures (cases where \emph{every} combination of a type fails), so a passed function is \emph{not disproven} rather than verified sound~\cite{elixir-set-theoretic-types}.
-Five Dialyzer categories fall outside this body-local view entirely.
-\texttt{no\_return} and \texttt{unused\_fun} are products of Dialyzer's \emph{whole-program} success-typing fixed point~\cite{lindahl2006practical}: detecting that a function has no reachable return path, or that it is never called, requires reasoning across the program's control flow and call sites, which a current function-at-a-time typechecker does not do.
-\texttt{unknown\_function}, \texttt{call\_to\_missing}, and \texttt{callback\_type\_mismatch} require \emph{cross-module} resolution: because the typechecker assumes any call to another module in the same project has type \texttt{dynamic()}, it never looks the callee up, and so never notices that the target function is missing or unexported (\texttt{unknown\_function}, \texttt{call\_to\_missing}) or that an implementation violates the callback type its \texttt{@behaviour} declares (\texttt{callback\_type\_mismatch}).
-On these 59 entries the typechecker found no body-level fault either, so it passed; the warnings are therefore not type disagreements but findings of an analysis it does not \emph{yet} perform, and nothing in its theory precludes adding them.
-Until then Dialyzer remains complementary here, and the 59 entries are evidence of an analytical-scope difference, not of a definition the typechecker wrongly accepts.
+By design the new typechecker performs \emph{module type inference}~\cite{elixir-set-theoretic-types}: it infers and checks each function from the current module, the standard library, and the project's dependencies, and it treats every call to another module \emph{within the same project} as \texttt{dynamic()}.
+This inference is \emph{best-effort}. It warns only when a type is \emph{certain} to fail---when \emph{every} possible typing of an expression leads to an error---so a function that passes is one it could not disprove, not one it has proven correct.
+Five of Dialyzer's categories fall outside this body-local view.
+\texttt{no\_return} and \texttt{unused\_fun} come from Dialyzer's \emph{whole-program} (the entire call graph at once) success-typing fixed point~\cite{lindahl2006practical}: detecting that a function never returns, or that it is never called, requires reasoning across the program's control flow and call sites---which a function-at-a-time typechecker does not do.
+\texttt{unknown\_function}, \texttt{call\_to\_missing}, and \texttt{callback\_type\_mismatch} instead require \emph{cross-module} resolution (a lookup of the specific module a call names).
+Since the typechecker treats every same-project call as \texttt{dynamic()}, it never looks the callee up, so it never sees that the target is missing or unexported (\texttt{unknown\_function}, \texttt{call\_to\_missing}), nor that an implementation contradicts the callback type its \texttt{@behaviour} declares (\texttt{callback\_type\_mismatch}).
+On all 59 entries the typechecker likewise found no body-level fault, so it passed.
+These warnings are therefore not type disagreements but findings of analyses it does not \emph{yet} perform,\footnote{The word ``yet'' is not a promise. The type system is in an early phase whose stated goal is to assess performance and collect feedback from users, and its further milestones are explicitly conditional (``if the results are satisfactory''), so these analyses are not guaranteed to be added~\cite{elixir-set-theoretic-types}.} and nothing in its theory rules them out.
+Until they are added, Dialyzer stays complementary here: the 59 entries mark a difference in analytical scope, not a definition the typechecker wrongly accepts.
 
-A further consideration discounts the \texttt{unknown\_function} and \texttt{call\_to\_missing} warnings in particular as trivial.
-Dialyzer emits one whenever a called function's module is absent from its PLT (the persistent lookup table of analysed modules), so the warning reports \emph{dependency-closure completeness}, not type correctness: the residual cases here call into optional OTP applications (\texttt{:eldap}), development and test tooling (\texttt{IEx}, \texttt{Mix}, \texttt{ExUnit}), optional libraries outside the build closure (\texttt{Jason}, \texttt{PhoenixHTMLHelpers}), or compiler-internal and operator-expansion helpers (\texttt{:elixir\_quote}, \texttt{Enum.\_\_in\_\_/2}) that no project declares as an analysed dependency.
-This sensitivity to the PLT is also why the count is environment-dependent (a handful of these warnings in earlier constructions disappeared once the relevant dependencies were built into the PLT), and it confirms the category is an artefact of the build closure rather than a property of the code.
-The typechecker, which never resolves cross-project calls in the first place, has no analogue to produce, so these entries cannot be a disagreement.
+A further point makes the \texttt{unknown\_function} and \texttt{call\_to\_missing} warnings the weakest of all.
+Dialyzer can only check a call if it has already loaded the module being called; when that module was not loaded, it simply reports the call as missing.
+Such a warning says only that some called module was left out of the analysis---not that the code is wrong.
+Every case here calls a module that no project loads by default: optional Erlang applications (\texttt{:eldap}), development and test tools (\texttt{IEx}, \texttt{Mix}, \texttt{ExUnit}), optional Elixir libraries (\texttt{Jason}, \texttt{PhoenixHTMLHelpers}), or the compiler's own internal helpers (\texttt{:elixir\_quote}, \texttt{Enum.\_\_in\_\_/2}).
+This is why whether such a warning appears is a condition of the run, not a property of the code: the same call warns in a run where its module was not loaded for analysis and stays silent in one where it was.\footnote{Dialyzer reasons only about the modules in its lookup table (the PLT)~\cite{dialyzer-manual}, which \texttt{mix dialyzer} builds from the Erlang/OTP and Elixir core applications, the dependencies fetched for the project, and the project's own compiled code. A called module falls outside this set---and is reported as missing---when its application is not among them: an optional OTP application, a dependency scoped to \texttt{:dev} or \texttt{:test}, an optional dependency that was not fetched, or a compiler-internal module, unless the project lists it explicitly under \texttt{:plt\_add\_apps}~\cite{dialyxir}.}
+The new typechecker never looks up calls to other modules in the same project, so it has no such check at all; the differing verdict here is therefore a matter of scope---the two tools are not answering the same question---rather than a type-theoretic disagreement.
 
 \paragraph{Locally checkable but unreproduced (27 entries).}
 The remaining non-opacity categories are all within the typechecker's body-local remit: an argument mismatch at a call site (\texttt{call}), a pattern or clause that can never match (\texttt{pattern\_match}, \texttt{pattern\_match\_cov}), and a guard that can never succeed (\texttt{guard\_fail}) are each a body-against-declaration inconsistency it is built to catch.
@@ -161,8 +182,9 @@ That it does catch them is visible in the both-warned set (Subsection~\ref{sec:b
 That it did not reproduce these 27 is a matter of approximation and analysis scope, not of an inability to express the check itself.
 For only 6 of them could the cause be direct \texttt{dynamic()} masking: the annotation still carries a \texttt{dynamic()} that can cover the position Dialyzer faults, so where Dialyzer reasons against the original concrete type and finds the call impossible or the pattern dead, the widened annotation presents the typechecker with a value that vacuously satisfies the call and makes every pattern reachable (Subsection~\ref{sec:approximation-via-dynamic}); with the type translated concretely the typechecker would be expected to reproduce the finding.
 The other 21 carry \emph{no} \texttt{dynamic()} at all, and their annotations are faithful renderings (a source \texttt{map()} becomes \texttt{open\_map()}, an \texttt{any()} becomes \texttt{term()}, with nothing widened), so they are a genuine residual gap: real dead-clause, unreachable-pattern, and impossible-guard findings the typechecker simply does not make.
-Each of the 21 hinges on whole-program information the module-local analysis lacks. The unreachability follows from the return type of an intra-project call (a same-project callee returns an error tuple where the code expects a map, as in \texttt{as\_to\_model\_data/1}'s \texttt{extract\_actors/1} and the Mobilizon and Akkoma federation fetchers, which module-local inference assumes is \texttt{dynamic()}); from caller-side success typing that narrows an argument below its declared type (a four-atom tag only ever \texttt{:hour} or \texttt{:week} in \texttt{ttl\_to\_seconds/1}); or from a compile-time module attribute the typechecker does not constant-fold (\texttt{if @env == :test}, statically dead in \texttt{task\_children/0} and \texttt{maybe\_inserted\_at/0}).
-All need whole-program success typing or compile-time constant-folding that the module-local, best-effort typechecker does not perform: the Dialyzer categories are ones the typechecker can express, but these particular instances require information beyond its scope. They are the same whole-program reach that yields the 59 above, surfacing here under a locally-checkable category rather than as a translation artefact.
+Each of the 21 needs whole-program success typing or compile-time constant-folding that the module-local, best-effort typechecker does not perform.
+The unreachability comes from one of three sources: the return type of an intra-project call, which module-local inference assumes is \texttt{dynamic()}---the Mobilizon and Akkoma federation fetchers (functions that retrieve remote ActivityPub objects), for instance, return an error tuple where the caller expects a map; a caller-side narrowing of an argument below its declared type (\texttt{ttl\_to\_seconds/1} declares a time unit of \texttt{:second}, \texttt{:minute}, \texttt{:hour}, or \texttt{:week} but is only ever called with \texttt{:hour} or \texttt{:week}, so its \texttt{:second} and \texttt{:minute} clauses never match); or a comparison of compile-time constants it does not fold (\texttt{@env} is the build environment, \texttt{:dev} here, so the \texttt{:test} branch of \texttt{if @env == :test} is statically dead).
+The Dialyzer categories are ones the typechecker can express; these instances just call for reasoning the module-local analysis does not perform---largely the same reach that yields the 59 above, surfacing under a locally-checkable category rather than as a translation artefact.
 
 \paragraph{Opacity warnings the typechecker does not model (12 entries).}
 The remaining entries carry \texttt{opaque\_match} or \texttt{call\_without\_opaque}: Dialyzer warns that code constructs or pattern-matches an \texttt{@opaque} type through its internal structure rather than its public interface, an abstraction-boundary violation, here on library types such as \texttt{Ecto.Multi} and \texttt{Mint.HTTP.t()}, and even a project-local opaque (\texttt{Concentrate.TripDescriptor}).
@@ -173,7 +195,7 @@ Crucially, and unlike the locally-checkable group, this is \emph{not} a precisio
 Tellingly, the one entry whose annotation contains no \texttt{dynamic()} at all (\texttt{ExCubicIngestion.ProcessIngestion.ingest/1}, on \texttt{Ecto.Multi}) is missed all the same---confirming that opacity, not approximation, is the operative cause.
 
 \paragraph{Project distribution.}
-The Dialyzer-only warnings are concentrated: Mobilizon contributes 50 of the 98 and Akkoma 20, with the remaining 28 spread across twelve further projects (MBTA seven; Analytics five; Absinthe and Cachex three each; cldr and Livebook two each; and six projects with one apiece).
+The Dialyzer-only warnings are concentrated: Mobilizon contributes 50 of the 98 and Akkoma 20, with the remaining 28 spread across twelve further projects (MBTA seven; Analytics five; Absinthe and Cachex three each; Cldr and Livebook two each; and six projects with one apiece).
 The concentration tracks \texttt{dynamic()} density: the projects with the most unresolved remote types are those whose Dialyzer findings the translation most often masks with the gradual type.
 
 \subsection{Typechecker-Only Warnings}
@@ -184,7 +206,7 @@ At face value this is the strict-superset clause of the hypothesis; on inspectio
 The findings divide by kind into unreachable clauses or patterns (\num{1677}), argument mismatches at a call site (914), return-type mismatches (691), map-key accesses (217), and a residue of other checks (137).
 
 \paragraph{Unreachable-clause findings (\num{1677}).}
-The largest group is not the typechecker over-warning but the typechecker \emph{correctly} rejecting a wrong translated type: \num{1308} of the \num{1677} reject a struct pattern against a translated struct type that is \emph{disjoint} from the real struct, every one a residue of translating structs from the AST without a symbol table (Subsection~\ref{sec:struct-representation}).
+The largest group is not the typechecker over-warning but its \emph{correct} reasoning from a \emph{wrong} translated type: in \num{1308} of the \num{1677}, a struct pattern is matched against a translated struct type that is \emph{disjoint} from the real struct, so the pattern can never match and the clause is reported unreachable. Each is a residue of translating structs from the AST without a compiler-level lookup table (Subsection~\ref{sec:struct-representation}).
 In 752 the translated struct type lists only some of the struct's fields, so the closed map excludes valid structs and a \texttt{\%Mod\{\}} pattern cannot match; in 556 the translator could not expand an aliased struct name to its full module path, so the asserted \texttt{\_\_struct\_\_} atom names a different module than the pattern's.
 A verified instance is \texttt{Scenic.Components.button/3}, whose clause head pattern-matches the struct:
 \begin{lstlisting}[language=Elixir, firstnumber=last]
@@ -192,7 +214,7 @@ def button(%Graph{} = g, data, options) do
   add_to_graph(g, Component.Button, data, options)
 end
 \end{lstlisting}
-The compiler resolves \texttt{\%Graph\{\}} to \texttt{\%Scenic.Graph\{\}} (\texttt{:"Elixir.Scenic.Graph"}), disjoint from the translated argument's \texttt{:"Elixir.Graph"}, so the typechecker reports the clause unreachable; Dialyzer, reading the original spec, accepts the same clause, confirming the code is correct and the fault is the translation.
+The compiler resolves \texttt{\%Graph\{\}} to \texttt{\%Scenic.Graph\{\}} (\texttt{:"Elixir.Scenic.Graph"}), disjoint from the translated argument's \texttt{:"Elixir.Graph"} (because the translator could not expand the alias to its full module path), so the typechecker reports the clause unreachable; Dialyzer, reading the original spec, accepts the same clause, confirming the code is correct and the fault is the translation.
 The warning is thus \emph{valid} --- a sound deduction from the type it was handed --- yet it exposes a translation defect rather than a program fault, so it is neither a type-theoretic disagreement nor genuine error detection; both the field-set and alias residuals would be removed by resolving structs against their defining modules.
 Whether the defect surfaces at all, however, depends on the body: only a struct the body \emph{exercises}---through a pattern or a field access---is caught. The same \texttt{:"Elixir.Graph"} defect in \texttt{Scenic.Primitives.rrect/3}, which merely forwards its argument, produces no warning and is admitted into the both-pass pool, sound but unfaithful to the specification:
 \begin{lstlisting}[language=Elixir, firstnumber=last]
@@ -201,22 +223,77 @@ def rrect(graph_or_primitive, rrect, opts \\ []) do
 end
 \end{lstlisting}
 The \num{1308} counted here are therefore only the \emph{exercised} residuals; an unknown further number pass silently into the pool.
-The remaining 369 are non-struct, and they include the genuine dead code the typechecker surfaces and Dialyzer accepts: a clause matching an atom outside the scrutinee's type (\texttt{:dev\_blue} where the value is only \texttt{:dev\_green} or \texttt{:prod}), a defensive fall-through made redundant by an exhaustive earlier match, a right-hand \texttt{||} branch that can never run because the left side is always truthy, or a constantly-true-or-false guard.
+The remaining 369 are non-struct: genuine dead code the typechecker surfaces and Dialyzer accepts, each a branch the program can never reach. A representative case is \texttt{predictions\_from\_entites/3}, whose \texttt{@spec} types its \texttt{env} argument as \texttt{:prod} or \texttt{:dev\_green} while the body's \texttt{case} still has a third clause:
+\begin{lstlisting}[language=Elixir, firstnumber=last]
+@spec predictions_from_entites([map()], integer(), :prod | :dev_green) :: [map()]
+def predictions_from_entites(entities, timestamp, env) do
+  # ...
+  case env do
+    :prod -> "prod"
+    :dev_green -> "dev-green"
+    :dev_blue -> "dev-blue"
+  end
+  # ...
+end
+\end{lstlisting}
+Since \texttt{env} can only be \texttt{:prod} or \texttt{:dev\_green}, the \texttt{:dev\_blue} clause can never match: the typechecker reports it unreachable, while Dialyzer accepts it. The others are of the same kind---a catch-all clause the earlier clauses already make unreachable by covering every case, the right-hand side of an \texttt{||} that never runs because the left side is always truthy, or a clause whose guard can never succeed.
 For a codebase moving off Dialyzer onto the new checker, this reachability and exhaustiveness feedback is precisely the kind of static signal the transition is meant to add.
 
 \paragraph{Argument mismatches (914).}
-These are the conservatism of module-local inference: the faulted argument is inferred \texttt{term()} or \texttt{dynamic()}, from an intra-project call or a broad declared type such as \texttt{map()} or \texttt{list()}, so the typechecker cannot establish the callee's expected input and warns on correct code; others pass a struct whose translated type dropped the field the callee reads, turn on protocol dispatch (for instance \texttt{Ecto.Queryable}) the checker does not model, or are spec-looseness, where a bare \texttt{map()} parameter becomes an open map that guarantees no field, so a field access in the body cannot be shown to succeed even though the runtime map carries the key.
+Most are the conservatism of module-local inference: when the faulted argument is inferred \texttt{term()} or \texttt{dynamic()}---from an intra-project call, or from a broad declared type such as \texttt{map()} or \texttt{list()}---the typechecker cannot establish the callee's expected input and warns on correct code.
+\texttt{Scenic.PubSub.do\_subscribe/3} is representative: its \texttt{state} argument is declared \texttt{map()}, an open map that carries no per-field types, so the \texttt{subs\_id} destructured from it is inferred \texttt{term()}:
+\begin{lstlisting}[language=Elixir, firstnumber=last]
+@spec do_subscribe(pid :: GenServer.server(), source_id :: atom, state :: map) :: any
+def do_subscribe(pid, source_id, %{subs_id: subs_id, subs_pid: subs_pid} = state) do
+  # ...
+  Map.get(subs_id, source_id, [])
+  # ...
+end
+\end{lstlisting}
+\texttt{Map.get/3} expects a \texttt{map()} as its first argument, but \texttt{subs\_id} is \texttt{term()}, so the call is warned---even though \texttt{state} carries a map there at runtime, which is why Dialyzer accepts it.
+The rest fall into two smaller groups. Some pass a struct whose translated type is missing a field the callee accesses, so the argument does not satisfy what the callee expects---the unrecovered-field-set residual of Subsection~\ref{sec:struct-representation}. Others call through an Elixir protocol, such as \texttt{Ecto.Queryable}, whose dispatch the checker does not model, so it cannot tell what type the protocol's implementation expects.
 
 \paragraph{Return-type findings (691).}
 These classify by the typechecker's inferred body type against the declared type into three groups.
-In \num{390} the annotation itself carries a \texttt{dynamic()}: after root-hoisting it is gradual, so the disagreement is on a non-static type and neither a pass nor a warning here is a static verdict (Subsection~\ref{sec:approximation-via-dynamic}); this group absorbs the translation artefacts, a concrete body warned against a \texttt{dynamic()} assertion that root-hoisting stripped of its optionality, or over-broadened inference that invents a union arm the body never returns.
-In a further 125 the inferred return type is \texttt{dynamic()} or the top type \texttt{term()} while the asserted type is concrete: the body returns the result of an intra-project or un-spec'd remote call that inference assumes is \texttt{dynamic()}, so the typechecker cannot establish the concrete return type and warns, whereas Dialyzer's whole-program success typing resolves the callee and confirms the contract (\texttt{def config\_path, do: Path.join(data\_dir(), \dots)} is inferred \texttt{dynamic()} against a declared \texttt{binary()} because \texttt{data\_dir/0} is intra-project).
-The remaining 176 are purely static, no \texttt{dynamic()} on either side, so a disagreement is a true static verdict: the body provably returns a value outside the declared type that Dialyzer's optimism accepts, as when \texttt{Scenic.PubSub.publish/2} returns \texttt{\{:error, :not\_registered\}} under the specification \texttt{:ok} or \texttt{Absinthe.Type.Custom.parse\_date/1} returns \texttt{:error} under \texttt{\{:ok, nil\}}.
+In \num{390} the annotation itself carries a \texttt{dynamic()}: after root-hoisting the declared type is gradual, so neither a pass nor a warning here is a static verdict (Subsection~\ref{sec:approximation-via-dynamic}), and the group collects translation artefacts. \texttt{Absinthe.Phase.Debug.run/2} is representative:
+\begin{lstlisting}[language=Elixir, firstnumber=last]
+@spec run(any, Keyword.t()) :: {:ok, Absinthe.Blueprint.t()}
+def run(input, _options \\ []) do
+  Logger.debug("[Absinthe Blueprint]", input)
+  {:ok, input}
+end
+\end{lstlisting}
+\texttt{Blueprint.t()} is a struct the translation could not fully resolve, so the asserted return became \texttt{dynamic(\{:ok, \%Blueprint\{\dots\}\})}. The body returns \texttt{\{:ok, input\}} with \texttt{input} typed \texttt{term()} (it is declared \texttt{any}), so the typechecker flags the mismatch---but on a gradual type, an artefact of the translation rather than a static verdict.
+In a further 125 the declared type is concrete but inference cannot pin the body's return to it and types it as the top type \texttt{term()}; since \texttt{term()} is not a subtype of a concrete declaration, the typechecker warns, whereas Dialyzer's whole-program success typing resolves the value and confirms the contract:
+\begin{lstlisting}[language=Elixir, firstnumber=last]
+@spec backend() :: backend()
+def backend do
+  get(:backend)
+end
+\end{lstlisting}
+The \texttt{@spec} promises the return type \texttt{backend()}---defined as just the two atoms \texttt{:exla} or \texttt{:nx\_binary}---but the body calls the same module's \texttt{get/1}, whose own declared return is \texttt{term()} (its body is \texttt{Map.get(get(), key)}). \texttt{backend/0} is therefore typed \texttt{term()}, and since \texttt{term()} is not a subtype of those two atoms, the typechecker cannot show the body stays within the declared type and warns; Dialyzer accepts, because \texttt{term()} does not contradict \texttt{:exla} or \texttt{:nx\_binary} on any path.
+
+The subtlety is why the body is \texttt{term()} rather than \texttt{dynamic()}, since both denote ``any value''. Module type inference assumes \texttt{dynamic()} only for calls into \emph{other} modules of the same project; a call to a function in the \emph{same} module, like \texttt{get/1}, is resolved to its actual type---here \texttt{term()}~\cite{elixir-set-theoretic-types}. This is decisive, because the two tops behave oppositely against a concrete declaration: \texttt{term()} is the \emph{static} top and is not a subtype of a concrete type, so it warns, whereas \texttt{dynamic()} is the \emph{gradual} top, compatible with every type, so it never does. Had \texttt{get/1} lived in another project module its result would have been assumed \texttt{dynamic()}, and \texttt{backend/0} would have passed.
+The remaining 176 are purely static---no \texttt{dynamic()} on either side---so a disagreement is a true static verdict: the body provably returns a value outside the declared type that Dialyzer's optimism accepts:
+\begin{lstlisting}[language=Elixir, firstnumber=last]
+@spec bounds(vectors :: nil | list(Math.vector_2())) ::
+        {left :: number, top :: number, right :: number, bottom :: number}
+def bounds(nil) do
+  nil
+end
+def bounds([]) do
+  nil
+end
+def bounds([{x, y} | vectors]) when is_list(vectors) do
+  # ... reduces to a {left, top, right, bottom} tuple
+end
+\end{lstlisting}
+For a \texttt{nil} or empty input \texttt{bounds/1} returns \texttt{nil}, outside the declared coordinate tuple; Dialyzer's optimism accepts it because another clause can return the tuple.
 These purely-static leaks are the legitimate content of the strict-superset clause; representative cases are given in the appendix ``\nameref{app:typecheck-examples}''.
 
 \paragraph{Interpretation.}
 The headline ``\num{3636} warnings Dialyzer misses'' overstates the typechecker's advantage --- not because the typechecker is wrong (its warnings are valid) but because most are correct responses to a faulty \emph{input}, the translated type, rather than detections of a faulty \emph{program}.
-The unreachable-clause group is dominated by struct-representation residuals of AST-based translation (\num{1308} of \num{1677}), where the checker rejects a disjoint struct type, and the return-type group by \texttt{dynamic()}-masked and cannot-verify cases that carry no static verdict (515 of 691).
+The unreachable-clause group is dominated by struct-representation residuals of AST-based translation (\num{1308} of \num{1677}), where the checker rejects a disjoint struct type, and the return-type group by gradual (\texttt{dynamic()}-carrying) and cannot-verify cases that carry no static verdict (515 of 691).
 What the typechecker alone genuinely catches is the 176 purely-static return leaks Dialyzer's optimism accepts and the 369 non-struct unreachable-clause findings its reachability checking surfaces.
 The two analyses are thus better described as \emph{complementary} than nested for now: Dialyzer flags the whole-program properties and intra-project calls the typechecker leaves as \texttt{dynamic()}, and the typechecker both the return leaks Dialyzer's optimism accepts and the dead code its reachability checking surfaces.
 As the migration target shifts from Dialyzer to the new checker, these two classes, the return leaks and the reachability findings, are what the codebase stands to gain.
@@ -235,25 +312,18 @@ One entry per Dialyzer category from this set, paired with both tools' messages,
 \subsection{Implications for Downstream Use}
 \label{sec:downstream-implications}
 
-The two-tool cross-validation is not only a quality check on the translation; it directly shapes how the resulting dataset is consumed in the LLM training pipeline of the next chapter, whose goal is a model that predicts annotations the typechecker accepts, that is, predicts \emph{safe}.
+The cross-validation conducted by Dialyzer and Elixir's new typechecker is not only a quality check on the translation; it directly shapes how the resulting dataset is consumed in the LLM training pipeline in the next part, whose goal is to infer a function type that the typechecker accepts.
 Three observations transfer directly.
 
 \paragraph{Keeping only typechecker-verified labels.}
-The model is trained to produce annotations the typechecker accepts, so every training label must itself be an annotation the typechecker admits.
+The models are trained to produce annotations the typechecker accepts, so every training label must itself be an annotation the typechecker admits.
 We therefore keep only the \emph{both-pass} entries, those accepted by \emph{both} Dialyzer and the new typechecker.
-This is a substantive filter, not a cosmetic one: it removes \num{4385} entries (19.0\% of the corpus), the great majority typechecker rejections, plus the 452 the typechecker could not analyse and the 297 Dialyzer warnings.
+This is a substantive filter: it removes \num{4385} entries (19.0\% of the corpus), the great majority typechecker rejections, plus the 452 the typechecker could not analyse and the 297 Dialyzer warnings.
 About a fifth of the translated annotations are thus rejected by, or unverifiable under, at least one tool (genuinely inconsistent for some, but for most only unverifiable by the typechecker's conservative inference; see Subsection~\ref{sec:typecheck-only}), and excluding them leaves only labels the typechecker positively accepts.
 
-\paragraph{Two datasets: with and without gradual types.}
-Within the both-pass pool one choice remains: whether to also drop entries whose annotation contains \texttt{dynamic()}.
-Subsection~\ref{sec:approximation-via-dynamic} showed this \texttt{dynamic()} is mostly an artefact of unresolved remote types, not a deliberate gradual-typing decision, and the choice has costs on both sides: dropping it yields purely static, precise labels but discards more than half the pool, while keeping it preserves coverage at the risk of teaching the model to emit \texttt{dynamic()} to avoid type errors.
-Rather than decide in advance, we build \emph{two} datasets and let the next chapter settle the matter empirically:
-\begin{itemize}
-  \item the full \textbf{both-pass} pool (\textbf{\num{18688}} entries), which \emph{includes} gradual (\texttt{dynamic()}) types; and
-  \item its \textbf{dynamic-free} subset (\textbf{\num{7813}} entries) of \emph{purely static} types only.
-\end{itemize}
-The two are nested (the second is the precise core of the first); a length filter and a subproject-stratified split (Subsection~\ref{sec:llm-data-prep}) give the final per-track counts.
-Training one model on each lets us test directly whether including gradual types helps or hurts safe, precise prediction.
+\paragraph{Gradual types in the labels.}
+Those labels can carry \texttt{dynamic()}, inherited from the translation and mostly an artefact of unresolved remote types rather than a deliberate gradual-typing choice (Subsection~\ref{sec:approximation-via-dynamic}), so the model is trained to reproduce annotations that may include \texttt{dynamic()}.
+A length filter and a subproject-stratified split (Subsection~\ref{sec:llm-data-prep}) give the final training and test sets.
 
 \paragraph{Typechecker as the success criterion.}
 Because the model is optimised to satisfy the typechecker, evaluation uses the typechecker as ground truth: a predicted annotation counts as correct when the typechecker accepts it on injection into the real project.
@@ -266,11 +336,12 @@ Dialyzer plays no part in scoring predictions: its role was confined to building
     \item \textbf{Relative strictness}: the typechecker rejects \num{3835} entries (16.6\%) against Dialyzer's 297 (1.3\%); pass rates are 81.4\% versus 98.3\%. The typechecker is decisively the stricter tool, as hypothesised.
     \item \textbf{Subsumption}: the typechecker independently warns on 67.0\% of Dialyzer's failing entries (199 of 297), reproducing Dialyzer's finding directly for the locally-checkable categories and co-rejecting the rest on a separate body-level fault. The 98 it does not co-warn are \emph{not} type-theoretic counterexamples, but split between whole-program analyses it does not perform, locally-checkable findings masked by \texttt{dynamic()}, and \texttt{@opaque} type violations it does not model (Subsection~\ref{sec:dialyzer-only}).
     \item \textbf{Approximation cost}: 60.3\% of entries contain \texttt{dynamic()}; it suppresses some Dialyzer-visible errors but leaves 72\% of typechecker rejections intact, so it is not a blanket suppression.
-    \item \textbf{Typechecker-only (15.8\%)}: its dominant kind is unreachable-clause findings, of which \num{1308} of \num{1677} reject struct patterns the translator could not fully resolve from the AST (incomplete field sets or unresolved module paths) rather than genuine errors; the return-type group is likewise dominated by \texttt{dynamic()}-masked and cannot-verify cases carrying no static verdict. What it alone genuinely catches is 176 purely-static return leaks Dialyzer's optimism accepts and 369 non-struct dead-clause findings its reachability checking surfaces (Subsection~\ref{sec:typecheck-only}).
+    \item \textbf{Typechecker-only (15.8\%)}: its dominant kind is unreachable-clause findings, of which \num{1308} of \num{1677} reject struct patterns the translator could not fully resolve from the AST (incomplete field sets or unresolved module paths) rather than genuine warnings; the return-type group is likewise dominated by gradual (\texttt{dynamic()}-carrying) and cannot-verify cases carrying no static verdict. What it alone genuinely catches is 176 purely-static return leaks Dialyzer's optimism accepts and 369 non-struct dead-clause findings its reachability checking surfaces (Subsection~\ref{sec:typecheck-only}).
     \item \textbf{Both tools (0.9\%)}: definitions faulty enough that both analyses independently reject them, confirming agreement wherever a fault is visible to both.
-    \item \textbf{Training pools}: the both-pass filter yields \num{18688} typechecker-verified entries; its dynamic-free subset (\num{7813}) and the full set define the two supervision tracks compared empirically in the next chapter.
+    \item \textbf{Training pool}: the both-pass filter yields \num{18688} typechecker-verified entries; this single pool, length-filtered and split (Subsection~\ref{sec:llm-data-prep}), is the corpus on which the next part fine-tunes and compares two model architectures, a decoder-only and an encoder--decoder model.
 \end{itemize}
 The hypothesis is supported in its subsumption clause but qualified in its strict-superset clause.
 The set-theoretic typechecker subsumes Dialyzer wherever both reason over the same resolvable types. Its residual blind spots on Dialyzer's failures are attributable to whole-program analyses it has not \emph{yet} implemented, to features such as \texttt{@opaque}-type enforcement it does not yet model, and to translation-time approximation, not to any case where it wrongly accepts a definition Dialyzer soundly rejects.
-It also warns far more often than Dialyzer, but that excess is mostly translation residuals --- struct patterns it could not fully resolve from the AST and positions widened to \texttt{dynamic()} --- rather than superior error detection, with a genuine core of 176 purely-static return leaks and 369 non-struct dead-clause findings that it alone catches.
+It also warns far more often than Dialyzer.
+Although that excess is mostly translation residuals --- struct patterns the translation could not fully resolve from the AST, and positions widened to \texttt{dynamic()} --- a genuine core remains that the typechecker alone catches: 176 purely-static return leaks and 369 non-struct dead-clause findings.
 The two analyses are therefore best read as complementary: each detects a class the other cannot.
