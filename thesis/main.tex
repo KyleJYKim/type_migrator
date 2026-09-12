@@ -42,6 +42,10 @@
 
 \part{Translating TypeSpecs into Elixir Types}
 
+Existing Elixir code already carries type information---the optional \texttt{@spec} annotations Dialyzer consumes---but written in TypeSpecs, a syntax the new set-theoretic type system does not read.
+This part turns those annotations into the new system's types: it formalises both type languages and the translation between them, implements that translation as a prototype over real-world code, and validates the resulting dataset by cross-checking Dialyzer against the new typechecker.
+That checker-verified dataset is the supervised signal from which the second part learns.
+
 \chapter{Formalisation}
 \label{ch:formalisation}
 This chapter provides rigorous type syntax formalisation both TypeSpecs and Elixir Types in order to produce theoretical translation equations.
@@ -69,16 +73,22 @@ The final analysis eventually helps building a feasible dataset that we can use 
 
 \part{Inferring Elixir Types with Large Language Models}
 
-\chapter{Type Prediction with LLMs}
 The translation pipeline of Chapter~\ref{ch:formalisation} converts existing TypeSpec annotations into Elixir Types, and the analysis of Chapter~\ref{ch:implementation} characterises how the \num{23073} translated annotations are analysed under the two checkers: \num{18688} (81.0\%) are accepted by both, while the rest are dominated by translation-time \texttt{dynamic()} approximation and the typechecker's conservative module-local inference, with only a small residue of genuine type errors.
 Yet translation only reaches functions that \emph{already} carry TypeSpecs.
 Most production Elixir code carries none: in the application code of our corpus, only \num{15694} \texttt{@spec} annotations accompany \num{119901} \texttt{def} and \texttt{defp} clauses, so the large majority of functions go unspec'd.
 Developers omit the optional \texttt{@spec} directives; Dialyzer still analyses these functions by inferring success typings~\cite{lindahl2006practical}, but with no declared contract there is no developer's intended type to hold the body to.
 A complete migration to the typed environment is therefore not addressed by translation alone; the remaining, dominant, fraction of the codebase requires that an annotation be \emph{inferred}.
 
-This chapter investigates whether a large language model fine-tuned on the corpus of translated, typechecker-accepted annotations can supply such inferences with enough fidelity to drive the migration.
+The chapters that follow investigate whether a large language model fine-tuned on the corpus of translated, typechecker-accepted annotations can supply such inferences with enough fidelity to drive the migration.
 The supervised signal is the by-product of the agreement study (Subsection~\ref{sec:downstream-implications}): the \num{18688} \emph{both-pass} entries that both tools accept, which after a length filter form the training corpus detailed in Subsection~\ref{sec:llm-data-prep}.
 Each entry pairs a function definition with an Elixir Type annotation the typechecker accepts as consistent with that definition, and the supervised task is to recover that annotation from the definition.
+
+This prediction task is an unusual one for a language model, distinctive in three ways.
+First, the target type system is set-theoretic: a prediction must produce unions, intersections, and constructor-shaped types with explicit field information, not the class names of a nominal type system.
+Second, the task is type \emph{generation}, not type \emph{correction}: unlike the correction setting of~\cite{Nina}, in which a possibly-incorrect type is supplied and refined, the model here is given only the function definition and must produce the annotation from scratch.
+Third, and most sharply, the target notation is itself unfamiliar to the models: the set-theoretic Elixir Types are emitted by an in-development compiler and barely appear in any public corpus, so the notation is essentially unseen in pretraining.
+A code model can lean on a mature type language such as Python's or TypeScript's---which it has already absorbed during pretraining---and learn only \emph{when} to apply it; here it must instead learn the notation itself, its constructors, its unions written as \texttt{or}, and its \texttt{dynamic()}, from the supervised data.
+
 We pursue two model families in parallel on this both-pass pool---a large decoder-only model and a much smaller encoder--decoder, fine-tuned on the same annotations---and compare how well each architecture supports the prediction task.
 
 % We define \emph{total migration} as the state in which every function in a project carries an Elixir Type annotation accepted by the new typechecker.

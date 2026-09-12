@@ -1,46 +1,86 @@
-\section{LLM Type Prediction}
+\chapter{LLM Settings}
+\label{ch:llm-settings}
 
-Having established a corpus of typechecker-accepted annotations, we now ask whether a language model can \emph{produce} such annotations from a function's source alone.
-Because the target is a set-theoretic type, we evaluate a prediction not by textual similarity to the reference but by whether it is a type the reference does not contradict, using the type system's own compatibility judgement (Subsection~\ref{sec:compatibility-eval}).
+We fine-tune two models of deliberately contrasting architecture and scale on the corpus of typechecker-accepted annotations: a large decoder-only model adapted parameter-efficiently, and a much smaller encoder--decoder fine-tuned in full.
+Both see the same data, the same prompt, and the same split, so that any difference between them is attributable to the model rather than the data.
 
-\subsection{Task Formulation}
-\label{sec:llm-task}
+\section{Models}
+\label{sec:llm-models}
 
-We frame type prediction as a \emph{conditional text-generation} task: given the definition of a function (i.e., its source text together with any user-defined types in its module scope) the model writes out the corresponding Elixir Type annotation one token at a time, much as a language model produces a sentence.
-It is \emph{conditional} because what the model writes depends on the input code, and \emph{generation} because the annotation is produced as text rather than selected from a fixed set of labels, which is necessary here because the new Elixir type system is open-ended (arbitrary unions, tuples, and maps with explicit fields) and forms no finite vocabulary to classify into.
+\paragraph{Qwen2.5-Coder-7B (decoder-only).}
+Our first model is \texttt{Qwen2.5-Coder-7B}~\cite{qwen25coder} (the base variant, not instruct).
+This choice reflects three considerations.
+First, the Qwen2.5-Coder technical report~\cite{qwen25coder} reports that this model matches or exceeds DeepSeek-Coder-7B-Base~\cite{deepseekcoder} and StarCoder2-7B~\cite{starcoder2} across standard code benchmarks while remaining single-GPU deployable.
+Second, Qwen2.5-Coder is pre-trained on over 5.5~T tokens spanning 92 programming languages, including Elixir, a coverage criterion that excludes some alternatives whose Elixir presence is undocumented.
+Third, the base variant (rather than the instruction-tuned variant) is more suitable for structured completion tasks: we do not need conversational scaffolding, and starting from a base model avoids fighting habits introduced by chat-format training.
 
-Each training entry consists of:
-\begin{itemize}
-    \item the qualified module name in which the function is defined;
-    \item the list of \texttt{@type}, \texttt{@opaque}, and \texttt{@typep} declarations in scope at the function;
-    \item the function definition reconstructed from the AST, including all clauses;
-    \item two \emph{grounding} blocks extracted from that definition, which surface the evidence the code itself provides for the type: the \emph{argument patterns} (each clause's parameter patterns and guards, e.g.\ \texttt{(\%User\{\}, \_) when is\_binary(x)}) and the \emph{return expressions} (the outermost constructor of each clause's tail position, e.g.\ \texttt{\{:ok, \_\}} or, for a value produced by an opaque call, \texttt{call: fetch/1});
-    \item the target: the translated annotation, already accepted by the typechecker.
-\end{itemize}
+\paragraph{CodeT5+-770M (encoder--decoder).}
+Our second model is \texttt{CodeT5+-770M}~\cite{codet5p}, an encoder--decoder an order of magnitude smaller than the Qwen base.
+It is chosen precisely to contrast with the decoder-only model along two axes at once, architecture and scale, and so to ask how much of the result is owed to a large left-to-right model rather than to the task and data.
+An encoder--decoder reads the whole function definition bidirectionally in its encoder before the decoder emits any output token, and CodeT5+ is pre-trained end-to-end for exactly this kind of understanding-then-generation task~\cite{codet5p}, which makes it a natural counterpart for a problem where the annotation depends on evidence spread across the entire definition.
 
-These fields are assembled into a structured prompt with delimiter sections (\texttt{\#\#\# Module:}, \texttt{\#\#\# Types in scope:}, \texttt{\#\#\# Definition:}, \texttt{\#\#\# Argument patterns:}, \texttt{\#\#\# Return expressions:}, \texttt{\#\#\# Elixir type:}), with the target annotation placed last.
-The two grounding blocks make explicit, at the input, exactly the code evidence a faithful annotation should rest on: a type is expected only where a pattern, guard, or tail constructor supports it.
-Training is plain next-token prediction over this whole text (the standard \emph{autoregressive} objective): at each position the model predicts the next token from all the tokens before it, so that, given the prompt up to \texttt{\#\#\# Elixir type:}, it learns to continue with the correct annotation.
+\section{Fine-tuning and Hyperparameters}
+\label{sec:llm-training}
 
-This formulation differs from prior work in three respects.
-First, the target type system is set-theoretic rather than nominal: predictions must produce unions, intersections, and constructor-shaped types with explicit field information, not class names.
-Second, the task is type \emph{generation} rather than the type \emph{correction} studied by~\cite{Nina}.
-There is no observed (potentially incorrect) type in the input, only the function definition; the model must produce the annotation from scratch.
-Third, the language is Elixir on the BEAM, an under-represented target in code-LLM training corpora compared with Python or TypeScript, on which most existing type-prediction work has been conducted.
+The two models are adapted by different regimes, matched on every shared hyperparameter so that the regime and architecture, not the schedule, account for any difference.
 
-\subsection{Dataset Preparation}
+\paragraph{Qwen: QLoRA.}
+At 7~B parameters the model cannot be fully fine-tuned on a single GPU within reasonable time, and the supervised dataset is too small to benefit from full fine-tuning regardless.
+We therefore apply QLoRA~\cite{qlora}: the base model is loaded in 4-bit NormalFloat (NF4) quantisation with double-quantisation enabled, and a Low-Rank Adaptation (LoRA)~\cite{lora} layer is attached to all seven linear sub-modules of every transformer block (\texttt{q\_proj}, \texttt{k\_proj}, \texttt{v\_proj}, \texttt{o\_proj}, \texttt{gate\_proj}, \texttt{up\_proj}, \texttt{down\_proj}).
+The LoRA rank is 32 with $\alpha = 64$ and a dropout of 0.05, giving roughly 80~M trainable parameters out of the 7~B base.
+Training uses the HuggingFace \texttt{TRL} \texttt{SFTTrainer} with sequence packing at a maximum length of 1{,}024 tokens.
+As a decoder-only model, it takes the prompt and the target annotation as one concatenated sequence and is trained by next-token prediction over the whole of it (the standard autoregressive objective).
+
+\paragraph{CodeT5+: full fine-tuning.}
+The 770~M encoder--decoder is small enough to fine-tune in full: all of its parameters are updated, with no adapters or quantisation.
+Being a sequence-to-sequence model, it does not concatenate the two: the prompt is the encoder input, read bidirectionally, and the annotation is the decoder's target, so the training loss falls on the annotation tokens alone.
+Its encoder input and decoder output are each capped at 512 tokens (against the 1{,}024 the packed Qwen sequence allows), a length that still covers every target the length filter of Subsection~\ref{sec:llm-data-prep} keeps.
+
+\paragraph{Shared training configuration.}
+Both runs use an effective batch size of 16 (Qwen: per-device 2 with 8 gradient-accumulation steps; CodeT5+: per-device 4 with 4), a learning rate of $1 \times 10^{-4}$ with cosine decay and a 10\% warmup ratio, weight decay 0.01, and bfloat16 mixed precision.
+The optimiser is paged AdamW with 8-bit state, both train for 1.2 epochs, and the best checkpoint by validation loss is retained.
+Qwen's eval-time batch size is reduced to 1 to avoid running out of memory during the cross-entropy over its 152{,}064-token vocabulary.
+
+\section{Compute Environment}
+\label{sec:llm-compute}
+All training runs were carried out on the LIP6 Convergence cluster, where each job was allocated through Slurm a single NVIDIA~A100 GPU, 8 CPU cores, and host RAM.
+Most runs used a half-GPU MIG slice (the \texttt{a100\_3g.40gb} profile, 40~GB) rather than a full A100; the 4-bit QLoRA configuration keeps the 7~B base model together with its LoRA adapters and optimiser state comfortably within the 40~GB budget, so the full \texttt{a100\_7g.80gb} profile was needed only occasionally, and no run approached its time or memory limit.
+The compatibility evaluation, which requires the compiler with the typechecker rather than a GPU, was run separately on a local workstation.
+
+\section{Training Behaviour and Reproducibility}
+\label{sec:llm-repro}
+Both models converge cleanly with no instability; the validation loss bottoms early and drifts up thereafter, so best-checkpoint-by-validation-loss selection retains the optimum rather than the final weights.
+% TODO: fill in the exact per-run figures from the final cluster logs
+% (optimiser steps, wall-clock time, initial/final training loss, best
+% validation loss) for both models.
+All training artefacts (configuration, prompt template, every dataset split, and the final weights) are versioned with the seeds used at each stage (salt 42 for the hash split, seed 42 for the trainers).
+
+\chapter{LLM Implementation}
+\label{ch:llm-impl}
+
+With the models and their training regime fixed in Chapter~\ref{ch:llm-settings}, this chapter implements the pipeline that turns the checker-verified corpus into predictions: how the training dataset is prepared, and the code that fine-tunes the models and generates their annotations.
+
+\section{Dataset Preparation}
+\label{sec:llm-dataset}
+
+This section turns the corpus of typechecker-accepted annotations into a supervised learning dataset: it settles the both-pass pool it draws from and its train/validation/test split, then frames the prediction task and the prompt the model is trained on.
+
+\subsection{The Both-Pass Corpus and Split}
 \label{sec:llm-data-prep}
 
-We train on the \emph{both-pass} pool: every entry on which both Dialyzer and the set-theoretic typechecker accept the translated annotation.
+We train on the \emph{both-pass} pool: every entry on which both Dialyzer and the set-theoretic typechecker accept the translated annotation, that is passed.
 This is the largest checker-accepted pool, and it admits annotations whose translation contains \texttt{dynamic()}---overwhelmingly an artefact of unresolved remote types rather than a deliberate gradual-typing choice (Subsection~\ref{sec:approximation-via-dynamic}), but a type the checker nonetheless accepts as safe.
 A length filter is applied before the split: entries whose function definition exceeds 2{,}000 characters or whose target annotation exceeds 1{,}000 characters are removed, as these pathological cases (e.g.\ \texttt{Regex.replace/4}, whose translation expands to over 250~KiB\footnote{Its third argument is typed \texttt{(... -> String.t())}, a variable-arity function whose non-\texttt{term()} return type the translation expands into a union over every fixed arity the BEAM permits, from 0 to 255 (Chapter~\ref{ch:formalisation}); a 616-character definition thereby yields an annotation of over 250~KiB.}) would dominate batch composition without proportionate learning signal.
 
 \paragraph{Subproject-stratified split.}
-The dataset is partitioned by a project-stratified split: evaluating on functions from a project that also appears in training would over-estimate generalisation.
+The dataset is partitioned so that evaluation never sees a project it trained on: reusing functions from a training project would over-estimate generalisation.
 The \texttt{project} field denotes a GitHub organisation, not a codebase (an organisation such as \texttt{mbta} hosts more than a hundred independent repositories), so we split by \emph{subproject}, defined as \texttt{project/module\_root} where \texttt{module\_root} is the top-level segment of the Elixir module path (e.g.\ \texttt{mbta/AlertProcessor}).
-The split assignment is a deterministic hash of each subproject name (a salted MD5 reduced modulo 100), rather than a shuffle of the universe, so that a subproject keeps its assignment across dataset regenerations at a 70/15/15 target ratio: the test set is stable even as the corpus grows, which is what makes results comparable across training rounds.
-No subproject leaks across train, validation, and test.
-This yields the splits in Table~\ref{tab:llm-splits}.
+
+Each subproject is assigned to a split by hashing its name: we take the MD5 digest of the subproject name prefixed with the seed---the string \texttt{42:mbta/AlertProcessor}, for instance---read the digest as an integer, and reduce it modulo 100 to a bucket in $[0,100)$; buckets $[0,70)$ are \emph{train}, $[70,85)$ \emph{validation}, and $[85,100)$ \emph{test}. Every function of a subproject inherits that one bucket, so no subproject can leak across the three splits.
+
+Hashing the \emph{name}, rather than shuffling the subproject universe, is what buys stability. A shuffle assigns splits by permuting the whole set, so regenerating the dataset---adding a repository, or dropping one that no longer compiles under the development compiler---reshuffles the assignment and can move a subproject from test into train; the test set then differs between rounds, silently invalidating any comparison of results across them. A per-name hash, by contrast, is a pure function of the subproject and the fixed seed, independent of every other subproject, so an assignment never changes as the corpus grows---and that fixed test set is what makes results comparable across training rounds.
+
+The 70/15/15 ratio is exact over the hash range, and near-exact over the \emph{count} of subprojects (279/60/64, i.e.\ 69/15/16\%), but it does not carry over to \emph{entries}: the split unit is the whole subproject, and subprojects vary widely in size, which means a few large ones tilt the entry counts. By entry the split comes out at 63.8/22.5/13.7\% (Table~\ref{tab:llm-splits}), validation well above and training below the nominal share---a drift we accept as the price of a leak-free, round-stable test set.
 
 \begin{table}[h]
 \centering
@@ -57,49 +97,59 @@ Test       & \num{2127} & 64 \\
 \label{tab:llm-splits}
 \end{table}
 
-Of the \num{2127} held-out test references, \num{1639} (\num{77.1}\%) are gradual (their deterministic translation resorted to \texttt{dynamic()}, Subsection~\ref{sec:approximation-via-dynamic}); the remaining \num{488} are fully concrete.
+% Of the \num{2127} held-out test references, \num{1100} (\num{51.7}\%) are gradual (their deterministic translation resorted to \texttt{dynamic()}, Subsection~\ref{sec:approximation-via-dynamic}); the remaining \num{1027} are fully concrete.
 
-\subsection{Model and Training}
-\label{sec:llm-training}
+\subsection{Task Formulation}
+\label{sec:llm-task}
 
-\paragraph{Base model.}
-We fine-tune \texttt{Qwen2.5-Coder-7B}~\cite{qwen25coder} (the base variant, not instruct) as the foundation model.
-This choice reflects three considerations.
-First, the Qwen2.5-Coder technical report~\cite{qwen25coder} reports that this model matches or exceeds DeepSeek-Coder-7B-Base~\cite{deepseekcoder} and StarCoder2-7B~\cite{starcoder2} across standard code benchmarks while remaining single-GPU deployable.
-Second, Qwen2.5-Coder is pre-trained on over 5.5~T tokens spanning 92 programming languages, including Elixir, a coverage criterion that excludes some alternatives whose Elixir presence is undocumented.
-Third, the base variant (rather than the instruction-tuned variant) is more suitable for structured completion tasks: we do not need conversational scaffolding, and starting from a base model avoids fighting habits introduced by chat-format training.
+We frame type prediction as a \emph{conditional text-generation} task: given the definition of a function (i.e., its source text together with any user-defined types in its module scope) the model writes out the corresponding Elixir Type annotation one token at a time, much as a language model produces a sentence.
+It is \emph{conditional} because what the model writes depends on the input code, and \emph{generation} because the annotation is produced as text rather than selected from a fixed set of labels, which is necessary here because the new Elixir type system is open-ended (arbitrary unions, tuples, and maps with explicit fields) and forms no finite vocabulary to classify into.
 
-\paragraph{Parameter-efficient fine-tuning.}
-At 7~B parameters the model cannot be fully fine-tuned on a single GPU within reasonable time, and the supervised dataset is too small to benefit from full fine-tuning regardless.
-We therefore apply QLoRA~\cite{qlora}: the base model is loaded in 4-bit NormalFloat (NF4) quantisation with double-quantisation enabled, and a Low-Rank Adaptation (LoRA)~\cite{lora} layer is attached to all seven linear sub-modules of every transformer block (\texttt{q\_proj}, \texttt{k\_proj}, \texttt{v\_proj}, \texttt{o\_proj}, \texttt{gate\_proj}, \texttt{up\_proj}, \texttt{down\_proj}).
-The LoRA rank is 32 with $\alpha = 64$ and a dropout of 0.05, giving roughly 80~M trainable parameters out of the 7~B base.
+Each training entry consists of:
+\begin{itemize}
+    \item the qualified module name in which the function is defined;
+    \item the list of \texttt{@type}, \texttt{@opaque}, and \texttt{@typep} declarations (translated) in scope at the function;
+    \item the function definition reconstructed from the AST, including all clauses when there are more than one;
+    % \item two \emph{grounding} blocks extracted from that definition, which surface the evidence the code itself provides for the type: the \emph{argument patterns} (each clause's parameter patterns and guards, e.g.\ \texttt{(\%User\{\}, \_) when is\_binary(x)}) and the \emph{return expressions} (the outermost constructor of each clause's tail position, e.g.\ \texttt{\{:ok, \_\}} or, for a value produced by an opaque call, \texttt{call: fetch/1});
+    \item the target: the translated annotation, already accepted by the typechecker.
+\end{itemize}
 
-\paragraph{Training configuration.}
-Training uses the HuggingFace \texttt{TRL} \texttt{SFTTrainer} with sequence packing at a maximum length of 1{,}024 tokens.
-The effective batch size is 16 (per-device batch size 2 with 8 gradient accumulation steps).
-The learning rate is $2 \times 10^{-4}$ with cosine decay and a 5\% warmup ratio, weight decay 0.01, and bfloat16 mixed precision.
-The optimiser is paged AdamW with 8-bit state, and the best checkpoint by validation loss is retained.
-Training runs for two epochs on a single GPU; eval-time batch size is reduced to 1 to avoid out-of-memory during the cross-entropy over the 152{,}064-token vocabulary.
+These fields are assembled into a structured prompt with delimiter sections at runtime by Python:
+\begin{lstlisting}[numbers=none]
+"### Instruction":
+    "For the given Elixir function definition, infer the most precise correct
+     function type, written as an Elixir set-theoretic type annotation.
+     Respond only with Elixir Types (Descr) syntax."
 
-\paragraph{Compute environment.}
-All training runs were carried out on the LIP6 Convergence cluster, where each job was allocated through Slurm a single NVIDIA~A100 GPU, 8 CPU cores, and host RAM.
-Most runs used a half-GPU MIG slice (the \texttt{a100\_3g.40gb} profile, 40~GB) rather than a full A100; the 4-bit QLoRA configuration keeps the 7~B base model together with its LoRA adapters and optimiser state comfortably within the 40~GB budget, so the full \texttt{a100\_7g.80gb} profile was needed only occasionally, and no run approached its time or memory limit.
-The compatibility evaluation, which requires the compiler with the typechecker rather than a GPU, was run separately on a local workstation.
+"### Input":
+    "Module": MODULE_NAME
+    "Types in scope": USER_DEFINED_TYPES
+    "Definition": FUNCTION_DEFINITION
 
-\paragraph{Training behaviour.}
-The model converges cleanly with no instability.
-The validation loss bottoms early and drifts up thereafter, so best-checkpoint-by-validation-loss selection retains the optimum rather than the final weights.
-% TODO: fill in the exact per-run figures from the final cluster logs
-% (optimiser steps, wall-clock time, initial/final training loss, best
-% validation loss).
+"### Output":
+    FUNCTION_ANNOTATION
+\end{lstlisting}
+The last (\text{FUNCTION\_ANNOTATION}) of which marks the target annotation the model must produce.
+% The two grounding blocks make explicit, at the input, exactly the code evidence a faithful annotation should rest on: a type is expected only where a pattern, guard, or tail constructor supports it.
+The supervised objective is to \emph{generate} this target annotation from the prompt: given the definition, the model is trained to produce, token by token, the annotation the typechecker accepts for it.
 
-\paragraph{Reproducibility.}
-All training artefacts (configuration, prompt template, every dataset split, and the final adapter weights) are versioned with the seeds used at each stage (salt 42 for the hash split, seed 42 for the trainers).
+% ============================================================
+% TODO: code-implementation sections of the pipeline go here,
+%       e.g. \section{Training Pipeline} (prepare_data.py, train_sft.py,
+%       train_seq2seq.py) and \section{Generation and Injection}
+%       (generate.py / generate_seq2seq.py, the constrained decoder,
+%       and injection back into the project for typechecking).
+% ============================================================
 
-\subsection{Evaluation: Set-Theoretic Compatibility}
+\chapter{Evaluation}
+\label{ch:llm-eval}
+
+A trained model is evaluated by comparing each predicted annotation against the accepted reference annotation on the held-out test entries.
+Because the target is a set-theoretic type, we evaluate a prediction not by textual similarity to the reference but by whether it is a type the reference does not contradict, using the type system's own compatibility judgement.
+
+\section{Set-Theoretic Compatibility}
 \label{sec:compatibility-eval}
 
-A trained model is evaluated by comparing each predicted annotation against the accepted reference annotation on held-out test entries.
 The question a metric must answer is not whether the prediction is textually identical to the reference, but whether it is a \emph{safe} type for the function: one the reference does not contradict.
 This is exactly the judgement the set-theoretic type system already provides, so rather than adopt an external similarity heuristic we evaluate predictions with the typechecker's own type algebra (the \texttt{Descr} module, Chapter~\ref{ch:formalisation}).
 
@@ -124,18 +174,12 @@ A prediction that fails to parse is counted as not compatible (reported separate
 Alongside compatibility we report the \emph{exact-match} rate: the fraction of predictions that denote the identical type to the reference, decided by the same type algebra so that a difference of union-arm ordering or map-field ordering does not count against a prediction.
 Exact match is strictly stronger than compatibility---it additionally requires equal \emph{precision}, not merely safety---and we use it only as a precision indicator, never as the primary criterion, for the reason given above.
 
-\paragraph{Results.}
-The model is evaluated on the common \num{2127}-entry test set with greedy decoding under a grammar constraint that restricts output to well-formed set-theoretic types.
-It attains \num{40.4}\% compatibility (\num{860} of \num{2127}), an exact-match rate of \num{8.6}\%, and a null rate of \num{0.4}\%.
-The remainder of this section asks how far this result depends on the model's architecture and scale, by comparing against a much smaller encoder--decoder.
+\section{Results}
+\label{sec:llm-results}
 
-\subsection{Architecture Comparison: A Smaller Encoder--Decoder}
-\label{sec:llm-architecture}
-
-The canonical model is a QLoRA adaptation of a 7~B decoder-only base.
-To ask how much of the result is owed to that architecture and scale rather than to the task and data, we compare against \texttt{CodeT5+-770M}~\cite{codet5p}, an encoder--decoder model an order of magnitude smaller, which we \emph{fully} fine-tune rather than adapt.
-Both models train on the same canonical both-pass dataset with the same prompt and are scored on the identical \num{2127}-entry test set, so any difference is attributable to the model, not the data.
+Both models are scored on the common \num{2127}-entry test set, having trained on the same both-pass dataset with the same prompt, so any difference is attributable to the model rather than the data.
 One asymmetry must be stated: the Qwen decoding is grammar-constrained to well-formed set-theoretic types, whereas the CodeT5+ decoding is \emph{unconstrained}, because the constrained-decoding library does not support its tokenizer; we therefore report each model's null rate.
+Table~\ref{tab:llm-architecture} summarises the outcome.
 
 \begin{table}[h]
 \centering
@@ -152,11 +196,11 @@ CodeT5+-770M (full FT, unconstrained) & \textbf{\num{52.5}\%} & \textbf{\num{30.
 \end{table}
 
 The smaller encoder--decoder is the stronger model on both axes.
-It is more compatible (\num{52.5}\% versus \num{40.4}\%, a \num{12.0}-point margin) and far more precise, matching the reference exactly on \num{30.1}\% of entries against \num{8.6}\% for Qwen---\num{3.5} times as many---while decoding without the grammar constraint and at roughly a tenth of the parameters.
+It is more compatible (\num{52.5}\% versus \num{40.4}\%, \num{1116} entries against \num{860}, a \num{12.0}-point margin) and far more precise, matching the reference exactly on \num{30.1}\% of entries against \num{8.6}\% for Qwen---\num{3.5} times as many---while decoding without the grammar constraint and at roughly a tenth of the parameters.
 The one cost of the missing constraint appears in the null column (\num{4.2}\% against \num{0.4}\%), but it does not close the gap: crediting all \num{89} null predictions as compatible would raise CodeT5+ to \num{56.6}\%, still above Qwen.
 Full fine-tuning of a task-matched encoder--decoder thus outperforms parameter-efficient adaptation of a much larger decoder-only model on this task.
 
-\subsection{Qualitative Analysis}
+\section{Qualitative Analysis}
 \label{sec:llm-qualitative}
 \label{sec:qualitative}
 
@@ -170,10 +214,10 @@ The two denote the same value set, so the prediction counts as exact, and it typ
 \paragraph{Recovering precision the translator lost.}
 On targets whose \emph{reference} is gradual, the model frequently supplies a precise type the deterministic translation could not.
 \texttt{AshStateMachine.Charts.mermaid\_flowchart/1} has reference \texttt{(dynamic() -> dynamic())} --- the translation widened both positions to \texttt{dynamic()} because their types came from unresolved remote types --- yet the model predicts \texttt{(atom() -> binary())}, which typechecks.
-The prediction is \emph{more} precise than the reference it is scored against: the model has reconstructed information the translation discarded, which is why it remains compatible on much of the gradual-reference subset where an exact match against the reference is by definition impossible.
+The prediction is \emph{more} precise than the reference it is scored against: the model has reconstructed information the translation discarded, and such a precise prediction is compatible with, but cannot exactly match, a \texttt{dynamic()} reference---which is much of the gradual-reference subset.
 
 \paragraph{Where the larger model fails and the smaller succeeds.}
-The architecture comparison of Subsection~\ref{sec:llm-architecture} shows up in individual predictions.
+The architecture comparison of Section~\ref{sec:llm-results} shows up in individual predictions.
 \texttt{Postgrex.ReplicationConnection.encode\_lsn/1} has reference \texttt{(integer() -> \{:ok, binary()\} or :error)}.
 Qwen collapses the two result arms into a single ill-formed tuple \texttt{\{:ok or :error, dynamic()\}} with a spurious \texttt{empty\_list()} alternative, a shape the function never returns, and the typechecker rejects it; CodeT5+ reproduces the reference exactly.
 The same precision gap appears on return structure: \texttt{Integer.extended\_gcd/2} has reference \texttt{(integer(), integer() -> \{integer(), integer(), integer()\})}, and Qwen discards the tuple's element structure, collapsing the return to a bare \texttt{tuple()} that admits tuples the function never returns and is therefore rejected, whereas CodeT5+ reproduces the three-integer tuple exactly.
@@ -181,5 +225,5 @@ In both cases Qwen misjudges the precision the code actually determines --- over
 Such precision errors are concentrated on functions with non-obvious control flow or opaque struct constructors, exactly the code where the ground-truth shape is hardest to read off the source alone, and they are the dominant source of incompatible predictions for both models.
 The smaller encoder--decoder is consistently less prone to it.
 We are deliberately cautious about the cause: CodeT5+ and Qwen differ in more than their encoder --- also in fine-tuning regime (full versus low-rank adaptation), pretraining corpus and objective, and parameter count --- so this single comparison cannot attribute the gap to any one factor.
-One plausible contributor is architectural: an encoder--decoder reads the whole function definition bidirectionally before the decoder fixes any output position, a fuller view of the code's evidence than a strictly left-to-right, decoder-only pass affords, and CodeT5+ is pretrained end-to-end for exactly this kind of understanding-then-generation task~\cite{codet5p}.
+One plausible contributor is architectural: an encoder--decoder reads the whole function definition bidirectionally before the decoder fixes any output position, a fuller view of the code's evidence than a strictly left-to-right, decoder-only pass affords.
 Isolating the encoder's contribution --- for instance by fully fine-tuning a decoder-only model of comparable scale under an otherwise identical regime --- is left to future work.
