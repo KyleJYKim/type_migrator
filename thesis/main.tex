@@ -89,7 +89,7 @@ Second, the task is type \emph{generation}, not type \emph{correction}: unlike t
 Third, and most sharply, the target notation is itself unfamiliar to the models: the set-theoretic Elixir Types are emitted by an in-development compiler and barely appear in any public corpus, so the notation is essentially unseen in pretraining.
 A code model can lean on a mature type language such as Python's or TypeScript's---which it has already absorbed during pretraining---and learn only \emph{when} to apply it; here it must instead learn the notation itself, its constructors, its unions written as \texttt{or}, and its \texttt{dynamic()}, from the supervised data.
 
-We pursue two model families in parallel on this both-pass pool---a large decoder-only model and a much smaller encoder--decoder, fine-tuned on the same annotations---and compare how well each architecture supports the prediction task.
+We pursue two model families in parallel on this both-pass pool---a large decoder-only model and a much smaller encoder--decoder, fine-tuned on the same annotations---to find an effective route to inferring these annotations rather than to rank the two architectures.
 
 % We define \emph{total migration} as the state in which every function in a project carries an Elixir Type annotation accepted by the new typechecker.
 % Under this definition the LLM's role is to fill the gap left by translation: where an existing \texttt{@spec} can be translated, the prototype of Chapter~\ref{ch:implementation} does so; where none exists, the model predicts one.

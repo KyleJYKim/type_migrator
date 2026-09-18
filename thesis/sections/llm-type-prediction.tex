@@ -1,8 +1,9 @@
-\chapter{LLM Settings}
+\chapter{Setup and Implementation}
 \label{ch:llm-settings}
 
-We fine-tune two models of deliberately contrasting architecture and scale on the corpus of typechecker-accepted annotations: a large decoder-only model adapted parameter-efficiently, and a much smaller encoder--decoder fine-tuned in full.
-Both see the same data, the same prompt, and the same split, so that any difference between them is attributable to the model rather than the data.
+We fine-tune two models of deliberately contrasting design on the corpus of typechecker-accepted annotations: a large decoder-only model adapted parameter-efficiently, and a much smaller encoder--decoder fine-tuned in full.
+The aim is not to crown one architecture but to find an effective way to infer the new types.
+Both see the same data, the same prompt, and the same split, so that what differs is the modelling approach and not the material it learns from.
 
 \section{Models}
 \label{sec:llm-models}
@@ -11,20 +12,24 @@ Both see the same data, the same prompt, and the same split, so that any differe
 Our first model is \texttt{Qwen2.5-Coder-7B}~\cite{qwen25coder} (the base variant, not instruct).
 This choice reflects three considerations.
 First, the Qwen2.5-Coder technical report~\cite{qwen25coder} reports that this model matches or exceeds DeepSeek-Coder-7B-Base~\cite{deepseekcoder} and StarCoder2-7B~\cite{starcoder2} across standard code benchmarks while remaining single-GPU deployable.
-Second, Qwen2.5-Coder is pre-trained on over 5.5~T tokens spanning 92 programming languages, including Elixir, a coverage criterion that excludes some alternatives whose Elixir presence is undocumented.
-Third, the base variant (rather than the instruction-tuned variant) is more suitable for structured completion tasks: we do not need conversational scaffolding, and starting from a base model avoids fighting habits introduced by chat-format training.
+Second, its pretraining includes Elixir: the technical report~\cite{qwen25coder} lists Elixir among the 92 programming languages spanned by its more than 5.5~T tokens.
+We treated documented Elixir coverage as a requirement, which ruled out otherwise-comparable models whose pretraining data is not documented to contain any.
+Third, we use the base variant rather than the instruction-tuned one.
+Because we fine-tune on a fixed prompt template of our own (Subsection~\ref{sec:llm-task}), the instruction-following an instruct variant adds is redundant, while its chat-format tuning would instil conversational habits---preambles, explanations, surrounding prose---that a task demanding only a bare type annotation would then have to suppress; a base checkpoint carries none to override.
+Using base checkpoints for both models also keeps the comparison on equal footing, with neither carrying an extra layer of alignment tuning.
 
 \paragraph{CodeT5+-770M (encoder--decoder).}
-Our second model is \texttt{CodeT5+-770M}~\cite{codet5p}, an encoder--decoder an order of magnitude smaller than the Qwen base.
-It is chosen precisely to contrast with the decoder-only model along two axes at once, architecture and scale, and so to ask how much of the result is owed to a large left-to-right model rather than to the task and data.
-An encoder--decoder reads the whole function definition bidirectionally in its encoder before the decoder emits any output token, and CodeT5+ is pre-trained end-to-end for exactly this kind of understanding-then-generation task~\cite{codet5p}, which makes it a natural counterpart for a problem where the annotation depends on evidence spread across the entire definition.
+Our second model is \texttt{CodeT5+-770M}~\cite{codet5p}, an encoder--decoder an order of magnitude smaller than the Qwen2.5 base.
+We chose it as a deliberately contrasting model: a different architecture, and much smaller.
+As an encoder--decoder it encodes the full input before decoding, and it is pre-trained end-to-end for code understanding and generation~\cite{codet5p}.
 
 \section{Fine-tuning and Hyperparameters}
 \label{sec:llm-training}
 
-The two models are adapted by different regimes, matched on every shared hyperparameter so that the regime and architecture, not the schedule, account for any difference.
+The two models are adapted by different regimes. 
+Since the aim is the best inference each model can give rather than a controlled comparison between them, we tune each independently for its own best performance; only the dataset, split, and prompt are held in common (Section~\ref{sec:llm-dataset}).
 
-\paragraph{Qwen: QLoRA.}
+\paragraph{Qwen2.5: QLoRA.}
 At 7~B parameters the model cannot be fully fine-tuned on a single GPU within reasonable time, and the supervised dataset is too small to benefit from full fine-tuning regardless.
 We therefore apply QLoRA~\cite{qlora}: the base model is loaded in 4-bit NormalFloat (NF4) quantisation with double-quantisation enabled, and a Low-Rank Adaptation (LoRA)~\cite{lora} layer is attached to all seven linear sub-modules of every transformer block (\texttt{q\_proj}, \texttt{k\_proj}, \texttt{v\_proj}, \texttt{o\_proj}, \texttt{gate\_proj}, \texttt{up\_proj}, \texttt{down\_proj}).
 The LoRA rank is 32 with $\alpha = 64$ and a dropout of 0.05, giving roughly 80~M trainable parameters out of the 7~B base.
@@ -34,31 +39,19 @@ As a decoder-only model, it takes the prompt and the target annotation as one co
 \paragraph{CodeT5+: full fine-tuning.}
 The 770~M encoder--decoder is small enough to fine-tune in full: all of its parameters are updated, with no adapters or quantisation.
 Being a sequence-to-sequence model, it does not concatenate the two: the prompt is the encoder input, read bidirectionally, and the annotation is the decoder's target, so the training loss falls on the annotation tokens alone.
-Its encoder input and decoder output are each capped at 512 tokens (against the 1{,}024 the packed Qwen sequence allows), a length that still covers every target the length filter of Subsection~\ref{sec:llm-data-prep} keeps.
+Its encoder input and decoder output are each capped at 512 tokens (against the 1{,}024 the packed Qwen2.5 sequence allows), a length that still covers every target the length filter of Subsection~\ref{sec:llm-data-prep} keeps.
 
 \paragraph{Shared training configuration.}
-Both runs use an effective batch size of 16 (Qwen: per-device 2 with 8 gradient-accumulation steps; CodeT5+: per-device 4 with 4), a learning rate of $1 \times 10^{-4}$ with cosine decay and a 10\% warmup ratio, weight decay 0.01, and bfloat16 mixed precision.
-The optimiser is paged AdamW with 8-bit state, both train for 1.2 epochs, and the best checkpoint by validation loss is retained.
-Qwen's eval-time batch size is reduced to 1 to avoid running out of memory during the cross-entropy over its 152{,}064-token vocabulary.
+Both runs use an effective batch size of 16 (Qwen2.5: per-device 2 with 8 gradient-accumulation steps; CodeT5+: per-device 4 with 4), a learning rate of $1 \times 10^{-4}$ with cosine decay and a 10\% warmup ratio, weight decay 0.01, and bfloat16 mixed precision.
+The optimiser is paged AdamW with 8-bit state, and both train for 1.2 epochs, each retaining the checkpoint with the lowest validation loss (Section~\ref{sec:llm-repro}).
 
 \section{Compute Environment}
 \label{sec:llm-compute}
 All training runs were carried out on the LIP6 Convergence cluster, where each job was allocated through Slurm a single NVIDIA~A100 GPU, 8 CPU cores, and host RAM.
-Most runs used a half-GPU MIG slice (the \texttt{a100\_3g.40gb} profile, 40~GB) rather than a full A100; the 4-bit QLoRA configuration keeps the 7~B base model together with its LoRA adapters and optimiser state comfortably within the 40~GB budget, so the full \texttt{a100\_7g.80gb} profile was needed only occasionally, and no run approached its time or memory limit.
-The compatibility evaluation, which requires the compiler with the typechecker rather than a GPU, was run separately on a local workstation.
+Runs used a full A100 (the \texttt{a100\_7g.80gb} profile, 80~GB); because the 4-bit QLoRA configuration keeps the 7~B base model, its LoRA adapters, and optimiser state comfortably within 40~GB, a half-GPU MIG slice (the \texttt{a100\_3g.40gb} profile, 40~GB) was equally effective where it was used, and no run approached its time or memory limit.
+The compatibility evaluation, which requires the compiler with the typechecker, was run separately on a local workstation.
 
-\section{Training Behaviour and Reproducibility}
-\label{sec:llm-repro}
-Both models converge cleanly with no instability; the validation loss bottoms early and drifts up thereafter, so best-checkpoint-by-validation-loss selection retains the optimum rather than the final weights.
-% TODO: fill in the exact per-run figures from the final cluster logs
-% (optimiser steps, wall-clock time, initial/final training loss, best
-% validation loss) for both models.
-All training artefacts (configuration, prompt template, every dataset split, and the final weights) are versioned with the seeds used at each stage (salt 42 for the hash split, seed 42 for the trainers).
-
-\chapter{LLM Implementation}
-\label{ch:llm-impl}
-
-With the models and their training regime fixed in Chapter~\ref{ch:llm-settings}, this chapter implements the pipeline that turns the checker-verified corpus into predictions: how the training dataset is prepared, and the code that fine-tunes the models and generates their annotations.
+With the models and their training regime fixed, we now turn to the pipeline that turns the checker-verified corpus into predictions: how the training dataset is prepared, and the code that fine-tunes the models and generates their annotations.
 
 \section{Dataset Preparation}
 \label{sec:llm-dataset}
@@ -80,7 +73,11 @@ Each subproject is assigned to a split by hashing its name: we take the MD5 dige
 
 Hashing the \emph{name}, rather than shuffling the subproject universe, is what buys stability. A shuffle assigns splits by permuting the whole set, so regenerating the dataset---adding a repository, or dropping one that no longer compiles under the development compiler---reshuffles the assignment and can move a subproject from test into train; the test set then differs between rounds, silently invalidating any comparison of results across them. A per-name hash, by contrast, is a pure function of the subproject and the fixed seed, independent of every other subproject, so an assignment never changes as the corpus grows---and that fixed test set is what makes results comparable across training rounds.
 
-The 70/15/15 ratio is exact over the hash range, and near-exact over the \emph{count} of subprojects (279/60/64, i.e.\ 69/15/16\%), but it does not carry over to \emph{entries}: the split unit is the whole subproject, and subprojects vary widely in size, which means a few large ones tilt the entry counts. By entry the split comes out at 63.8/22.5/13.7\% (Table~\ref{tab:llm-splits}), validation well above and training below the nominal share---a drift we accept as the price of a leak-free, round-stable test set.
+The resulting proportions are approximate, and deliberately so.
+The ratio is exactly 70/15/15 over the hash range, but a finite set of subprojects cannot realise it exactly: by \emph{count} the split lands at 279/60/64 (69/15/16\%), the ordinary sampling spread of dropping 403 independent items into fixed buckets.
+By \emph{entries} it drifts further, to 63.8/22.5/13.7\% (Table~\ref{tab:llm-splits})---validation above and training below the nominal share---because the split unit is the whole subproject while entries are counted per function, and subprojects vary widely in size, so a few large ones landing in validation tilt the totals; this imbalance is one no choice of hash can remove, since it stems from the coarse split unit rather than from the hash.
+We treat precise proportions as subordinate to a test set that is leak-free and stable across rounds, and the two changes that would tighten the ratio each forfeit exactly one of those guarantees: splitting by \emph{entry} would balance the counts but leak sibling functions of one subproject across splits, while counting up to an exact 70\% would nail the ratio but tie every assignment to the whole corpus, so that adding or dropping a single repository would reshuffle the test set.
+A split that never leaks and never shifts between rounds is worth more here than an exact one that does either.
 
 \begin{table}[h]
 \centering
@@ -114,7 +111,7 @@ Each training entry consists of:
     \item the target: the translated annotation, already accepted by the typechecker.
 \end{itemize}
 
-These fields are assembled into a structured prompt with delimiter sections at runtime by Python:
+These fields are assembled at runtime into a structured prompt with delimiter sections. It is built once and shared verbatim by both models---everything up to and including the \texttt{\#\#\# Output:} marker:
 \begin{lstlisting}[numbers=none]
 "### Instruction":
     "For the given Elixir function definition, infer the most precise correct
@@ -127,19 +124,113 @@ These fields are assembled into a structured prompt with delimiter sections at r
     "Definition": FUNCTION_DEFINITION
 
 "### Output":
+\end{lstlisting}
+The target annotation is what follows that marker:
+\begin{lstlisting}[numbers=none]
     FUNCTION_ANNOTATION
 \end{lstlisting}
-The last (\text{FUNCTION\_ANNOTATION}) of which marks the target annotation the model must produce.
-% The two grounding blocks make explicit, at the input, exactly the code evidence a faithful annotation should rest on: a type is expected only where a pattern, guard, or tail constructor supports it.
-The supervised objective is to \emph{generate} this target annotation from the prompt: given the definition, the model is trained to produce, token by token, the annotation the typechecker accepts for it.
+The \texttt{\#\#\# Output:} marker is the seam at which the two architectures diverge---the one point where they treat the same text differently.
+For the decoder-only model (Qwen2.5), prompt and target form a single continuous token stream: the prompt up to \texttt{\#\#\# Output:} is fed in and the model \emph{continues} it, emitting the annotation, and a terminating end-of-text token, as the completion of that same sequence.
+For the encoder--decoder (CodeT5+), the two are separate streams: the identical prompt is the \emph{encoder} input, read in full and bidirectionally, while the annotation is generated on the \emph{decoder} side as its own target sequence.
+The supervised objective is the same either way---given the definition, produce, token by token, the annotation the typechecker accepts---but the decoder-only model is trained over the whole concatenated sequence, whereas the encoder--decoder places its loss on the target tokens alone (Section~\ref{sec:llm-training}).
 
-% ============================================================
-% TODO: code-implementation sections of the pipeline go here,
-%       e.g. \section{Training Pipeline} (prepare_data.py, train_sft.py,
-%       train_seq2seq.py) and \section{Generation and Injection}
-%       (generate.py / generate_seq2seq.py, the constrained decoder,
-%       and injection back into the project for typechecking).
-% ============================================================
+The template uses the familiar Alpaca-style \texttt{\#\#\# Instruction}/\texttt{\#\#\# Input}/\texttt{\#\#\# Output} headers, yet both models are base, pre-trained checkpoints, not instruction-tuned variants (Section~\ref{sec:llm-models}).
+The headers are therefore not there to trigger instruction-following---a base model has learned none---but act as fixed structural delimiters imposed identically during fine-tuning and at inference (the same template is the single source of truth for both).
+The model thus learns the format from the supervised data: the annotation is what follows the \texttt{\#\#\# Output:} marker.
+The natural-language instruction line is itself a constant prefix, identical across every example, so a base model need not interpret it as a command for the mapping to be learned.
+An instruction-tuned model, by contrast, would read such a header through its own learned instruction-following and would normally be driven through its dedicated chat template and special role tokens; we instead supply a plain, fixed scaffold and teach its role through fine-tuning.
+
+\section{Training Pipeline}
+\label{sec:llm-pipeline}
+The pipeline is a handful of Python scripts sharing one prompt module.
+\texttt{prepare\_data.py} consumes the translation prototype's dataset (Chapter~\ref{ch:implementation}), keeps the both-pass entries, applies the length filter, and writes the seed-scoped \texttt{train}/\texttt{validation}/\texttt{test} splits of Subsection~\ref{sec:llm-data-prep}.
+The prompt template of Subsection~\ref{sec:llm-task} lives in a single module imported by both trainers and both generators, so the format cannot drift between training and inference---a silent prompt mismatch there would degrade generation without raising any error.
+
+Two scripts realise the regimes of Section~\ref{sec:llm-training}.
+The decoder-only script wraps the base model in QLoRA and trains with the \texttt{TRL} \texttt{SFTTrainer}, packing prompt and target into one sequence and taking the loss over all of it.
+The encoder--decoder script fully fine-tunes CodeT5+ with a \texttt{Seq2SeqTrainer}; its \texttt{DataCollatorForSeq2Seq} right-shifts the decoder input and sets the label of every padding position to $-100$, so the cross-entropy falls on the annotation tokens alone.
+Both evaluate on the validation split as training proceeds and retain the checkpoint of lowest validation loss (Section~\ref{sec:llm-repro}).
+
+\section{Training Behaviour and Reproducibility}
+\label{sec:llm-repro}
+Both runs converge without instability.
+Qwen2.5 trains for \num{177} optimiser steps in \num{3388}~seconds (about \num{56} minutes); its training loss falls smoothly from \num{1.41} to a run-mean of \num{0.66}, with small and stable gradient norms throughout.
+CodeT5+ trains for roughly \num{740} steps in \num{2943}~seconds (about \num{49} minutes), its training loss dropping from \num{2.63} to a run-mean of \num{0.28} after a noisier early phase.
+
+The two validation curves differ in a way that bears on checkpoint selection (Figure~\ref{fig:llm-loss-curves}).
+Qwen2.5's validation loss bottoms early---\num{0.885} at about epoch~\num{0.68}---and drifts upward to \num{0.905} thereafter, so the retained checkpoint is an intermediate one rather than the final weights.
+CodeT5+'s bottoms late---\num{0.276} at about epoch~\num{1.0}---and stays essentially flat to the end, so its best and final checkpoints nearly coincide.
+In both cases the model carried forward to evaluation is the one that minimises validation loss.
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}[t]{0.49\textwidth}
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=\textwidth, height=5.2cm,
+    xlabel={Epochs}, ylabel={Loss},
+    xmin=0, xmax=1.22, ymin=0.3, ymax=1.45,
+    legend pos=north east, legend cell align=left,
+    grid=major, grid style={gray!15},
+    tick label style={font=\scriptsize}, label style={font=\small}, legend style={font=\scriptsize},
+]
+\addplot[gray!55, very thin, mark=none] coordinates {
+(0.010,1.405)(0.020,1.385)(0.030,1.325)(0.050,1.335)(0.060,1.262)(0.070,1.231)(0.090,1.131)(0.100,1.167)(0.120,0.987)(0.130,0.972)(0.140,0.946)(0.160,0.897)(0.170,0.833)(0.180,0.841)(0.200,0.826)(0.210,0.824)(0.220,0.784)(0.240,0.732)(0.250,0.783)(0.260,0.762)(0.280,0.761)(0.290,0.760)(0.310,0.801)(0.320,0.757)(0.330,0.761)(0.350,0.708)(0.360,0.668)(0.370,0.712)(0.390,0.657)(0.400,0.649)(0.410,0.653)(0.430,0.642)(0.440,0.599)(0.450,0.624)(0.470,0.689)(0.480,0.653)(0.500,0.586)(0.510,0.659)(0.520,0.499)(0.540,0.570)(0.550,0.494)(0.560,0.571)(0.580,0.594)(0.590,0.696)(0.600,0.564)(0.620,0.525)(0.630,0.559)(0.640,0.494)(0.660,0.556)(0.670,0.506)(0.690,0.499)(0.700,0.558)(0.710,0.510)(0.730,0.584)(0.740,0.503)(0.750,0.579)(0.770,0.580)(0.780,0.560)(0.790,0.531)(0.810,0.608)(0.820,0.533)(0.830,0.553)(0.850,0.494)(0.860,0.496)(0.880,0.595)(0.890,0.477)(0.900,0.551)(0.920,0.475)(0.930,0.490)(0.940,0.485)(0.960,0.535)(0.970,0.456)(0.980,0.422)(1.000,0.497)(1.010,0.409)(1.020,0.497)(1.040,0.477)(1.050,0.514)(1.070,0.471)(1.080,0.471)(1.090,0.517)(1.110,0.474)(1.120,0.491)(1.130,0.396)(1.150,0.423)(1.160,0.428)(1.170,0.482)(1.190,0.523)(1.200,0.461)
+};
+\addlegendentry{Training}
+\addplot[blue, thick, mark=*, mark size=0.9pt] coordinates {
+(0.07,1.2749)(0.14,1.0189)(0.20,0.9322)(0.27,0.9041)(0.34,0.8929)(0.41,0.8918)(0.47,0.8934)(0.54,0.8873)(0.61,0.8931)(0.68,0.8851)(0.75,0.8863)(0.81,0.8910)(0.88,0.8958)(0.95,0.8944)(1.02,0.8988)(1.09,0.9051)(1.15,0.9049)
+};
+\addlegendentry{Validation}
+\addplot[only marks, mark=o, mark size=3pt, blue, thick] coordinates {(0.68,0.8851)};
+\end{axis}
+\end{tikzpicture}
+\caption{Qwen2.5-Coder-7B (QLoRA)}
+\end{subfigure}
+\hfill
+\begin{subfigure}[t]{0.49\textwidth}
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=\textwidth, height=5.2cm,
+    xlabel={Epochs}, ylabel={Loss},
+    xmin=0, xmax=1.22, ymin=0, ymax=2.75,
+    legend pos=north east, legend cell align=left,
+    grid=major, grid style={gray!15},
+    tick label style={font=\scriptsize}, label style={font=\small}, legend style={font=\scriptsize},
+]
+\addplot[gray!55, very thin, mark=none] coordinates {
+(0.010,2.633)(0.020,2.289)(0.020,1.508)(0.030,1.091)(0.040,0.861)(0.050,0.700)(0.060,0.672)(0.060,0.574)(0.070,0.574)(0.080,0.493)(0.090,0.430)(0.100,0.524)(0.110,0.490)(0.110,0.453)(0.120,0.403)(0.130,0.466)(0.140,0.385)(0.150,0.400)(0.150,0.474)(0.160,0.341)(0.170,0.332)(0.180,0.400)(0.190,0.387)(0.190,0.366)(0.200,0.359)(0.210,0.349)(0.220,0.315)(0.230,0.326)(0.230,0.338)(0.240,0.346)(0.250,0.415)(0.260,0.317)(0.270,0.366)(0.280,0.310)(0.280,0.338)(0.290,0.253)(0.300,0.317)(0.310,0.289)(0.320,0.355)(0.320,0.236)(0.330,0.377)(0.340,0.309)(0.350,0.270)(0.360,0.286)(0.360,0.217)(0.370,0.234)(0.380,0.264)(0.390,0.283)(0.400,0.286)(0.400,0.278)(0.410,0.196)(0.420,0.227)(0.430,0.302)(0.440,0.202)(0.440,0.201)(0.450,0.252)(0.460,0.201)(0.470,0.264)(0.480,0.232)(0.490,0.205)(0.490,0.234)(0.500,0.210)(0.510,0.249)(0.520,0.243)(0.530,0.257)(0.530,0.193)(0.540,0.335)(0.550,0.264)(0.560,0.234)(0.570,0.230)(0.570,0.199)(0.580,0.176)(0.590,0.278)(0.600,0.218)(0.610,0.150)(0.610,0.206)(0.620,0.196)(0.630,0.188)(0.640,0.236)(0.650,0.177)(0.660,0.171)(0.660,0.232)(0.670,0.244)(0.680,0.131)(0.690,0.206)(0.700,0.160)(0.700,0.192)(0.710,0.150)(0.720,0.152)(0.730,0.168)(0.740,0.162)(0.740,0.142)(0.750,0.183)(0.760,0.189)(0.770,0.214)(0.780,0.149)(0.780,0.178)(0.790,0.205)(0.800,0.202)(0.810,0.115)(0.820,0.213)(0.830,0.183)(0.830,0.114)(0.840,0.219)(0.850,0.139)(0.860,0.122)(0.870,0.170)(0.870,0.148)(0.880,0.171)(0.890,0.182)(0.900,0.143)(0.910,0.192)(0.910,0.122)(0.920,0.125)(0.930,0.151)(0.940,0.217)(0.950,0.162)(0.950,0.127)(0.960,0.168)(0.970,0.152)(0.980,0.139)(0.990,0.116)(1.000,0.167)(1.000,0.084)(1.010,0.095)(1.020,0.091)(1.030,0.138)(1.040,0.111)(1.040,0.080)(1.050,0.083)(1.060,0.061)(1.070,0.066)(1.080,0.086)(1.080,0.102)(1.090,0.093)(1.100,0.114)(1.110,0.097)(1.120,0.111)(1.120,0.127)(1.130,0.114)(1.140,0.080)(1.150,0.105)(1.160,0.090)(1.170,0.117)(1.170,0.084)(1.180,0.111)(1.190,0.104)(1.200,0.069)
+};
+\addlegendentry{Training}
+\addplot[red, thick, mark=square*, mark size=0.8pt] coordinates {
+(0.04,0.6758)(0.08,0.4661)(0.12,0.4376)(0.16,0.3979)(0.20,0.3868)(0.24,0.3742)(0.28,0.3744)(0.32,0.3662)(0.36,0.3437)(0.40,0.3297)(0.44,0.3265)(0.49,0.3273)(0.53,0.3317)(0.57,0.3764)(0.61,0.3157)(0.65,0.3046)(0.69,0.3051)(0.73,0.3100)(0.77,0.3030)(0.81,0.2935)(0.85,0.2914)(0.89,0.2903)(0.93,0.2872)(0.97,0.2766)(1.01,0.2759)(1.05,0.2798)(1.09,0.2823)(1.13,0.2817)(1.17,0.2816)
+};
+\addlegendentry{Validation}
+\addplot[only marks, mark=o, mark size=3pt, red, thick] coordinates {(1.01,0.2759)};
+\end{axis}
+\end{tikzpicture}
+\caption{CodeT5+-770M (full FT)}
+\end{subfigure}
+\caption[Learning and validation curves for the two runs.]{Training loss (grey) and validation loss (coloured) over training, per model; the circled point marks the checkpoint retained by minimum validation loss. Qwen2.5's validation loss bottoms early (epoch~\num{0.68}) and drifts up while its training loss keeps falling---a widening gap that is mild overfitting---whereas CodeT5+'s validation loss bottoms late (epoch~\num{1.0}) and stays essentially flat. Validation is measured every 10 optimiser steps for Qwen2.5 and every 25 for CodeT5+; training loss is logged every step and every fifth step respectively.}
+\label{fig:llm-loss-curves}
+\end{figure}
+
+All training artefacts (configuration, prompt template, every dataset split, and the final weights) are versioned with the seeds used at each stage (salt 42 for the hash split, seed 42 for the trainers).
+
+\section{Generation}
+\label{sec:llm-generation}
+A trained model is run over the held-out test split by \texttt{generate.py} (Qwen2.5) or \texttt{generate\_seq2seq.py} (CodeT5+): each entry's prompt is fed to the model, which decodes greedily to produce one annotation.
+
+Qwen2.5's decoding is \emph{grammar-constrained}.
+A GBNF grammar encodes the entire set-theoretic type syntax---unions, intersections, negation, the base types, \texttt{dynamic()}, function types, lists, tuples, and maps with \texttt{if\_set} fields---and a grammar-constrained logits processor masks, at every decoding step, every token that would break the grammar.
+The model can therefore emit only well-formed Descr types: balanced delimiters, terminated atoms, and no drift into TypeSpec forms such as \texttt{String.t()} or \texttt{any()}.
+A light repetition penalty and a per-entry time budget additionally break the degenerate enumeration loops into which a constrained greedy decoder can otherwise fall.
+CodeT5+ is decoded \emph{unconstrained}: the same grammar cannot be applied because the constrained-decoding library does not support its tokenizer, which is the source of its higher null rate (Section~\ref{sec:llm-results}).
+
+Each run writes one record per test entry---the generated annotation alongside its reference---to a predictions file.\footnote{A reference longer than the generation budget cannot be emitted in full; such entries are flagged, so the metric is not charged for a truncation the budget, not the model, caused.}
+Because every prediction is itself a concrete Descr type, it could be injected back into its source project and recompiled as an end-to-end check; the evaluation in this thesis instead scores each prediction directly against its reference with the type system's own compatibility judgement (Chapter~\ref{ch:llm-eval}).
 
 \chapter{Evaluation}
 \label{ch:llm-eval}
@@ -165,6 +256,44 @@ A predicted type is compatible with the reference when, treating \texttt{dynamic
 A compatible prediction is thus a safe annotation for the function.
 It may be exactly the reference or strictly more general, the limiting case being \texttt{dynamic()} itself, which is compatible with every reference; both count as compatible, whereas a prediction that commits to a concrete shape the reference excludes does not.
 This is the appropriate success criterion for a migration setting: an annotation is acceptable precisely when it does not conflict with the function's true type, even at some cost in precision.
+Formally, where $\DTR$ represents a Descr component, $\ETR$ an Elixir type, $\ETD$ \texttt{dynamic()}, and where $L$ is the prediction and $R$ the reference ($L$ and $R$ are head letters of left and right, respectively, following the naming in the function definition):
+
+\begin{figure} [H]
+    \[
+    \begin{prooftree}
+        % \hypo{\ETR \;\rightsquigarrow\; \DSR_{grd}\ \ (\text{the \texttt{:dynamic} component}),\ \ \DSR_{stt}\ \ (\text{the static remainder})}
+        \hypo{\DSR = \ETR \setminus \ETD}
+        \infer1[Descr Component]{\DTR = (\DSR_{grd} \cap \ETD) \cup \DSR_{stt}}
+        \infer1[Arguments of \texttt{compatible?/2}]{\DTR^{L} = (\DSR^{L}_{grd} \cap \ETD) \cup \DSR^{L}_{stt} & \DTR^{R} = (\DSR^{R}_{grd} \cap \ETD) \cup \DSR^{R}_{stt}}
+    \end{prooftree}
+    \]
+    \nl \nl
+    % \texttt{compatible?($\DTR^{L}$, $\DTR^{R}$)} = 
+    % \texttt{compatible?($(\DSR^{L}_{grd} \cap \ETD) \cup \DSR^{L}_{stt}$, $(\DSR^{R}_{grd} \cap \ETD) \cup \DSR^{R}_{stt}$)}
+    % \nl    
+    \begin{translationfig}
+    \texttt{compatible?($\DTR^{L}$, $\DTR^{R}$)} =  
+    \left\{
+        \begin{array}{ll}
+            \texttt{true}
+            & \textsl{if}\,\,\,\,((\DSR^{L}_{stt} = \emptyset)\,\,\textsl{and}\,\,(\DSR^{L}_{grd} \cap \DSR^{R}_{grd} \neq \emptyset))
+            \nl
+            & \textsl{or}\,\,((\DSR^{L}_{stt} \neq \emptyset)\,\,\textsl{and}\,\,(\DSR^{L}_{stt} \leq \DSR^{R}_{grd}))
+            \nl
+            \texttt{false} & \textsl{otherwise}
+
+            % \texttt{true}
+            % & \textsl{if}\,\,\,\,((\DSR^{L}_{stt} = \emptyset)\,\,\textsl{and}\,\,(\DSR^{L}_{grd} \cap \DSR^{R}_{grd} \neq \emptyset))
+            % \nl
+            % & \textsl{or}\,\,(\DSR^{L}_{stt} \leq \DSR^{R}_{grd})
+            % \nl
+            % \texttt{false} & \textsl{otherwise}
+        \end{array}
+    \right.
+    \end{translationfig}
+   \caption{Descr Compatibility}
+   \label{app:descr_compatibility}
+\end{figure}
 
 \paragraph{Computation.}
 Each prediction and reference is parsed into a \texttt{Descr} value and the two are submitted to \texttt{compatible?/2}; parsing collapses whitespace and union-arm ordering and rewrites any \texttt{|} to \texttt{or} (the model occasionally emits the TypeSpec union symbol out of pretraining habit, though the target system writes unions only as \texttt{or}).
@@ -178,7 +307,7 @@ Exact match is strictly stronger than compatibility---it additionally requires e
 \label{sec:llm-results}
 
 Both models are scored on the common \num{2127}-entry test set, having trained on the same both-pass dataset with the same prompt, so any difference is attributable to the model rather than the data.
-One asymmetry must be stated: the Qwen decoding is grammar-constrained to well-formed set-theoretic types, whereas the CodeT5+ decoding is \emph{unconstrained}, because the constrained-decoding library does not support its tokenizer; we therefore report each model's null rate.
+One asymmetry must be stated: the Qwen2.5 decoding is grammar-constrained to well-formed set-theoretic types, whereas the CodeT5+ decoding is \emph{unconstrained}, because the constrained-decoding library does not support its tokenizer; we therefore report each model's null rate.
 Table~\ref{tab:llm-architecture} summarises the outcome.
 
 \begin{table}[h]
@@ -187,8 +316,8 @@ Table~\ref{tab:llm-architecture} summarises the outcome.
 \toprule
 \textbf{Model} & \textbf{Compatible} & \textbf{Exact match} & \textbf{Null} \\
 \midrule
-Qwen2.5-Coder-7B (QLoRA, constrained) & \num{40.4}\% & \num{8.6}\% & \num{0.4}\% \\
-CodeT5+-770M (full FT, unconstrained) & \textbf{\num{52.5}\%} & \textbf{\num{30.1}\%} & \num{4.2}\% \\
+Qwen2.5-Coder-7B (QLoRA, constrained) & \num{36.6}\% & \num{6.6}\% & \num{0.5}\% \\
+CodeT5+-770M (full FT, unconstrained) & \textbf{\num{54.3}\%} & \textbf{\num{30.2}\%} & \num{4.4}\% \\
 \bottomrule
 \end{tabular}
 \caption{Architecture comparison on the common \num{2127}-entry test set; both models trained on the canonical both-pass dataset with the same prompt.}
@@ -196,8 +325,9 @@ CodeT5+-770M (full FT, unconstrained) & \textbf{\num{52.5}\%} & \textbf{\num{30.
 \end{table}
 
 The smaller encoder--decoder is the stronger model on both axes.
-It is more compatible (\num{52.5}\% versus \num{40.4}\%, \num{1116} entries against \num{860}, a \num{12.0}-point margin) and far more precise, matching the reference exactly on \num{30.1}\% of entries against \num{8.6}\% for Qwen---\num{3.5} times as many---while decoding without the grammar constraint and at roughly a tenth of the parameters.
-The one cost of the missing constraint appears in the null column (\num{4.2}\% against \num{0.4}\%), but it does not close the gap: crediting all \num{89} null predictions as compatible would raise CodeT5+ to \num{56.6}\%, still above Qwen.
+It is more compatible (\num{54.3}\% versus \num{36.6}\%, \num{1155} entries against \num{778}, a \num{17.7}-point margin) and far more precise, matching the reference exactly on \num{30.2}\% of entries against \num{6.6}\% for Qwen2.5 (\num{642} against \num{141}, more than four times as many), while decoding without the grammar constraint and at roughly a tenth of the parameters.
+The one cost of the missing constraint is CodeT5+'s higher null rate (\num{4.4}\% against \num{0.5}\%): these malformed outputs are counted against it as incompatible.
+That handicap---\num{3.9} points more null than Qwen2.5, all charged against CodeT5+---is far smaller than its \num{17.7}-point compatibility margin, so the unconstrained decoding does not account for the gap.
 Full fine-tuning of a task-matched encoder--decoder thus outperforms parameter-efficient adaptation of a much larger decoder-only model on this task.
 
 \section{Qualitative Analysis}
@@ -219,11 +349,29 @@ The prediction is \emph{more} precise than the reference it is scored against: t
 \paragraph{Where the larger model fails and the smaller succeeds.}
 The architecture comparison of Section~\ref{sec:llm-results} shows up in individual predictions.
 \texttt{Postgrex.ReplicationConnection.encode\_lsn/1} has reference \texttt{(integer() -> \{:ok, binary()\} or :error)}.
-Qwen collapses the two result arms into a single ill-formed tuple \texttt{\{:ok or :error, dynamic()\}} with a spurious \texttt{empty\_list()} alternative, a shape the function never returns, and the typechecker rejects it; CodeT5+ reproduces the reference exactly.
-The same precision gap appears on return structure: \texttt{Integer.extended\_gcd/2} has reference \texttt{(integer(), integer() -> \{integer(), integer(), integer()\})}, and Qwen discards the tuple's element structure, collapsing the return to a bare \texttt{tuple()} that admits tuples the function never returns and is therefore rejected, whereas CodeT5+ reproduces the three-integer tuple exactly.
-In both cases Qwen misjudges the precision the code actually determines --- over-committing to a concrete shape the body never produces (\texttt{encode\_lsn}), or discarding structure the body fixes (the \texttt{extended\_gcd} tuple) --- and a single mis-typed position is enough for the typechecker to reject the whole annotation.
+Qwen2.5 collapses the two result arms into a single ill-formed tuple \texttt{\{:ok or :error, dynamic()\}} with a spurious \texttt{empty\_list()} alternative, a shape the function never returns, and the typechecker rejects it; CodeT5+ reproduces the reference exactly.
+The same precision gap appears on return structure: \texttt{Integer.extended\_gcd/2} has reference \texttt{(integer(), integer() -> \{integer(), integer(), integer()\})}, and Qwen2.5 discards the tuple's element structure, collapsing the return to a bare \texttt{tuple()} that admits tuples the function never returns and is therefore rejected, whereas CodeT5+ reproduces the three-integer tuple exactly.
+In both cases Qwen2.5 misjudges the precision the code actually determines --- over-committing to a concrete shape the body never produces (\texttt{encode\_lsn}), or discarding structure the body fixes (the \texttt{extended\_gcd} tuple) --- and a single mis-typed position is enough for the typechecker to reject the whole annotation.
 Such precision errors are concentrated on functions with non-obvious control flow or opaque struct constructors, exactly the code where the ground-truth shape is hardest to read off the source alone, and they are the dominant source of incompatible predictions for both models.
 The smaller encoder--decoder is consistently less prone to it.
-We are deliberately cautious about the cause: CodeT5+ and Qwen differ in more than their encoder --- also in fine-tuning regime (full versus low-rank adaptation), pretraining corpus and objective, and parameter count --- so this single comparison cannot attribute the gap to any one factor.
+We are deliberately cautious about the cause: CodeT5+ and Qwen2.5 differ in more than their encoder --- also in fine-tuning regime (full versus low-rank adaptation), pretraining corpus and objective, and parameter count --- so this single comparison cannot attribute the gap to any one factor.
 One plausible contributor is architectural: an encoder--decoder reads the whole function definition bidirectionally before the decoder fixes any output position, a fuller view of the code's evidence than a strictly left-to-right, decoder-only pass affords.
 Isolating the encoder's contribution --- for instance by fully fine-tuning a decoder-only model of comparable scale under an otherwise identical regime --- is left to future work.
+
+\section{Limitations}
+\label{sec:llm-limitations}
+The most consequential limitation is the size of the supervised corpus.
+The both-pass pool yields only \num{9888} training examples---small for fine-tuning a language model, and a structural consequence of the setting: an Elixir function enters the pool only if it already carries a TypeSpec and that translation is accepted by both checkers, in a language whose typed-code footprint is far smaller than Python's.
+So even though we draw on \num{175} repositories, we retain far fewer usable examples than comparable Python work.
+For scale, the closest study---Mengesha's LLM type prediction on Python~\cite{Nina}---trains on \num{56384} examples from \num{50} repositories, and the standard Python type-inference corpus, ManyTypes4Py~\cite{manytypes4py}, contains more than \num{869000} type annotations across \num{5382} projects.\footnote{These counts are not strictly commensurable---our examples are function-level annotations, whereas Mengesha's and ManyTypes4Py's are variable-level---so this is an order-of-magnitude comparison rather than a like-for-like one.}
+Data at this scale plausibly caps the absolute accuracies reported above, and bears more on the 7~B model---the more data-hungry of the two---than on CodeT5+.
+The architecture effect itself, however, is unlikely to be a mere artefact of corpus size: Mengesha's Python study, at roughly six times the data, reports the same ranking, a small encoder--decoder ahead of a 7~B decoder-only model~\cite{Nina}.
+
+The corpus is also bounded in \emph{range}, not only in size.
+The length filter (Subsection~\ref{sec:llm-data-prep}) discards every entry whose function definition exceeds 2{,}000 characters or whose target annotation exceeds 1{,}000; the pathological cases it removes---variable-arity functions such as \texttt{Regex.replace/4}, whose translated type expands into a union over every fixed arity the BEAM permits (Chapter~\ref{ch:formalisation})---are therefore absent from both training and test.
+The models are neither taught nor asked to produce such types, so the reported accuracies say nothing about them: they characterise prediction only within the length envelope the filter keeps.
+
+Three further limitations qualify the comparison.
+First, the two decodings are not symmetric: 2.5 is grammar-constrained to well-formed types while CodeT5+ is not (Section~\ref{sec:llm-results}), so CodeT5+'s stronger numbers are achieved despite a handicap in output well-formedness, visible in its higher null rate.
+Second, each model is trained and evaluated on a single subproject split (salt 42); we do not report variance across splits or seeds, so the point estimates should be read as indicative rather than tightly bounded.
+Third, checkpoints are selected by validation cross-entropy, a cheap proxy that need not coincide with the set-theoretic compatibility we ultimately report; a selection criterion computed directly on compatibility---necessarily on validation data, never on the test set---is left to future work.
