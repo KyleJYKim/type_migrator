@@ -242,13 +242,16 @@ Because the target is a set-theoretic type, we evaluate a prediction not by text
 \label{sec:compatibility-eval}
 
 The question a metric must answer is not whether the prediction is textually identical to the reference, but whether it is a \emph{safe} type for the function: one the reference does not contradict.
-This is exactly the judgement the set-theoretic type system already provides, so rather than adopt an external similarity heuristic we evaluate predictions with the typechecker's own type algebra (the \texttt{Descr} module, Chapter~\ref{ch:formalisation}).
+This is exactly the judgement the set-theoretic type system already provides, hence, we score predictions with the type algebra the typechecker itself is built on: the compiler's internal \texttt{Module.Types.Descr} module, which represents types as sets of values and defines union, intersection, negation, and subtyping as set inclusion (Chapter~\ref{ch:formalisation}).
 
 \paragraph{Why not exact match.}
-The most direct metric is exact-match accuracy: the fraction of test entries on which the predicted annotation string equals the reference string.
-This is uninformatively strict for set-theoretic types.
+The most direct metric is exact-match accuracy: the fraction of test entries on which the prediction is the reference.
+Taken literally, as equality of the two annotation strings, it is uninformatively strict for set-theoretic types.
 Two annotations that describe the identical set of values, for instance a union written as \texttt{A or B} versus \texttt{B or A}, or a map written with one field ordering versus another, are semantically equal but textually distinct; conversely two annotations may differ in a single atom yet denote entirely different value sets.
-A binary string comparison conflates these cases, and, more importantly, it penalises a prediction that is a \emph{sound} answer merely for being less precise than the reference, which is the wrong signal for a migration setting where a safe over-approximation is a success, not a failure.
+We therefore decide exact match set-theoretically instead: a prediction matches exactly when it denotes the identical type to the reference, each being a subtype of the other, so that a difference of union-arm or map-field ordering, or a redundant arm, does not count against it.
+Even so decided, exact match is the wrong primary criterion.
+It is strictly stronger than compatibility (below), additionally requiring equal \emph{precision} rather than mere safety, so it penalises a prediction that is a \emph{sound} answer merely for being less precise than the reference, which is the wrong signal for a migration setting where a safe over-approximation is a success, not a failure.
+We therefore report it alongside compatibility only as an indicator of precision.
 
 \paragraph{Compatibility.}
 We therefore adopt \emph{compatibility}, computed by the \texttt{Descr.compatible?/2} relation: the gradual-typing consistency judgement of the set-theoretic system itself.
@@ -295,13 +298,17 @@ Formally, where $\DTR$ represents a Descr component, $\ETR$ an Elixir type, $\ET
    \label{app:descr_compatibility}
 \end{figure}
 
-\paragraph{Computation.}
-Each prediction and reference is parsed into a \texttt{Descr} value and the two are submitted to \texttt{compatible?/2}; parsing collapses whitespace and union-arm ordering and rewrites any \texttt{|} to \texttt{or} (the model occasionally emits the TypeSpec union symbol out of pretraining habit, though the target system writes unions only as \texttt{or}).
-A prediction that fails to parse is counted as not compatible (reported separately as \emph{null}).
+A Descr component is the union of a gradual part and a static part: the gradual part is a type representation intersected with \texttt{dynamic()}, and the static part is another type representation.
+If the static part is empty, the type is fully gradual (e.g.\ \texttt{dynamic(integer())}); if both parts are present, the type has at least one \texttt{dynamic()} in its union (e.g.\ \texttt{dynamic(integer()) or atom()}), and the gradual part then also contains the static part, since it records the largest type the value may have at runtime; and if there is no gradual part at all, the type is fully static (e.g.\ \texttt{integer()}), in which case \texttt{compatible?/2} uses the type itself in place of the gradual part.
+The function takes two Descr components, $\DTR^L$ and $\DTR^R$: in our case, the prediction and the reference.
+It splits $\DTR^L$ into the type representations of both its parts, $\DSR^L_{grd}$ and $\DSR^L_{stt}$, and takes from $\DTR^R$ only its gradual part $\DSR^R_{grd}$ (or $\DTR^R$ itself, if it is fully static).
+It then branches on whether $\DSR^L_{stt}$ is empty: if it is, compatibility holds exactly when $\DSR^L_{grd}$ and $\DSR^R_{grd}$ overlap, that is, when their intersection is non-empty; if it is not, compatibility holds exactly when $\DSR^L_{stt}$ is a subtype of $\DSR^R_{grd}$.
+This is lenient where the prediction is fully gradual, which need only overlap the reference, while a prediction with static content must fit within the largest type the reference admits.
 
-\paragraph{Exact match.}
-Alongside compatibility we report the \emph{exact-match} rate: the fraction of predictions that denote the identical type to the reference, decided by the same type algebra so that a difference of union-arm ordering or map-field ordering does not count against a prediction.
-Exact match is strictly stronger than compatibility---it additionally requires equal \emph{precision}, not merely safety---and we use it only as a precision indicator, never as the primary criterion, for the reason given above.
+\paragraph{Computation.}
+Each prediction and reference is parsed into a \texttt{Descr} value by our own parser, which reads the annotation string as Elixir syntax and rebuilds it with \texttt{Descr}'s constructors (the typechecker itself never reads such strings); parsing collapses whitespace and union-arm ordering and rewrites any \texttt{|} to \texttt{or} (the model occasionally emits the TypeSpec union symbol out of pretraining habit, though the target system writes unions only as \texttt{or}).
+The two values are then submitted to \texttt{compatible?/2}, the same relation the typechecker applies when it checks an expression against an expected type.
+A prediction that fails to parse is counted as not compatible (reported separately as \emph{null}).
 
 \section{Results}
 \label{sec:llm-results}

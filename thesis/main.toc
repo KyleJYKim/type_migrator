@@ -102,30 +102,29 @@
 \contentsline {paragraph}{Why not exact match.}{56}{section*.84}%
 \contentsline {paragraph}{Compatibility.}{56}{section*.85}%
 \contentsline {paragraph}{Computation.}{57}{section*.87}%
-\contentsline {paragraph}{Exact match.}{57}{section*.88}%
 \contentsline {section}{\numberline {4.2}Results}{57}{section.4.2}%
 \contentsline {section}{\numberline {4.3}Qualitative Analysis}{58}{section.4.3}%
-\contentsline {paragraph}{Exact matches a string comparison would miss.}{58}{section*.90}%
-\contentsline {paragraph}{Recovering precision the translator lost.}{58}{section*.91}%
-\contentsline {paragraph}{Where the larger model fails and the smaller succeeds.}{58}{section*.92}%
-\contentsline {section}{\numberline {4.4}Limitations}{58}{section.4.4}%
-\contentsline {part}{Conclusion}{60}{section*.93}%
-\contentsline {chapter}{Conclusion}{61}{section*.95}%
-\contentsline {section}{Conclusion and Future Work}{61}{section*.97}%
-\contentsline {subsection}{Limitations and Future Work}{61}{section*.98}%
-\contentsline {paragraph}{End-to-end total migration.}{61}{section*.99}%
-\contentsline {paragraph}{Evaluation scope and dataset.}{62}{section*.100}%
-\contentsline {paragraph}{Manual project preparation.}{62}{section*.101}%
-\contentsline {paragraph}{A compiler under active development.}{62}{section*.102}%
-\contentsline {paragraph}{Case 1: Rule \textsc {(M2)}}{63}{section*.108}%
-\contentsline {paragraph}{Case 2: Rule \textsc {(M3)}}{64}{section*.110}%
-\contentsline {paragraph}{Case 3: Rule \textsc {(M4)}}{64}{section*.112}%
-\contentsline {paragraph}{Case 4: Rule \textsc {(M5)}}{65}{section*.115}%
-\contentsline {paragraph}{Case 5: Rule \textsc {(M6)}}{65}{section*.117}%
-\contentsline {paragraph}{\texttt {no\_return} (whole-program).}{67}{section*.120}%
-\contentsline {paragraph}{\texttt {pattern\_match} (locally checkable).}{67}{section*.121}%
-\contentsline {paragraph}{\texttt {opaque\_match} (opacity).}{67}{section*.122}%
-\contentsline {paragraph}{Direct reproduction (\texttt {call}).}{68}{section*.124}%
-\contentsline {paragraph}{Co-rejection on a separate fault (\texttt {call\_without\_opaque}).}{68}{section*.125}%
-\contentsline {paragraph}{Cannot verify.}{69}{section*.129}%
-\contentsline {paragraph}{Over-broadened inference.}{69}{section*.130}%
+\contentsline {paragraph}{Exact matches a string comparison would miss.}{58}{section*.89}%
+\contentsline {paragraph}{Recovering precision the translator lost.}{58}{section*.90}%
+\contentsline {paragraph}{Where the larger model fails and the smaller succeeds.}{58}{section*.91}%
+\contentsline {section}{\numberline {4.4}Limitations}{59}{section.4.4}%
+\contentsline {part}{Conclusion}{60}{section*.92}%
+\contentsline {chapter}{Conclusion}{61}{section*.94}%
+\contentsline {section}{Conclusion and Future Work}{61}{section*.96}%
+\contentsline {subsection}{Limitations and Future Work}{61}{section*.97}%
+\contentsline {paragraph}{End-to-end total migration.}{61}{section*.98}%
+\contentsline {paragraph}{Evaluation scope and dataset.}{62}{section*.99}%
+\contentsline {paragraph}{Manual project preparation.}{62}{section*.100}%
+\contentsline {paragraph}{A compiler under active development.}{62}{section*.101}%
+\contentsline {paragraph}{Case 1: Rule \textsc {(M2)}}{63}{section*.107}%
+\contentsline {paragraph}{Case 2: Rule \textsc {(M3)}}{64}{section*.109}%
+\contentsline {paragraph}{Case 3: Rule \textsc {(M4)}}{64}{section*.111}%
+\contentsline {paragraph}{Case 4: Rule \textsc {(M5)}}{65}{section*.114}%
+\contentsline {paragraph}{Case 5: Rule \textsc {(M6)}}{65}{section*.116}%
+\contentsline {paragraph}{\texttt {no\_return} (whole-program).}{67}{section*.119}%
+\contentsline {paragraph}{\texttt {pattern\_match} (locally checkable).}{67}{section*.120}%
+\contentsline {paragraph}{\texttt {opaque\_match} (opacity).}{67}{section*.121}%
+\contentsline {paragraph}{Direct reproduction (\texttt {call}).}{68}{section*.123}%
+\contentsline {paragraph}{Co-rejection on a separate fault (\texttt {call\_without\_opaque}).}{68}{section*.124}%
+\contentsline {paragraph}{Cannot verify.}{69}{section*.128}%
+\contentsline {paragraph}{Over-broadened inference.}{69}{section*.129}%
