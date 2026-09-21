@@ -248,7 +248,8 @@ This is exactly the judgement the set-theoretic type system already provides, he
 The most direct metric is exact-match accuracy: the fraction of test entries on which the prediction is the reference.
 Taken literally, as equality of the two annotation strings, it is uninformatively strict for set-theoretic types.
 Two annotations that describe the identical set of values, for instance a union written as \texttt{A or B} versus \texttt{B or A}, or a map written with one field ordering versus another, are semantically equal but textually distinct; conversely two annotations may differ in a single atom yet denote entirely different value sets.
-We therefore decide exact match set-theoretically instead: a prediction matches exactly when it denotes the identical type to the reference, each being a subtype of the other, so that a difference of union-arm or map-field ordering, or a redundant arm, does not count against it.
+We therefore decide exact match set-theoretically instead, with the same module's \texttt{subtype?/2}: a prediction matches exactly when it is a subtype of the reference \emph{and} the reference a subtype of it, mutual inclusion being the set-theoretic statement that the two denote the identical set of values.
+A difference of union-arm or map-field ordering, or a redundant arm, therefore does not count against a prediction, whereas a single atom that changes the denoted set does.
 Even so decided, exact match is the wrong primary criterion.
 It is strictly stronger than compatibility (below), additionally requiring equal \emph{precision} rather than mere safety, so it penalises a prediction that is a \emph{sound} answer merely for being less precise than the reference, which is the wrong signal for a migration setting where a safe over-approximation is a success, not a failure.
 We therefore report it alongside compatibility only as an indicator of precision.
@@ -344,41 +345,39 @@ Full fine-tuning of a task-matched encoder--decoder thus outperforms parameter-e
 Inspecting individual predictions makes the behaviour behind the aggregate numbers concrete. All examples below are drawn verbatim from the models' outputs on the common test set.
 
 \paragraph{Exact matches a string comparison would miss.}
-Some predictions differ textually from the reference yet denote the identical type, which the type algebra credits as an exact match where a naive string comparison would not.
-\texttt{Membrane.RTP.Packet.PayloadType.dynamic?/1} has reference \texttt{(integer() or integer() -> :true or :false)}; the canonical model predicts \texttt{(integer() -> :true or :false)}, collapsing the redundant union \texttt{integer() or integer()} to the identical \texttt{integer()}.
-The two denote the same value set, so the prediction counts as exact, and it typechecks.
-
-\paragraph{Recovering precision the translator lost.}
-On targets whose \emph{reference} is gradual, the model frequently supplies a precise type the deterministic translation could not.
-\texttt{AshStateMachine.Charts.mermaid\_flowchart/1} has reference \texttt{(dynamic() -> dynamic())} --- the translation widened both positions to \texttt{dynamic()} because their types came from unresolved remote types --- yet the model predicts \texttt{(atom() -> binary())}, which typechecks.
-The prediction is \emph{more} precise than the reference it is scored against: the model has reconstructed information the translation discarded, and such a precise prediction is compatible with, but cannot exactly match, a \texttt{dynamic()} reference---which is much of the gradual-reference subset.
+Some predictions differ textually from the reference yet denote the identical type, which mutual subtyping credits as an exact match where a naive string comparison would not.
+\texttt{Membrane.RTP.Packet.PayloadType.dynamic?/1} has reference \texttt{(integer() or integer() -> :true or :false)}; both models predict \texttt{(integer() -> :true or :false)}, collapsing the redundant union \texttt{integer() or integer()} to the identical \texttt{integer()}.
+Each type is a subtype of the other, so the prediction counts as exact for both models.
 
 \paragraph{Where the larger model fails and the smaller succeeds.}
 The architecture comparison of Section~\ref{sec:llm-results} shows up in individual predictions.
 \texttt{Postgrex.ReplicationConnection.encode\_lsn/1} has reference \texttt{(integer() -> \{:ok, binary()\} or :error)}.
-Qwen2.5 collapses the two result arms into a single ill-formed tuple \texttt{\{:ok or :error, dynamic()\}} with a spurious \texttt{empty\_list()} alternative, a shape the function never returns, and the typechecker rejects it; CodeT5+ reproduces the reference exactly.
-The same precision gap appears on return structure: \texttt{Integer.extended\_gcd/2} has reference \texttt{(integer(), integer() -> \{integer(), integer(), integer()\})}, and Qwen2.5 discards the tuple's element structure, collapsing the return to a bare \texttt{tuple()} that admits tuples the function never returns and is therefore rejected, whereas CodeT5+ reproduces the three-integer tuple exactly.
-In both cases Qwen2.5 misjudges the precision the code actually determines --- over-committing to a concrete shape the body never produces (\texttt{encode\_lsn}), or discarding structure the body fixes (the \texttt{extended\_gcd} tuple) --- and a single mis-typed position is enough for the typechecker to reject the whole annotation.
-Such precision errors are concentrated on functions with non-obvious control flow or opaque struct constructors, exactly the code where the ground-truth shape is hardest to read off the source alone, and they are the dominant source of incompatible predictions for both models.
-The smaller encoder--decoder is consistently less prone to it.
+Qwen2.5 predicts \texttt{(integer() -> \{:ok or :error, dynamic()\} or empty\_list())}, merging the two result arms into a single tuple and adding an \texttt{empty\_list()} alternative the reference does not contain; the prediction is incompatible with the reference, whereas CodeT5+ reproduces the reference exactly.
+\texttt{Integer.extended\_gcd/2} has reference \texttt{(integer(), integer() -> \{integer(), integer(), integer()\})}; Qwen2.5 predicts \texttt{(integer(), integer() -> \{:ok or :error, tuple()\} or none())}, a two-element result the reference excludes, and is again incompatible, whereas CodeT5+ reproduces the three-integer tuple exactly.
+In both cases Qwen2.5 predicts a tuple tagged \texttt{:ok or :error}, a pattern neither reference has.
 We are deliberately cautious about the cause: CodeT5+ and Qwen2.5 differ in more than their encoder --- also in fine-tuning regime (full versus low-rank adaptation), pretraining corpus and objective, and parameter count --- so this single comparison cannot attribute the gap to any one factor.
 One plausible contributor is architectural: an encoder--decoder reads the whole function definition bidirectionally before the decoder fixes any output position, a fuller view of the code's evidence than a strictly left-to-right, decoder-only pass affords.
+
+The two models also inherit different task formulations.
+An encoder--decoder is the classical formulation for sequence-to-sequence transduction: the Transformer was introduced in exactly that shape, one stack reading the input and another producing the output, for machine translation~\cite{vaswani2017}, and CodeT5+ is pre-trained end-to-end in that mould for code understanding and generation~\cite{codet5p}.
+The decoder-only alternative instead recasts such a task as the continuation of a single concatenated sequence, the more recent convention popularised by large autoregressive language models~\cite{gpt3}; it is the more general formulation, but the less specialised one for a fixed input-to-output transduction of the kind considered here.
+Controlled comparisons outside our setting point the same way.
+Raffel et al.~\cite{t5}, comparing architectures at matched parameter and compute budgets, report that the encoder--decoder performed best on every task they tried, and that it outperforms a decoder-only prefix language model that sees its input bidirectionally but shares one stack for input and output.
+Wang et al.~\cite{wang2022architecture} find that a causal decoder-only model generalises best zero-shot after self-supervised pretraining alone, but that models with non-causal visibility over their input do best once they are finetuned---the regime ours are in.
+Neither study concerns type prediction, and both vary the pretraining objective alongside the architecture, so they corroborate the mechanism rather than establish it here.
 Isolating the encoder's contribution --- for instance by fully fine-tuning a decoder-only model of comparable scale under an otherwise identical regime --- is left to future work.
 
-\section{Limitations}
-\label{sec:llm-limitations}
-The most consequential limitation is the size of the supervised corpus.
-The both-pass pool yields only \num{9888} training examples---small for fine-tuning a language model, and a structural consequence of the setting: an Elixir function enters the pool only if it already carries a TypeSpec and that translation is accepted by both checkers, in a language whose typed-code footprint is far smaller than Python's.
-So even though we draw on \num{175} repositories, we retain far fewer usable examples than comparable Python work.
-For scale, the closest study---Mengesha's LLM type prediction on Python~\cite{Nina}---trains on \num{56384} examples from \num{50} repositories, and the standard Python type-inference corpus, ManyTypes4Py~\cite{manytypes4py}, contains more than \num{869000} type annotations across \num{5382} projects.\footnote{These counts are not strictly commensurable---our examples are function-level annotations, whereas Mengesha's and ManyTypes4Py's are variable-level---so this is an order-of-magnitude comparison rather than a like-for-like one.}
-Data at this scale plausibly caps the absolute accuracies reported above, and bears more on the 7~B model---the more data-hungry of the two---than on CodeT5+.
-The architecture effect itself, however, is unlikely to be a mere artefact of corpus size: Mengesha's Python study, at roughly six times the data, reports the same ranking, a small encoder--decoder ahead of a 7~B decoder-only model~\cite{Nina}.
+\section{Summary}
+\label{sec:llm-summary}
 
-The corpus is also bounded in \emph{range}, not only in size.
-The length filter (Subsection~\ref{sec:llm-data-prep}) discards every entry whose function definition exceeds 2{,}000 characters or whose target annotation exceeds 1{,}000; the pathological cases it removes---variable-arity functions such as \texttt{Regex.replace/4}, whose translated type expands into a union over every fixed arity the BEAM permits (Chapter~\ref{ch:formalisation})---are therefore absent from both training and test.
-The models are neither taught nor asked to produce such types, so the reported accuracies say nothing about them: they characterise prediction only within the length envelope the filter keeps.
-
-Three further limitations qualify the comparison.
-First, the two decodings are not symmetric: 2.5 is grammar-constrained to well-formed types while CodeT5+ is not (Section~\ref{sec:llm-results}), so CodeT5+'s stronger numbers are achieved despite a handicap in output well-formedness, visible in its higher null rate.
-Second, each model is trained and evaluated on a single subproject split (salt 42); we do not report variance across splits or seeds, so the point estimates should be read as indicative rather than tightly bounded.
-Third, checkpoints are selected by validation cross-entropy, a cheap proxy that need not coincide with the set-theoretic compatibility we ultimately report; a selection criterion computed directly on compatibility---necessarily on validation data, never on the test set---is left to future work.
+\begin{itemize}
+    \item \textbf{Corpus and split}: the \num{18688} annotations accepted by both checkers (Chapter~\ref{ch:implementation}) are length-filtered and partitioned by hashing the name of each subproject, so that no subproject can appear in more than one split, yielding \num{9888} training, \num{3484} validation, and \num{2127} test entries over 279/60/64 subprojects (Subsection~\ref{sec:llm-data-prep}).
+    \item \textbf{Task}: prediction is framed as conditional generation---given a function definition and the types in scope, write the annotation as text---under one prompt template shared verbatim by both models, which diverge only in how they consume it: a single concatenated stream for the decoder-only model, separate encoder and decoder streams for the encoder--decoder (Subsection~\ref{sec:llm-task}).
+    \item \textbf{Training}: \texttt{Qwen2.5-Coder-7B} was adapted with QLoRA and \texttt{CodeT5+-770M} fully fine-tuned, both for 1.2 epochs on identical data. Both runs converged without instability, and each model carried forward is the checkpoint of lowest validation loss: \num{0.885} at epoch~\num{0.68} for Qwen2.5, whose curve drifts upward thereafter, and \num{0.276} at epoch~\num{1.0} for CodeT5+, whose curve stays flat to the end (Section~\ref{sec:llm-repro}).
+    \item \textbf{Metric}: predictions are judged by Elixir's own \texttt{compatible?/2} in \texttt{Module.Types.Descr}, which accepts a prediction exactly when the reference does not contradict it, with exact match---decided by the same module's \texttt{subtype?/2} in both directions---reported alongside as an indicator of precision and unparseable output counted as incompatible (Section~\ref{sec:compatibility-eval}).
+    \item \textbf{Results}: on the common \num{2127}-entry test set CodeT5+ is compatible on \num{54.3}\% of entries against \num{36.6}\% for Qwen2.5, a \num{17.7}-point margin, and exact on \num{30.2}\% against \num{6.6}\%---the smaller model ahead on both axes at roughly a tenth of the parameters and without the grammar constraint Qwen2.5 decodes under. The cost of that unconstrained decoding, a null rate \num{3.9} points higher and charged against CodeT5+ as incompatible, is far smaller than its margin (Section~\ref{sec:llm-results}).
+    \item \textbf{Qualitative behaviour}: deciding equality by mutual subtyping credits predictions that differ textually from the reference yet denote the same type, which a string comparison would miss; in the failures examined, Qwen2.5 tags the result tuple \texttt{:ok or :error}, a shape neither reference has (Section~\ref{sec:llm-qualitative}).
+    \item \textbf{Attribution}: the two models differ in architecture, scale, and fine-tuning regime at once, so the gap is not attributed to any single factor. The encoder's bidirectional read of the definition is a plausible contributor, and controlled architecture comparisons outside this setting point the same way~\cite{t5,wang2022architecture}, but isolating it would require a further experiment.
+\end{itemize}
+Within the envelope the length filter keeps, a fine-tuned model can therefore propose an annotation the reference accepts for slightly more than half of the held-out functions, and reproduce the reference exactly for close to a third.
+These figures measure agreement with a reference annotation; what they do not measure is whether such a prediction carries its function through migration in its own project, which would require compiling it back into the source.

@@ -7,19 +7,19 @@ Armstrong, J. (2007).
 
 \bibitem[Aronoff and {Dialyxir Contributors}, 2024]{dialyxir}
 Aronoff, J. and {Dialyxir Contributors} (2024).
-\newblock Dialyxir: Mix tasks to simplify use of {Dialyzer} in {Elixir}
-  projects.
+\newblock Dialyxir: Mix tasks to simplify use of {Dialyzer} in {Elixir} projects.
 \newblock \url{https://hexdocs.pm/dialyxir}.
 \newblock Accessed 2025.
 
+\bibitem[Brown et~al., 2020]{gpt3}
+Brown, T.~B., Mann, B., Ryder, N., et~al. (2020).
+\newblock Language models are few-shot learners.
+\newblock In {\em Advances in Neural Information Processing Systems 33}.
+
 \bibitem[Castagna et~al., 2014]{castagna2014polymorphic}
-Castagna, G., Ngu\^{y}\^{e}n, K., Xu, Z., Im, H., Lenglet, S., and Padovani, L.
-  (2014).
-\newblock Polymorphic functions with set-theoretic types: Part~1: Syntax,
-  semantics, and theory.
-\newblock In {\em Proceedings of the 41st Annual {ACM} {SIGPLAN}-{SIGACT}
-  Symposium on Principles of Programming Languages}, POPL '14, pages 5--17, New
-  York, NY, USA. ACM.
+Castagna, G., Ngu\^{y}\^{e}n, K., Xu, Z., Im, H., Lenglet, S., and Padovani, L. (2014).
+\newblock Polymorphic functions with set-theoretic types: Part~1: Syntax, semantics, and theory.
+\newblock In {\em Proceedings of the 41st Annual {ACM} {SIGPLAN}-{SIGACT} Symposium on Principles of Programming Languages}, POPL '14, pages 5--17, New York, NY, USA. ACM.
 
 \bibitem[Dettmers et~al., 2023]{qlora}
 Dettmers, T., Pagnoni, A., Holtzman, A., and Zettlemoyer, L. (2023).
@@ -36,8 +36,7 @@ Duboc, G. (2024).
 {Elixir Core Team} (2024a).
 \newblock alias, require, import, and use --- {Elixir} documentation.
 \newblock \url{https://hexdocs.pm/elixir/alias-require-and-import.html}.
-\newblock Modules are represented by atoms; the alias \texttt{String} expands
-  to the atom \texttt{:"Elixir.String"}. Accessed 2025.
+\newblock Modules are represented by atoms; the alias \texttt{String} expands to the atom \texttt{:"Elixir.String"}. Accessed 2025.
 
 \bibitem[{Elixir Core Team}, 2024b]{elixir-set-theoretic-types}
 {Elixir Core Team} (2024b).
@@ -71,64 +70,55 @@ Duboc, G. (2024).
 
 \bibitem[Frisch et~al., 2008]{frisch2008semantic}
 Frisch, A., Castagna, G., and Benzaken, V. (2008).
-\newblock Semantic subtyping: Dealing set-theoretically with function, union,
-  intersection, and negation types.
+\newblock Semantic subtyping: Dealing set-theoretically with function, union, intersection, and negation types.
 \newblock {\em Journal of the {ACM}}, 55(4):19:1--19:64.
 
 \bibitem[Guo et~al., 2024]{deepseekcoder}
-Guo, D., Zhu, Q., Yang, D., Xie, Z., Dong, K., Zhang, W., Chen, G., Bi, X., Wu,
-  Y., Li, Y.~K., Luo, F., Xiong, Y., and Liang, W. (2024).
-\newblock Deepseek-coder: When the large language model meets programming --
-  the rise of code intelligence.
+Guo, D., Zhu, Q., Yang, D., Xie, Z., Dong, K., Zhang, W., Chen, G., Bi, X., Wu, Y., Li, Y.~K., Luo, F., Xiong, Y., and Liang, W. (2024).
+\newblock Deepseek-coder: When the large language model meets programming -- the rise of code intelligence.
 \newblock {\em arXiv preprint arXiv:2401.14196}.
 
 \bibitem[Hu et~al., 2022]{lora}
-Hu, E.~J., Shen, Y., Wallis, P., Allen-Zhu, Z., Li, Y., Wang, S., Wang, L., and
-  Chen, W. (2022).
+Hu, E.~J., Shen, Y., Wallis, P., Allen-Zhu, Z., Li, Y., Wang, S., Wang, L., and Chen, W. (2022).
 \newblock {LoRA}: Low-rank adaptation of large language models.
 \newblock In {\em International Conference on Learning Representations (ICLR)}.
 
 \bibitem[Hui et~al., 2024]{qwen25coder}
-Hui, B., Yang, J., Cui, Z., Yang, J., Liu, D., Zhang, L., Liu, T., Zhang, J.,
-  Yu, B., Lu, K., Dang, K., Fan, Y., Zhang, Y., Yang, A., Men, R., Huang, F.,
-  Zheng, B., Miao, Y., Quan, S., Feng, Y., Ren, X., Ren, X., Zhou, J., and Lin,
-  J. (2024).
+Hui, B., Yang, J., Cui, Z., Yang, J., Liu, D., Zhang, L., Liu, T., Zhang, J., Yu, B., Lu, K., Dang, K., Fan, Y., Zhang, Y., Yang, A., Men, R., Huang, F., Zheng, B., Miao, Y., Quan, S., Feng, Y., Ren, X., Ren, X., Zhou, J., and Lin, J. (2024).
 \newblock Qwen2.5-coder technical report.
 \newblock {\em arXiv preprint arXiv:2409.12186}.
 
 \bibitem[Lindahl and Sagonas, 2006]{lindahl2006practical}
 Lindahl, T. and Sagonas, K. (2006).
 \newblock Practical type inference based on success typings.
-\newblock In {\em Proceedings of the 8th {ACM} {SIGPLAN} Symposium on
-  Principles and Practice of Declarative Programming}, PPDP '06, pages
-  167--178, New York, NY, USA. ACM.
+\newblock In {\em Proceedings of the 8th {ACM} {SIGPLAN} Symposium on Principles and Practice of Declarative Programming}, PPDP '06, pages 167--178, New York, NY, USA. ACM.
 
 \bibitem[Lozhkov et~al., 2024]{starcoder2}
-Lozhkov, A., Li, R., Ben~Allal, L., Cassano, F., Lamy-Poirier, J., Tazi, N.,
-  et~al. (2024).
+Lozhkov, A., Li, R., Ben~Allal, L., Cassano, F., Lamy-Poirier, J., Tazi, N., et~al. (2024).
 \newblock Starcoder 2 and the stack v2: The next generation.
 \newblock {\em arXiv preprint arXiv:2402.19173}.
 
 \bibitem[Mengesha, 2026]{Nina}
 Mengesha, H.~B. (2026).
-\newblock Assessing llm type prediction with multi-dimensional similarity
-  metrics.
+\newblock Assessing llm type prediction with multi-dimensional similarity metrics.
 \newblock Master's thesis, Ca'Foscari University of Venice.
 \newblock Supervised by Michele Bugliesi and Rocco Tripodi.
 
 \bibitem[Mir et~al., 2021]{manytypes4py}
 Mir, A.~M., Latoskinas, E., and Gousios, G. (2021).
-\newblock {ManyTypes4Py}: A benchmark {Python} dataset for machine
-  learning-based type inference.
-\newblock In {\em 2021 IEEE/ACM 18th International Conference on Mining
-  Software Repositories (MSR)}.
+\newblock {ManyTypes4Py}: A benchmark {Python} dataset for machine learning-based type inference.
+\newblock In {\em 2021 IEEE/ACM 18th International Conference on Mining Software Repositories (MSR)}.
 \newblock arXiv:2104.04706.
+
+\bibitem[Raffel et~al., 2020]{t5}
+Raffel, C., Shazeer, N., Roberts, A., Lee, K., Narang, S., Matena, M., Zhou, Y., Li, W., and Liu, P.~J. (2020).
+\newblock Exploring the limits of transfer learning with a unified text-to-text transformer.
+\newblock {\em Journal of Machine Learning Research}, 21(140):1--67.
 
 \bibitem[Siek and Taha, 2006]{siek2006gradual}
 Siek, J.~G. and Taha, W. (2006).
 \newblock Gradual typing for functional languages.
-\newblock In {\em Proceedings of the 2006 Workshop on Scheme and Functional
-  Programming}, pages 81--92.
+\newblock In {\em Proceedings of the 2006 Workshop on Scheme and Functional Programming}, pages 81--92.
 
 \bibitem[Valim, 2012]{elixir-lang}
 Valim, J. (2012).
@@ -141,11 +131,19 @@ Valim, J. (2026).
 \newblock Precision in type system design.
 \newblock \url{https://youtu.be/Ay-gnCqDw9o?is=iMHzHn4dvBMsFUpn}.
 
+\bibitem[Vaswani et~al., 2017]{vaswani2017}
+Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A.~N., Kaiser, L., and Polosukhin, I. (2017).
+\newblock Attention is all you need.
+\newblock In {\em Advances in Neural Information Processing Systems 30}.
+
+\bibitem[Wang et~al., 2022]{wang2022architecture}
+Wang, T., Roberts, A., Hesslow, D., Le~Scao, T., Chung, H.~W., Beltagy, I., Launay, J., and Raffel, C. (2022).
+\newblock What language model architecture and pretraining objective work best for zero-shot generalization?
+\newblock In {\em Proceedings of the 39th International Conference on Machine Learning}, volume 162 of {\em Proceedings of Machine Learning Research}, pages 22964--22984.
+
 \bibitem[Wang et~al., 2023]{codet5p}
-Wang, Y., Le, H., Gotmare, A.~D., Bui, N. D.~Q., Li, J., and Hoi, S. C.~H.
-  (2023).
-\newblock Codet5+: Open code large language models for code understanding and
-  generation.
+Wang, Y., Le, H., Gotmare, A.~D., Bui, N. D.~Q., Li, J., and Hoi, S. C.~H. (2023).
+\newblock Codet5+: Open code large language models for code understanding and generation.
 \newblock {\em arXiv preprint arXiv:2305.07922}.
 
 \end{thebibliography}

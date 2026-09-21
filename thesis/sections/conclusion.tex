@@ -1,46 +1,66 @@
-\section{Conclusion and Future Work}
-
-This thesis set out to support the migration of existing Elixir codebases to the language's new set-theoretic type system along the two fronts on which type information is available: translating the types that are already declared as Erlang-style TypeSpecs, and inferring those that are not.
-Chapter~\ref{ch:formalisation} formalised the translation as a set of equations from TypeSpec syntax to Elixir Types, isolating the constructs that cannot be translated precisely and approximating them with the gradual type \texttt{dynamic()}.
-Chapter~\ref{ch:implementation} realised that translation as a prototype, applied it across 383 repositories (drawn from 54 distinct owners) to produce \num{23073} translated annotations, and cross-validated each against both Dialyzer and the new typechecker.
-
-The agreement study established that the new typechecker is the substantially stricter of the two analyses, rejecting \num{6011} annotations against Dialyzer's 285, while subsuming the majority of Dialyzer's own findings (a subsumption rate of 60.7\%).
-Where both tools resolve the same types the typechecker reproduces Dialyzer's warnings; the residual cases are attributable not to disagreement but to whole-program analyses the typechecker does not yet perform, to \texttt{@opaque}-enforcement it does not model, and to translation-time \texttt{dynamic()} approximation, so the two analyses are complementary rather than nested.
-The cross-validation yielded \num{7498} annotations accepted by both tools; these constitute the checker-verified supervision signal for the prediction task.
-
-The prediction study fine-tuned a code LLM to recover these annotations and, through a two-track design, asked whether gradual types should be admitted into the supervision signal.
-The result is a trade-off rather than a single best choice.
-A model trained on the precise, dynamic-free pool and one trained on the larger gradual-inclusive pool invert across two equally legitimate notions of success: the gradual-inclusive model recovers more typechecker-accepted annotations (raw pass rate 75.0\% versus 63.7\%), which serves a \emph{low-noise} migration whose immediate aim is to make a codebase compile; the precise model produces more annotations that are accepted \emph{and} genuinely static (safe-and-precise rate 63.7\% versus 29.7\%) and never resorts to the gradual type, which serves type safety and downstream usefulness.
-Critically, the gradual-inclusive model confirms the concern that motivated this work, namely that a model can learn to over-emit \texttt{dynamic()} to mute type errors, lifting the bare pass rate while halving precision; it does so despite training on more than twice the data.
-The practical guidance is therefore a tunable trade-off rather than a single recommended model: admit gradual types when a low-noise transition is the priority, and exclude them when precision is.
-
-Taken together, the translation prototype and the two prediction models cover the two sources of type information in a codebase, and the checker-verified, two-track methodology offers a reusable template for building and evaluating type-annotation datasets for a young set-theoretic type system.
-What remains is to compose the two methods into a single end-to-end migration of a complete project and to measure it directly, which we set out as the principal item of future work below.
-
-\subsection{Limitations and Future Work}
+\section{Limitations and Future Work}
 \label{sec:future-work}
-
-\paragraph{End-to-end total migration.}
-This thesis defines \emph{total migration} as the state in which every function in a project carries a typechecker-accepted Elixir Type, and it establishes the two enablers separately: a translation prototype that converts existing \texttt{@spec}s (Chapter~\ref{ch:implementation}), and an LLM that predicts annotations for the unspec'd majority (the two-track prediction study).
-Composing the two into an end-to-end migration of a complete, previously-unannotated project is the natural next step and is left to future work.
-Concretely, such a study would run the full pipeline, namely target discovery of untyped functions, annotation \emph{inference} (translation where a spec exists and prediction where it does not), \emph{injection} of the resulting annotation into the source, and recompilation in the original project context, and would report a \emph{migration rate}: the fraction of previously-untyped functions that become compile-clean and free of type warnings.
-A case study over a handful of projects, with a per-function breakdown of outcomes (clean compile, type warning, or compile failure from a syntactic or unresolved-reference error), would connect the compatibility metric of Subsection~\ref{sec:compatibility-eval} with extrinsic migration success, testing directly whether compatibility with a reference predicts whether a prediction actually migrates.
-
-\paragraph{Evaluation scope and dataset.}
-Several limitations bound the present results and motivate the study above.
-The extrinsic evaluation is conducted on \emph{held-out} projects rather than within a single evolving codebase.
-The corpus itself is bounded by what the custom compiler's OTP-28 toolchain can build: projects whose dependencies do not compile under it never enter the dataset, so the results generalise to typecheckable Elixir code rather than to the language's full ecosystem.
-The supervised dataset, while checker-verified, is modest in size (\num{7498} both-pass entries) and resolves no cross-project dependency types at training time, so the model never observes the remote types the translator was forced to widen to \texttt{dynamic()}, precisely the cases where prediction would most help.
-Where the model does fail, the failures concentrate in framework code with non-obvious internal representations (packed-binary math types, opaque struct APIs) and in the recurring atom/integer-versus-binary confusion, suggesting that dependency-aware context at training time is the most promising lever for the next iteration.
-
-\paragraph{Manual project preparation.}
-Constructing and evaluating the corpus was not a fully automated pipeline: a number of projects required manual intervention before they would compile under the custom compiler.
-The development-branch Elixir is built against a specific Erlang/OTP release (OTP-28), so projects pinning an older toolchain, or depending on libraries incompatible with it, did not build out of the box; bringing them up required pinning compatible dependency versions and adjusting build settings.
-For instance, a project that aliased compilation to \texttt{--warnings-as-errors} turned the typechecker's own warnings into hard failures and had to be relaxed.
-These interventions were applied uniformly and identically to both tracks, so they do not bias the comparison; but they mean the corpus cannot yet be regenerated end-to-end without human effort, and that scaling to a substantially larger project set would demand either more robust automated environment resolution or an accepted loss of coverage.
 
 \paragraph{A compiler under active development.}
 The set-theoretic type system targeted in this work ships in a development-branch compiler (Elixir~1.21.0-dev) whose type-checking behaviour is not yet stable, and the translation pipeline depends directly on it.
 This coupling produced concrete incompatibilities between the translated annotations and the compiler.
 The clearest is an arity mismatch in the \texttt{@assert\_type\_form} assertions the translation emits: for a function declaring specifications at several arities alongside a default-argument clause, the assertion generated for a higher arity could be associated by the compiler with a lower-arity clause, aborting compilation of the whole file; resolving these required repositioning the offending \texttt{@spec}s by hand.
-Such mismatches are a property of a young, moving target rather than of the translation itself, so the empirical results reported here are tied to a particular snapshot of the compiler and can be expected to shift, most plausibly to improve, as its type checker and its handling of assertions mature.
+Such mismatches are a property of a young, moving target rather than of the translation itself, so the empirical results reported here are tied to a particular snapshot of the compiler and can be expected to shift as its type checker and its handling of assertions mature.
+The same holds for the prediction scores: \texttt{compatible?/2} belongs to the compiler's internal, undocumented \texttt{Descr} module, so the compatibility figures are tied to the same snapshot.
+
+\paragraph{Manual project preparation.}
+Constructing and evaluating the corpus was not a fully automated pipeline: a number of projects required manual intervention before they would compile under the custom compiler.
+The development-branch Elixir is built against a specific Erlang/OTP release (OTP-28), so projects pinning an older toolchain, or depending on libraries incompatible with it, did not build out of the box; bringing them up required pinning compatible dependency versions and adjusting build settings.
+For instance, a project that aliased compilation to \texttt{--warnings-as-errors} turned the typechecker's own warnings into hard failures and had to be relaxed.
+These interventions mean the corpus cannot yet be regenerated end-to-end without human effort, and that scaling to a substantially larger project set would demand either more robust automated environment resolution or an accepted loss of coverage.
+
+\paragraph{Scope and range of the corpus.}
+The corpus is bounded by what the custom compiler's OTP-28 toolchain can build: projects whose dependencies do not compile under it never enter the dataset, so the results generalise to typecheckable Elixir code rather than to the language's full ecosystem.
+It is bounded in \emph{range} as well, by the length filter applied before the split (Subsection~\ref{sec:llm-data-prep}), which discards every entry whose function definition exceeds 2{,}000 characters or whose target annotation exceeds 1{,}000.
+The pathological cases it removes---variable-arity functions such as \texttt{Regex.replace/4}, whose translated type expands into a union over every fixed arity the BEAM permits (Chapter~\ref{ch:formalisation})---are therefore absent from both training and test.
+The models are neither taught nor asked to produce such types, so the reported accuracies say nothing about them: they characterise prediction only within the length envelope the filter keeps.
+
+\paragraph{Scale of the supervised corpus.}
+The most consequential limitation of the prediction study is the size of that corpus.
+The both-pass pool yields only \num{9888} training examples---small for fine-tuning a language model, and a structural consequence of the setting: an Elixir function enters the pool only if it already carries a TypeSpec and that translation is accepted by both checkers, in a language whose typed-code footprint is far smaller than Python's.
+So even though we draw on 383 repositories, we retain far fewer usable examples than comparable Python work.
+For scale, the closest study---Mengesha's LLM type prediction on Python~\cite{Nina}---trains on \num{56384} examples drawn from 20 of the 50 repositories in its benchmark, and the standard Python type-inference corpus, ManyTypes4Py~\cite{manytypes4py}, contains more than \num{869000} type annotations across \num{5382} projects.\footnote{These counts are not strictly commensurable---our examples are function-level annotations, whereas Mengesha's and ManyTypes4Py's are variable-level---so this is an order-of-magnitude comparison rather than a like-for-like one.}
+Data at this scale plausibly caps the absolute accuracies of Section~\ref{sec:llm-results}, and bears more on the 7~B model---the more data-hungry of the two---than on CodeT5+.
+The architecture effect itself, however, is unlikely to be a mere artefact of corpus size: Mengesha's Python study, at roughly six times the data, reports the same ranking, a small encoder--decoder ahead of a 7~B decoder-only model~\cite{Nina}.
+
+\paragraph{What the model comparison does not establish.}
+Three further limitations qualify that comparison.
+First, the two decodings are not symmetric: Qwen2.5 is grammar-constrained to well-formed types while CodeT5+ is not (Section~\ref{sec:llm-results}), so CodeT5+'s stronger numbers are achieved despite a handicap in output well-formedness, visible in its higher null rate.
+Second, each model is trained and evaluated on a single subproject split (salt 42); we do not report variance across splits or seeds, so the point estimates should be read as indicative rather than tightly bounded.
+Third, checkpoints are selected by validation cross-entropy, a cheap proxy that need not coincide with the set-theoretic compatibility we ultimately report; a selection criterion computed directly on compatibility---necessarily on validation data, never on the test set---is left to future work.
+Because the two models also differ in architecture, scale, and fine-tuning regime at once, the gap between them is not attributable to any one of the three; isolating the encoder's contribution, for instance by fully fine-tuning a decoder-only model of comparable scale under an otherwise identical regime, remains open (Section~\ref{sec:llm-qualitative}).
+
+\paragraph{Dependency types as context.}
+The prompt carries only the type declarations in scope at the function itself, not those of the modules it depends on, so the model is never shown the remote types the translator widened to \texttt{dynamic()}---precisely the positions where the reference annotation is least informative.
+Supplying those dependency types as additional context is a natural next step, and one the dataset already has the structure to support, since every annotation is recorded with the project and module it came from.
+
+\paragraph{End-to-end total migration.}
+This thesis defines \emph{total migration} as the state in which every function in a project carries a typechecker-accepted Elixir Type, and develops its two ingredients separately: a translation prototype for functions that carry a \texttt{@spec} (Chapter~\ref{ch:implementation}), and fine-tuned models that predict annotations for those that do not (Chapter~\ref{ch:llm-eval}).
+Composing the two into an end-to-end migration of a complete, previously-unannotated project is left to future work.
+Concretely, such a study would run the full pipeline, namely target discovery of untyped functions, annotation \emph{inference} (translation where a spec exists and prediction where it does not), \emph{injection} of the resulting annotation into the source, and recompilation in the original project context, and would report a \emph{migration rate}: the fraction of previously-untyped functions that become compile-clean and free of type warnings.
+The prototype already includes an evaluator for the injection step, which writes a prediction into its function's \texttt{@assert\_type\_form} and recompiles the project; it was not run for the results reported here.
+A case study over a handful of projects, with a per-function breakdown of outcomes (clean compile, type warning, or compile failure), would connect the compatibility metric of Section~\ref{sec:compatibility-eval} with extrinsic migration success, testing directly whether compatibility with a reference predicts whether a prediction actually migrates.
+
+\section{Conclusion}
+
+This thesis set out to support the migration of existing Elixir codebases to the language's new set-theoretic type system along the two fronts on which type information is available: translating the types that are already declared as Erlang-style TypeSpecs, and inferring those that are not.
+Chapter~\ref{ch:formalisation} formalised both type languages and the translation between them as a set of equations, and extended it to a total translation by approximating the TypeSpec constructs that have no exact counterpart, promoting a field's key type to its smallest supertype among the Elixir key types.
+Chapter~\ref{ch:implementation} realised the translation as a prototype, which widens to \texttt{dynamic()} the types it cannot resolve, applied it across 383 repositories to produce \num{23073} translated annotations, and checked them against both Dialyzer and the new typechecker, which return a verdict on \num{22621} of them.
+
+The agreement study found the typechecker to be decisively the stricter analysis: it rejects \num{3835} entries (16.6\%) against Dialyzer's 297 (1.3\%).
+It independently warns on 199 of Dialyzer's 297 failing entries (67.0\%); the remaining 98 are not cases where it wrongly accepts a definition Dialyzer soundly rejects, but fall to whole-program analyses it does not perform, to findings masked by translation-time \texttt{dynamic()}, and to \texttt{@opaque} violations it does not model.
+Its excess warnings are mostly translation residuals, yet a core remains that only it catches: 176 purely static return leaks and 369 non-struct dead-clause findings.
+The two analyses are therefore complementary, and the \num{18688} annotations both accept form the checker-verified corpus for the second part.
+
+The second part fine-tuned two contrasting models on that corpus, length-filtered and split by subproject into \num{9888} training, \num{3484} validation, and \num{2127} test entries: \texttt{Qwen2.5-Coder-7B}, a decoder-only model adapted with QLoRA, and \texttt{CodeT5+-770M}, an encoder--decoder fine-tuned in full.
+Predictions were scored with the type system's own compatibility relation, \texttt{compatible?/2}, which accepts a prediction exactly when the reference does not contradict it, and exact match was reported alongside as an indicator of precision.
+On the held-out entries CodeT5+ is compatible on 54.3\% against 36.6\% for Qwen2.5, and matches the reference exactly on 30.2\% against 6.6\%, with roughly a tenth of the parameters and without the grammar constraint Qwen2.5 decodes under.
+Because the two models differ in architecture, scale, and fine-tuning regime at once, the comparison does not attribute the gap to any single factor, though the same ranking in a Python type-prediction study at roughly six times the data~\cite{Nina} suggests it is not an artefact of our corpus size.
+
+Taken together, the translation prototype supplies types for the functions that already carry a TypeSpec, and a fine-tuned model can propose types for those that do not.
+The predictions, however, were scored against reference annotations rather than compiled into their projects, so whether they carry a real codebase through migration remains to be measured; this is the principal item of future work set out above.

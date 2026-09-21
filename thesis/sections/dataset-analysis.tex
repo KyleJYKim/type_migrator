@@ -325,14 +325,14 @@ About a fifth of the translated annotations are thus rejected by, or unverifiabl
 Those labels can carry \texttt{dynamic()}, inherited from the translation and mostly an artefact of unresolved remote types rather than a deliberate gradual-typing choice (Subsection~\ref{sec:approximation-via-dynamic}), so the model is trained to reproduce annotations that may include \texttt{dynamic()}.
 A length filter and a subproject-stratified split (Subsection~\ref{sec:llm-data-prep}) give the final training and test sets.
 
-\paragraph{Typechecker as the success criterion.}
-Because the model is optimised to satisfy the typechecker, evaluation uses the typechecker as ground truth: a predicted annotation counts as correct when the typechecker accepts it on injection into the real project.
-Dialyzer plays no part in scoring predictions: its role was confined to building the dataset (the agreement study of this chapter and the both-pass filter). The prediction metric is the typechecker's acceptance alone, which is appropriate because the task is precisely to produce annotations the new type system admits.
+\paragraph{Scoring predictions.}
+Dialyzer plays no part in scoring predictions: its role is confined to building the dataset (the agreement study of this chapter and the both-pass filter).
+Predictions are scored against their reference annotation with the new type system's own compatibility relation, \texttt{compatible?/2} (Section~\ref{sec:compatibility-eval}), so the typechecker-accepted references are the standard each prediction is measured against.
 
 \subsection{Summary}
 
 \begin{itemize}
-    \item \textbf{Coverage}: all \num{23073} specs from 383 repositories were translated; Dialyzer analysed every one, and the new typechecker all but 452 whose host projects fail to compile under the development-branch compiler, leaving \num{22621} with a verdict from both tools.
+    \item \textbf{Coverage}: all \num{23073} specs from 383 repositories were translated; Dialyzer analysed all but 91 and the new typechecker all but 452, whose host projects fail to compile under the development-branch compiler; the 91 are among the 452, leaving \num{22621} with a verdict from both tools.
     \item \textbf{Relative strictness}: the typechecker rejects \num{3835} entries (16.6\%) against Dialyzer's 297 (1.3\%); pass rates are 81.4\% versus 98.3\%. The typechecker is decisively the stricter tool, as hypothesised.
     \item \textbf{Subsumption}: the typechecker independently warns on 67.0\% of Dialyzer's failing entries (199 of 297), reproducing Dialyzer's finding directly for the locally-checkable categories and co-rejecting the rest on a separate body-level fault. The 98 it does not co-warn are \emph{not} type-theoretic counterexamples, but split between whole-program analyses it does not perform, locally-checkable findings masked by \texttt{dynamic()}, and \texttt{@opaque} type violations it does not model (Subsection~\ref{sec:dialyzer-only}).
     \item \textbf{Approximation cost}: 60.3\% of entries contain \texttt{dynamic()}; it suppresses some Dialyzer-visible errors but leaves 72\% of typechecker rejections intact, so it is not a blanket suppression.
