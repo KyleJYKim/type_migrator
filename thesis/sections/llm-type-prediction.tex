@@ -354,29 +354,6 @@ The one cost of the missing constraint is CodeT5+'s higher null rate (\num{4.4}\
 That handicap---\num{2.4} points more null than Qwen2.5, all charged against CodeT5+---is far smaller than its \num{20.5}-point compatibility margin, so the unconstrained decoding does not account for the gap.
 Full fine-tuning of a task-matched encoder--decoder thus outperforms parameter-efficient adaptation of a much larger decoder-only model on this task.
 
-\paragraph{How the compatibility is earned.}
-Because the evaluator records both directions of \texttt{subtype?/2}, each prediction falls into one of four cases against its reference, and the two models earn their compatibility differently (Table~\ref{tab:llm-distance}).
-Predictions that are equal to the reference or narrower than it are compatible by construction, and every one of them is: \num{164} and \num{172} for Qwen2.5, \num{627} and \num{197} for CodeT5+.
-The remaining compatible predictions are ones the reference neither contains nor is contained by, admitted because the reference is gradual and a \texttt{dynamic()} position accepts anything.
-For Qwen2.5 those account for \num{390} of its \num{763} compatible predictions (\num{51}\%); for CodeT5+, \num{324} of \num{1198} (\num{27}\%).
-Qwen2.5's compatibility therefore rests about twice as heavily on references too weak to contradict it, so the \num{20.5}-point margin understates the distance between the two models on the entries where the reference has something to say.
-
-\begin{table}[h]
-\centering
-\begin{tabular}{lrrrrr}
-\toprule
- & \multicolumn{2}{c}{\textbf{compatible by construction}} & \multicolumn{2}{c}{\textbf{not contained}} & \\
-\cmidrule(lr){2-3}\cmidrule(lr){4-5}
-\textbf{Model} & \textbf{equal} & \textbf{narrower} & \textbf{broader} & \textbf{apart} & \textbf{null} \\
-\midrule
-Qwen2.5-Coder-7B & \num{164} & \num{172} & \num{154} & \num{1594} & \num{43} \\
-CodeT5+-770M     & \textbf{\num{627}} & \num{197} & \num{205} & \num{1005} & \num{93} \\
-\bottomrule
-\end{tabular}
-\caption[Predictions by set-theoretic relation to the reference.]{Each prediction by its relation to the reference, from the two directions of \texttt{subtype?/2}: \emph{equal} (mutual subtyping, the exact matches), \emph{narrower} (prediction a strict subtype), \emph{broader} (reference a strict subtype), \emph{apart} (neither contains the other), \emph{null} (unparseable). The first two are always compatible; of the last two, only those whose reference is gradual are.}
-\label{tab:llm-distance}
-\end{table}
-
 \section{Qualitative Analysis}
 \label{sec:llm-qualitative}
 \label{sec:qualitative}
@@ -385,14 +362,36 @@ Inspecting individual predictions makes the behaviour behind the aggregate numbe
 
 \paragraph{Exact matches a string comparison would miss.}
 Some predictions differ textually from the reference yet denote the identical type, which mutual subtyping credits as an exact match where a naive string comparison would not.
-\texttt{Membrane.RTP.Packet.PayloadType.dynamic?/1} has reference \texttt{(integer() or integer() -> :true or :false)}; both models predict \texttt{(integer() -> :true or :false)}, collapsing the redundant union \texttt{integer() or integer()} to the identical \texttt{integer()}.
-Each type is a subtype of the other, so the prediction counts as exact for both models.
+For \texttt{Membrane.RTP.Packet.PayloadType.dynamic?/1} both models collapse a redundant union:
+
+\begin{lstlisting}[numbers=none]
+reference    (integer() or integer() -> :true or :false)
+both models  (integer() -> :true or :false)
+\end{lstlisting}
+
+\noindent
+\texttt{integer() or integer()} denotes the same set of values as \texttt{integer()}, so each type is a subtype of the other and the prediction counts as exact for both models.
 
 \paragraph{Where the larger model fails and the smaller succeeds.}
 The architecture comparison of Section~\ref{sec:llm-results} shows up in individual predictions, and one failure shape recurs: Qwen2.5 answers with a \emph{struct} where the reference is a plain primitive.
-\texttt{CSSHelpers.string\_to\_class/1} has reference \texttt{(binary() -> binary())}; Qwen2.5 predicts \texttt{(binary() -> dynamic(\%\{atom() => if\_set(term()), :\_\_struct\_\_ => :"Elixir.String"\}))}, an open struct named \texttt{String}, whereas CodeT5+ reproduces the reference exactly.
-\texttt{CMS.Helpers.rewrite\_url/1} has the same reference and draws the same shape from Qwen2.5, this time named \texttt{URI}.
-\texttt{Membrane.Matroska.Schema.element\_id\_to\_name/1} has reference \texttt{(integer() -> atom())}, where Qwen2.5 predicts \texttt{(integer() -> binary())}---the right arity and argument, the wrong leaf type---and CodeT5+ is again exact.
+CodeT5+ matches the reference exactly on all three functions below, so only Qwen2.5's answer is set against it:
+
+\begin{lstlisting}[numbers=none]
+CSSHelpers.string_to_class/1
+  reference  (binary() -> binary())
+  Qwen2.5    (binary() -> dynamic(%{atom() => if_set(term()), :__struct__ => :"Elixir.String"}))
+
+CMS.Helpers.rewrite_url/1
+  reference  (binary() -> binary())
+  Qwen2.5    (binary() -> dynamic(%{atom() => if_set(term()), :__struct__ => :"Elixir.URI"}))
+
+Membrane.Matroska.Schema.element_id_to_name/1
+  reference  (integer() -> atom())
+  Qwen2.5    (integer() -> binary())
+\end{lstlisting}
+
+\noindent
+The first two answer with an open struct where the type is a plain \texttt{binary()}; the third keeps the arity and the argument type but returns the wrong leaf type.
 The pattern is measurable rather than anecdotal: among Qwen2.5's \num{1364} non-compatible predictions, \num{253} name a struct the reference does not contain, against \num{33} of CodeT5+'s \num{929}.
 In \num{21} of Qwen2.5's cases the invented struct is \texttt{String}, which is not a struct in Elixir at all---a shape no reference in the corpus could have taught it.
 
@@ -416,7 +415,7 @@ Isolating the encoder's contribution --- for instance by fully fine-tuning a dec
     \item \textbf{Task}: prediction is framed as conditional generation---given a function definition and the types in scope, write the annotation as text---under one prompt template shared verbatim by both models, which diverge only in how they consume it: a single concatenated stream for the decoder-only model, separate encoder and decoder streams for the encoder--decoder (Subsection~\ref{sec:llm-task}).
     \item \textbf{Training}: \texttt{Qwen2.5-Coder-7B} was adapted with QLoRA and \texttt{CodeT5+-770M} fully fine-tuned, both for 1.2 epochs on identical data. Both runs converged without instability, and each model carried forward is the checkpoint of lowest validation loss: \num{0.694} at epoch~\num{0.44} for Qwen2.5, whose curve drifts upward thereafter, and \num{0.276} at epoch~\num{0.97} for CodeT5+, whose curve stays flat to the end. Both runs record the same prompt-module hash, so the two models read prompts built by one and the same code (Section~\ref{sec:llm-repro}).
     \item \textbf{Metric}: predictions are judged by Elixir's own \texttt{compatible?/2} in \texttt{Module.Types.Descr}, which accepts a prediction exactly when the reference does not contradict it, with exact match---decided by the same module's \texttt{subtype?/2} in both directions---reported alongside as an indicator of precision and unparseable output counted as incompatible (Section~\ref{sec:compatibility-eval}).
-    \item \textbf{Results}: on the common \num{2127}-entry test set CodeT5+ is compatible on \num{56.3}\% of entries against \num{35.9}\% for Qwen2.5, a \num{20.5}-point margin, and exact on \num{29.5}\% against \num{7.7}\%---the smaller model ahead on both axes at roughly a tenth of the parameters and without the grammar constraint Qwen2.5 decodes under. The cost of that unconstrained decoding, a null rate \num{2.4} points higher and charged against CodeT5+ as incompatible, is far smaller than its margin. Of the compatible predictions, \num{51}\% of Qwen2.5's are admitted only because the reference is gradual, against \num{27}\% of CodeT5+'s, so the margin understates the gap where the reference constrains the answer (Section~\ref{sec:llm-results}).
+    \item \textbf{Results}: on the common \num{2127}-entry test set CodeT5+ is compatible on \num{56.3}\% of entries against \num{35.9}\% for Qwen2.5, a \num{20.5}-point margin, and exact on \num{29.5}\% against \num{7.7}\%---the smaller model ahead on both axes at roughly a tenth of the parameters and without the grammar constraint Qwen2.5 decodes under. The cost of that unconstrained decoding, a null rate \num{2.4} points higher and charged against CodeT5+ as incompatible, is far smaller than its margin (Section~\ref{sec:llm-results}).
     \item \textbf{Qualitative behaviour}: deciding equality by mutual subtyping credits predictions that differ textually from the reference yet denote the same type, which a string comparison would miss; in the failures examined, Qwen2.5 answers with a struct where the reference is a plain primitive---\num{253} of its \num{1364} failures name a struct the reference does not contain, against \num{33} of CodeT5+'s \num{929} (Section~\ref{sec:llm-qualitative}).
     \item \textbf{Attribution}: the two models differ in architecture, scale, and fine-tuning regime at once, so the gap is not attributed to any single factor. The encoder's bidirectional read of the definition is a plausible contributor, and controlled architecture comparisons outside this setting point the same way~\cite{t5,wang2022architecture}, but isolating it would require a further experiment.
 \end{itemize}

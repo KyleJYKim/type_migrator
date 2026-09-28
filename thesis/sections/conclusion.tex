@@ -20,6 +20,12 @@ It is bounded in \emph{range} as well, by the length filter applied before the s
 The pathological cases it removes---variable-arity functions such as \texttt{Regex.replace/4}, whose translated type expands into a union over every fixed arity the BEAM permits (Chapter~\ref{ch:formalisation})---are therefore absent from both training and test.
 The models are neither taught nor asked to produce such types, so the reported accuracies say nothing about them: they characterise prediction only within the length envelope the filter keeps.
 
+A third selection acts at the level of the individual function, and it bears directly on what the prediction results can be taken to show.
+An entry exists only because some developer wrote a \texttt{@spec} for that function, and functions that carry one need not resemble those that do not: an author is likelier to annotate a public interface than an internal helper, and likelier still to annotate a function whose type was easy to state.
+Both models are therefore trained and evaluated on annotated code, while the motivation for predicting types at all is the unannotated majority.
+This gap cannot be closed by the metric used here, since scoring a prediction requires a reference annotation to score it against, and a function without a \texttt{@spec} has none.
+Closing it needs the extrinsic measurement described below---compiling predicted annotations back into their projects and counting those the compiler accepts---which is what would establish how far these accuracies carry to the code the models are ultimately meant for.
+
 \paragraph{Scale of the supervised corpus.}
 The most consequential limitation of the prediction study is the size of that corpus.
 The both-pass pool yields only \num{9888} training examples---small for fine-tuning a language model, and a structural consequence of the setting: an Elixir function enters the pool only if it already carries a TypeSpec and that translation is accepted by both checkers, in a language whose typed-code footprint is far smaller than Python's.
@@ -27,6 +33,16 @@ So even though we draw on 383 repositories, we retain far fewer usable examples 
 For scale, the closest study---Mengesha's LLM type prediction on Python~\cite{Nina}---trains on \num{56384} examples drawn from 20 of the 50 repositories in its benchmark, and the standard Python type-inference corpus, ManyTypes4Py~\cite{manytypes4py}, contains more than \num{869000} type annotations across \num{5382} projects.\footnote{These counts are not strictly commensurable---our examples are function-level annotations, whereas Mengesha's and ManyTypes4Py's are variable-level---so this is an order-of-magnitude comparison rather than a like-for-like one.}
 Data at this scale plausibly caps the absolute accuracies of Section~\ref{sec:llm-results}, and bears more on the 7~B model---the more data-hungry of the two---than on CodeT5+.
 The architecture effect itself, however, is unlikely to be a mere artefact of corpus size: Mengesha's Python study, at roughly six times the data, reports the same ranking, a small encoder--decoder ahead of a 7~B decoder-only model~\cite{Nina}.
+
+\paragraph{Consistency of the reference annotations.}
+Beyond their number, the references vary in kind.
+They are translations of \texttt{@spec}s written by hand across 383 independently developed repositories, and passing both checkers certifies only that each is \emph{sound} for its own function---not that any two were written at the same level of precision.
+One author may declare a return type as \texttt{map()}, another spell out every field of the same shape, and a third leave a position to \texttt{term()}; the translation preserves that spread, and the approximation of unresolved remote types adds more of it, which is why \num{60.3}\% of translated entries carry a \texttt{dynamic()} somewhere (Subsection~\ref{sec:approximation-via-dynamic}).
+As a training signal this is a target function that is not merely noisy but inconsistently \emph{granular}: the same code can license annotations at several precisions, all of them accepted.
+It also weakens the metric at both ends, since a prediction is penalised for disagreeing with whichever convention its reference happened to follow, while a reference left gradual cannot contradict a prediction at all (Section~\ref{sec:compatibility-eval}).
+The remedy is not more hand-written specs but a different source of labels: the typechecker already performs module type inference, deriving a type for each function from its body rather than from a declaration (Subsection~\ref{sec:dialyzer-only}), so a corpus of \emph{compiler-inferred} annotations would be uniform in granularity by construction, being produced by one procedure rather than by hundreds of authors.
+Its inference is best-effort, and what it derives for a body it cannot pin down would be correspondingly weak, so such a corpus would trade one kind of imprecision for another---but a systematic kind, whose distribution could be measured once and reported, rather than one inherited unevenly from every repository in the sample.
+Rebuilding the supervised corpus that way---and comparing a model trained on inferred labels against one trained on translated human specs---is left to future work, and would also decouple the prediction study from the translation prototype that currently supplies its targets.
 
 \paragraph{What the model comparison does not establish.}
 Three further limitations qualify that comparison.
