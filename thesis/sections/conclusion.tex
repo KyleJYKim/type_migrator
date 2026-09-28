@@ -32,7 +32,9 @@ The architecture effect itself, however, is unlikely to be a mere artefact of co
 Three further limitations qualify that comparison.
 First, the two decodings are not symmetric: Qwen2.5 is grammar-constrained to well-formed types while CodeT5+ is not (Section~\ref{sec:llm-results}), so CodeT5+'s stronger numbers are achieved despite a handicap in output well-formedness, visible in its higher null rate.
 Second, each model is trained and evaluated on a single subproject split (salt 42); we do not report variance across splits or seeds, so the point estimates should be read as indicative rather than tightly bounded.
-Third, checkpoints are selected by validation cross-entropy, a cheap proxy that need not coincide with the set-theoretic compatibility we ultimately report; a selection criterion computed directly on compatibility---necessarily on validation data, never on the test set---is left to future work.
+Third, checkpoints are selected by validation cross-entropy, a cheap proxy that need not coincide with the set-theoretic compatibility we ultimately report.
+That gap is not hypothetical here: between two rounds differing only in the notation of the types supplied in the prompt, Qwen2.5's best validation loss improved by \num{22}\% while its compatibility fell slightly, and CodeT5+'s loss held constant while its compatibility rose two points (Section~\ref{sec:llm-repro}).
+A selection criterion computed directly on compatibility---necessarily on validation data, never on the test set---is left to future work.
 Because the two models also differ in architecture, scale, and fine-tuning regime at once, the gap between them is not attributable to any one of the three; isolating the encoder's contribution, for instance by fully fine-tuning a decoder-only model of comparable scale under an otherwise identical regime, remains open (Section~\ref{sec:llm-qualitative}).
 
 \paragraph{Dependency types as context.}
@@ -59,7 +61,7 @@ The two analyses are therefore complementary, and the \num{18688} annotations bo
 
 The second part fine-tuned two contrasting models on that corpus, length-filtered and split by subproject into \num{9888} training, \num{3484} validation, and \num{2127} test entries: \texttt{Qwen2.5-Coder-7B}, a decoder-only model adapted with QLoRA, and \texttt{CodeT5+-770M}, an encoder--decoder fine-tuned in full.
 Predictions were scored with the type system's own compatibility relation, \texttt{compatible?/2}, which accepts a prediction exactly when the reference does not contradict it, and exact match was reported alongside as an indicator of precision.
-On the held-out entries CodeT5+ is compatible on 54.3\% against 36.6\% for Qwen2.5, and matches the reference exactly on 30.2\% against 6.6\%, with roughly a tenth of the parameters and without the grammar constraint Qwen2.5 decodes under.
+On the held-out entries CodeT5+ is compatible on 56.3\% against 35.9\% for Qwen2.5, and matches the reference exactly on 29.5\% against 7.7\%, with roughly a tenth of the parameters and without the grammar constraint Qwen2.5 decodes under.
 Because the two models differ in architecture, scale, and fine-tuning regime at once, the comparison does not attribute the gap to any single factor, though the same ranking in a Python type-prediction study at roughly six times the data~\cite{Nina} suggests it is not an artefact of our corpus size.
 
 Taken together, the translation prototype supplies types for the functions that already carry a TypeSpec, and a fine-tuned model can propose types for those that do not.

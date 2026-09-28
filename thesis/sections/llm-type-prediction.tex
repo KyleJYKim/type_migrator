@@ -39,10 +39,11 @@ As a decoder-only model, it takes the prompt and the target annotation as one co
 \paragraph{CodeT5+: full fine-tuning.}
 The 770~M encoder--decoder is small enough to fine-tune in full: all of its parameters are updated, with no adapters or quantisation.
 Being a sequence-to-sequence model, it does not concatenate the two: the prompt is the encoder input, read bidirectionally, and the annotation is the decoder's target, so the training loss falls on the annotation tokens alone.
-Its encoder input and decoder output are each capped at 512 tokens (against the 1{,}024 the packed Qwen2.5 sequence allows), a length that still covers every target the length filter of Subsection~\ref{sec:llm-data-prep} keeps.
+Its decoder output is capped at 512 tokens, which covers every target the length filter of Subsection~\ref{sec:llm-data-prep} keeps, and its encoder input at 1{,}536, which covers every prompt the types-in-scope cap allows (the longest is under 1{,}400 tokens), so no input is truncated.
+Because attention cost grows with the square of the encoder length, this run uses a per-device batch of 2 with 8 gradient-accumulation steps and gradient checkpointing, holding the effective batch at 16.
 
 \paragraph{Shared training configuration.}
-Both runs use an effective batch size of 16 (Qwen2.5: per-device 2 with 8 gradient-accumulation steps; CodeT5+: per-device 4 with 4), a learning rate of $1 \times 10^{-4}$ with cosine decay and a 10\% warmup ratio, weight decay 0.01, and bfloat16 mixed precision.
+Both runs use an effective batch size of 16 (Qwen2.5: per-device 2 with 8 gradient-accumulation steps; CodeT5+: likewise 2 with 8), a learning rate of $1 \times 10^{-4}$ with cosine decay and a 10\% warmup ratio, weight decay 0.01, and bfloat16 mixed precision.
 The optimiser is paged AdamW with 8-bit state, and both train for 1.2 epochs, each retaining the checkpoint with the lowest validation loss (Section~\ref{sec:llm-repro}).
 
 \section{Compute Environment}
@@ -105,7 +106,7 @@ It is \emph{conditional} because what the model writes depends on the input code
 Each training entry consists of:
 \begin{itemize}
     \item the qualified module name in which the function is defined;
-    \item the list of \texttt{@type}, \texttt{@opaque}, and \texttt{@typep} declarations (translated) in scope at the function;
+    \item the \texttt{@type}, \texttt{@opaque}, and \texttt{@typep} declarations in scope at the function, themselves translated into Elixir Types, so that the context the model reads is in the notation it must write;\footnote{The declarations are recorded in the dataset in their original TypeSpec form and translated by the same equations as the target (Chapter~\ref{ch:formalisation}). The block is capped at 2{,}000 characters, whole declarations only: translation \emph{expands} a type, and a declaration containing a variable-arity \texttt{(... -> T)} reaches over 500~KiB once the union over arities is written out (Subsection~\ref{sec:llm-data-prep}). The cap binds on \num{4.3}\% of entries and retains \num{97.8}\% of all declarations.}
     \item the function definition reconstructed from the AST, including all clauses when there are more than one;
     % \item two \emph{grounding} blocks extracted from that definition, which surface the evidence the code itself provides for the type: the \emph{argument patterns} (each clause's parameter patterns and guards, e.g.\ \texttt{(\%User\{\}, \_) when is\_binary(x)}) and the \emph{return expressions} (the outermost constructor of each clause's tail position, e.g.\ \texttt{\{:ok, \_\}} or, for a value produced by an opaque call, \texttt{call: fetch/1});
     \item the target: the translated annotation, already accepted by the typechecker.
@@ -120,11 +121,14 @@ These fields are assembled at runtime into a structured prompt with delimiter se
 
 "### Input":
     "Module": MODULE_NAME
-    "Types in scope": USER_DEFINED_TYPES
     "Definition": FUNCTION_DEFINITION
+    "Types in scope": USER_DEFINED_TYPES
 
 "### Output":
 \end{lstlisting}
+The definition precedes the types in scope deliberately: should a prompt ever exceed a model's input window, truncation removes the tail, and the expendable part must be there.
+With the types first, an oversized declaration could consume the window and cut away the definition and the \texttt{\#\#\# Output:} marker themselves, leaving the model to answer from a fragment of a type.
+
 The target annotation is what follows that marker:
 \begin{lstlisting}[numbers=none]
     FUNCTION_ANNOTATION
@@ -154,13 +158,25 @@ Both evaluate on the validation split as training proceeds and retain the checkp
 \section{Training Behaviour and Reproducibility}
 \label{sec:llm-repro}
 Both runs converge without instability.
-Qwen2.5 trains for \num{177} optimiser steps in \num{3388}~seconds (about \num{56} minutes); its training loss falls smoothly from \num{1.41} to a run-mean of \num{0.66}, with small and stable gradient norms throughout.
-CodeT5+ trains for roughly \num{740} steps in \num{2943}~seconds (about \num{49} minutes), its training loss dropping from \num{2.63} to a run-mean of \num{0.28} after a noisier early phase.
+Qwen2.5 trains for \num{220} optimiser steps in \num{10996}~seconds (about three hours); its training loss falls smoothly from \num{1.21} to a run-mean of \num{0.54}, with small and stable gradient norms throughout.
+CodeT5+ trains for roughly \num{741} steps in \num{3803}~seconds (about \num{63} minutes), its training loss dropping from \num{2.43} to a run-mean of \num{0.27} after a noisier early phase.
 
 The two validation curves differ in a way that bears on checkpoint selection (Figure~\ref{fig:llm-loss-curves}).
-Qwen2.5's validation loss bottoms early---\num{0.885} at about epoch~\num{0.68}---and drifts upward to \num{0.905} thereafter, so the retained checkpoint is an intermediate one rather than the final weights.
-CodeT5+'s bottoms late---\num{0.276} at about epoch~\num{1.0}---and stays essentially flat to the end, so its best and final checkpoints nearly coincide.
+Qwen2.5's validation loss bottoms early---\num{0.694} at about epoch~\num{0.44}---and drifts upward to \num{0.713} thereafter, so the retained checkpoint is an intermediate one rather than the final weights.
+CodeT5+'s bottoms late---\num{0.276} at about epoch~\num{0.97}---and stays essentially flat to the end, so its best and final checkpoints nearly coincide.
 In both cases the model carried forward to evaluation is the one that minimises validation loss.
+
+\paragraph{The proxy and the metric can disagree.}
+One observation from these runs bears directly on that selection rule.
+Both models were also trained in an earlier round whose prompt supplied the types in scope in their original TypeSpec form rather than translated (Subsection~\ref{sec:llm-task}); everything else was held fixed.
+Between the two rounds Qwen2.5's best validation loss fell from \num{0.885} to \num{0.694}, a \num{22}\% improvement, while its compatibility on the test set fell slightly, from \num{36.6}\% to \num{35.9}\%.
+CodeT5+ moved the other way: its best validation loss was unchanged at \num{0.276}, while its compatibility rose from \num{54.3}\% to \num{56.3}\%.
+Cross-entropy on held-out targets and compatibility with a reference are therefore not merely different scales but can move in opposite directions, which is the concrete form of the caveat attached to selecting checkpoints by validation loss (Section~\ref{sec:future-work}).
+
+\paragraph{Provenance of the two runs.}
+Each run records the prompt format it used---the instruction text, which fields the blocks were built from, the character budget, and a hash of the prompt module's source---alongside a sample of the exact training texts and every generation prompt with its raw output.
+The four phases of the comparison (both models, training and generation) record the same prompt-module hash, so the two models demonstrably read prompts built by the same code rather than by two copies of it that had drifted apart.
+The same logs confirm that no prompt was truncated on the encoder side and none was skipped for length, and that \num{13} training and \num{8} validation examples were dropped for exceeding Qwen2.5's \num{1024}-token packing window.
 
 \begin{figure}[H]
 \centering
@@ -170,20 +186,20 @@ In both cases the model carried forward to evaluation is the one that minimises 
 \begin{axis}[
     width=\textwidth, height=5.2cm,
     xlabel={Epochs}, ylabel={Loss},
-    xmin=0, xmax=1.22, ymin=0.3, ymax=1.45,
+    xmin=0, xmax=1.22, ymin=0.4, ymax=1.35,
     legend pos=north east, legend cell align=left,
     grid=major, grid style={gray!15},
     tick label style={font=\scriptsize}, label style={font=\small}, legend style={font=\scriptsize},
 ]
 \addplot[gray!55, very thin, mark=none] coordinates {
-(0.010,1.405)(0.020,1.385)(0.030,1.325)(0.050,1.335)(0.060,1.262)(0.070,1.231)(0.090,1.131)(0.100,1.167)(0.120,0.987)(0.130,0.972)(0.140,0.946)(0.160,0.897)(0.170,0.833)(0.180,0.841)(0.200,0.826)(0.210,0.824)(0.220,0.784)(0.240,0.732)(0.250,0.783)(0.260,0.762)(0.280,0.761)(0.290,0.760)(0.310,0.801)(0.320,0.757)(0.330,0.761)(0.350,0.708)(0.360,0.668)(0.370,0.712)(0.390,0.657)(0.400,0.649)(0.410,0.653)(0.430,0.642)(0.440,0.599)(0.450,0.624)(0.470,0.689)(0.480,0.653)(0.500,0.586)(0.510,0.659)(0.520,0.499)(0.540,0.570)(0.550,0.494)(0.560,0.571)(0.580,0.594)(0.590,0.696)(0.600,0.564)(0.620,0.525)(0.630,0.559)(0.640,0.494)(0.660,0.556)(0.670,0.506)(0.690,0.499)(0.700,0.558)(0.710,0.510)(0.730,0.584)(0.740,0.503)(0.750,0.579)(0.770,0.580)(0.780,0.560)(0.790,0.531)(0.810,0.608)(0.820,0.533)(0.830,0.553)(0.850,0.494)(0.860,0.496)(0.880,0.595)(0.890,0.477)(0.900,0.551)(0.920,0.475)(0.930,0.490)(0.940,0.485)(0.960,0.535)(0.970,0.456)(0.980,0.422)(1.000,0.497)(1.010,0.409)(1.020,0.497)(1.040,0.477)(1.050,0.514)(1.070,0.471)(1.080,0.471)(1.090,0.517)(1.110,0.474)(1.120,0.491)(1.130,0.396)(1.150,0.423)(1.160,0.428)(1.170,0.482)(1.190,0.523)(1.200,0.461)
+(0.010,1.208) (0.020,1.248) (0.030,1.290) (0.040,1.148) (0.050,1.107) (0.060,1.101) (0.070,1.056) (0.080,0.963) (0.090,0.969) (0.100,0.887) (0.110,0.843) (0.130,0.766) (0.140,0.685) (0.150,0.722) (0.160,0.743) (0.170,0.746) (0.180,0.615) (0.190,0.723) (0.200,0.588) (0.210,0.595) (0.220,0.647) (0.230,0.538) (0.240,0.578) (0.260,0.531) (0.270,0.641) (0.280,0.577) (0.290,0.507) (0.300,0.603) (0.310,0.561) (0.320,0.648) (0.330,0.553) (0.340,0.522) (0.350,0.509) (0.360,0.530) (0.380,0.573) (0.390,0.531) (0.400,0.461) (0.410,0.506) (0.420,0.544) (0.430,0.497) (0.440,0.483) (0.450,0.500) (0.460,0.540) (0.470,0.568) (0.480,0.505) (0.500,0.517) (0.510,0.506) (0.520,0.562) (0.530,0.495) (0.540,0.509) (0.550,0.444) (0.560,0.449) (0.570,0.404) (0.580,0.391) (0.590,0.501) (0.600,0.457) (0.610,0.430) (0.630,0.396) (0.640,0.410) (0.650,0.445) (0.660,0.434) (0.670,0.560) (0.680,0.412) (0.690,0.428) (0.700,0.355) (0.710,0.363) (0.720,0.411) (0.730,0.422) (0.750,0.456) (0.760,0.374) (0.770,0.433) (0.780,0.445) (0.790,0.467) (0.800,0.447) (0.810,0.437) (0.820,0.453) (0.830,0.403) (0.840,0.456) (0.850,0.447) (0.870,0.398) (0.880,0.455) (0.890,0.393) (0.900,0.402) (0.910,0.414) (0.920,0.445) (0.930,0.391) (0.940,0.397) (0.950,0.422) (0.960,0.409) (0.970,0.438) (0.990,0.424) (1.000,0.339) (1.010,0.332) (1.020,0.342) (1.030,0.385) (1.040,0.409) (1.050,0.389) (1.060,0.402) (1.070,0.390) (1.080,0.323) (1.100,0.399) (1.110,0.329) (1.120,0.370) (1.130,0.352) (1.140,0.366) (1.150,0.356) (1.160,0.435) (1.170,0.378) (1.180,0.402) (1.190,0.388)
 };
 \addlegendentry{Training}
 \addplot[blue, thick, mark=*, mark size=0.9pt] coordinates {
-(0.07,1.2749)(0.14,1.0189)(0.20,0.9322)(0.27,0.9041)(0.34,0.8929)(0.41,0.8918)(0.47,0.8934)(0.54,0.8873)(0.61,0.8931)(0.68,0.8851)(0.75,0.8863)(0.81,0.8910)(0.88,0.8958)(0.95,0.8944)(1.02,0.8988)(1.09,0.9051)(1.15,0.9049)
+(0.05,1.1707) (0.11,0.8764) (0.16,0.7583) (0.22,0.7172) (0.27,0.7074) (0.33,0.7027) (0.38,0.6989) (0.44,0.6939) (0.49,0.6998) (0.54,0.6974) (0.60,0.6993) (0.65,0.7025) (0.71,0.7039) (0.76,0.7034) (0.82,0.6984) (0.87,0.7028) (0.93,0.7070) (0.98,0.7008) (1.04,0.7080) (1.09,0.7135) (1.14,0.7132) (1.20,0.7129)
 };
 \addlegendentry{Validation}
-\addplot[only marks, mark=o, mark size=3pt, blue, thick] coordinates {(0.68,0.8851)};
+\addplot[only marks, mark=o, mark size=3pt, blue, thick] coordinates {(0.44,0.6939)};
 \end{axis}
 \end{tikzpicture}
 \caption{Qwen2.5-Coder-7B (QLoRA)}
@@ -195,25 +211,25 @@ In both cases the model carried forward to evaluation is the one that minimises 
 \begin{axis}[
     width=\textwidth, height=5.2cm,
     xlabel={Epochs}, ylabel={Loss},
-    xmin=0, xmax=1.22, ymin=0, ymax=2.75,
+    xmin=0, xmax=1.22, ymin=0, ymax=2.6,
     legend pos=north east, legend cell align=left,
     grid=major, grid style={gray!15},
     tick label style={font=\scriptsize}, label style={font=\small}, legend style={font=\scriptsize},
 ]
 \addplot[gray!55, very thin, mark=none] coordinates {
-(0.010,2.633)(0.020,2.289)(0.020,1.508)(0.030,1.091)(0.040,0.861)(0.050,0.700)(0.060,0.672)(0.060,0.574)(0.070,0.574)(0.080,0.493)(0.090,0.430)(0.100,0.524)(0.110,0.490)(0.110,0.453)(0.120,0.403)(0.130,0.466)(0.140,0.385)(0.150,0.400)(0.150,0.474)(0.160,0.341)(0.170,0.332)(0.180,0.400)(0.190,0.387)(0.190,0.366)(0.200,0.359)(0.210,0.349)(0.220,0.315)(0.230,0.326)(0.230,0.338)(0.240,0.346)(0.250,0.415)(0.260,0.317)(0.270,0.366)(0.280,0.310)(0.280,0.338)(0.290,0.253)(0.300,0.317)(0.310,0.289)(0.320,0.355)(0.320,0.236)(0.330,0.377)(0.340,0.309)(0.350,0.270)(0.360,0.286)(0.360,0.217)(0.370,0.234)(0.380,0.264)(0.390,0.283)(0.400,0.286)(0.400,0.278)(0.410,0.196)(0.420,0.227)(0.430,0.302)(0.440,0.202)(0.440,0.201)(0.450,0.252)(0.460,0.201)(0.470,0.264)(0.480,0.232)(0.490,0.205)(0.490,0.234)(0.500,0.210)(0.510,0.249)(0.520,0.243)(0.530,0.257)(0.530,0.193)(0.540,0.335)(0.550,0.264)(0.560,0.234)(0.570,0.230)(0.570,0.199)(0.580,0.176)(0.590,0.278)(0.600,0.218)(0.610,0.150)(0.610,0.206)(0.620,0.196)(0.630,0.188)(0.640,0.236)(0.650,0.177)(0.660,0.171)(0.660,0.232)(0.670,0.244)(0.680,0.131)(0.690,0.206)(0.700,0.160)(0.700,0.192)(0.710,0.150)(0.720,0.152)(0.730,0.168)(0.740,0.162)(0.740,0.142)(0.750,0.183)(0.760,0.189)(0.770,0.214)(0.780,0.149)(0.780,0.178)(0.790,0.205)(0.800,0.202)(0.810,0.115)(0.820,0.213)(0.830,0.183)(0.830,0.114)(0.840,0.219)(0.850,0.139)(0.860,0.122)(0.870,0.170)(0.870,0.148)(0.880,0.171)(0.890,0.182)(0.900,0.143)(0.910,0.192)(0.910,0.122)(0.920,0.125)(0.930,0.151)(0.940,0.217)(0.950,0.162)(0.950,0.127)(0.960,0.168)(0.970,0.152)(0.980,0.139)(0.990,0.116)(1.000,0.167)(1.000,0.084)(1.010,0.095)(1.020,0.091)(1.030,0.138)(1.040,0.111)(1.040,0.080)(1.050,0.083)(1.060,0.061)(1.070,0.066)(1.080,0.086)(1.080,0.102)(1.090,0.093)(1.100,0.114)(1.110,0.097)(1.120,0.111)(1.120,0.127)(1.130,0.114)(1.140,0.080)(1.150,0.105)(1.160,0.090)(1.170,0.117)(1.170,0.084)(1.180,0.111)(1.190,0.104)(1.200,0.069)
+(0.010,2.426) (0.020,1.912) (0.020,1.292) (0.030,1.033) (0.040,0.794) (0.050,0.605) (0.060,0.639) (0.060,0.503) (0.070,0.553) (0.080,0.469) (0.090,0.368) (0.100,0.465) (0.110,0.440) (0.110,0.416) (0.120,0.372) (0.130,0.395) (0.140,0.401) (0.150,0.417) (0.150,0.420) (0.160,0.301) (0.170,0.356) (0.180,0.401) (0.190,0.346) (0.190,0.339) (0.200,0.353) (0.210,0.372) (0.220,0.289) (0.230,0.325) (0.230,0.301) (0.240,0.343) (0.250,0.400) (0.260,0.302) (0.270,0.359) (0.280,0.301) (0.280,0.301) (0.290,0.297) (0.300,0.290) (0.310,0.300) (0.320,0.361) (0.320,0.265) (0.330,0.295) (0.340,0.302) (0.350,0.278) (0.360,0.279) (0.360,0.203) (0.370,0.242) (0.380,0.266) (0.390,0.261) (0.400,0.306) (0.400,0.267) (0.410,0.199) (0.420,0.231) (0.430,0.261) (0.440,0.219) (0.440,0.208) (0.450,0.258) (0.460,0.239) (0.470,0.279) (0.480,0.238) (0.490,0.202) (0.490,0.200) (0.500,0.230) (0.510,0.202) (0.520,0.218) (0.530,0.209) (0.530,0.196) (0.540,0.257) (0.550,0.252) (0.560,0.208) (0.570,0.197) (0.570,0.179) (0.580,0.184) (0.590,0.247) (0.600,0.178) (0.610,0.150) (0.610,0.196) (0.620,0.217) (0.630,0.182) (0.640,0.193) (0.650,0.175) (0.660,0.242) (0.660,0.215) (0.670,0.247) (0.680,0.151) (0.690,0.203) (0.700,0.165) (0.700,0.195) (0.710,0.162) (0.720,0.150) (0.730,0.165) (0.740,0.135) (0.740,0.166) (0.750,0.187) (0.760,0.178) (0.770,0.196) (0.780,0.131) (0.780,0.186) (0.790,0.199) (0.800,0.178) (0.810,0.126) (0.820,0.193) (0.830,0.211) (0.830,0.140) (0.840,0.241) (0.850,0.147) (0.860,0.123) (0.870,0.194) (0.870,0.143) (0.880,0.145) (0.890,0.166) (0.900,0.109) (0.910,0.194) (0.910,0.123) (0.920,0.143) (0.930,0.138) (0.940,0.200) (0.950,0.148) (0.950,0.130) (0.960,0.163) (0.970,0.150) (0.980,0.142) (0.990,0.118) (1.000,0.151) (1.000,0.091) (1.010,0.087) (1.020,0.088) (1.030,0.121) (1.040,0.107) (1.040,0.081) (1.050,0.072) (1.060,0.063) (1.070,0.078) (1.080,0.108) (1.080,0.117) (1.090,0.108) (1.100,0.100) (1.110,0.092) (1.120,0.098) (1.120,0.127) (1.130,0.108) (1.140,0.085) (1.150,0.098) (1.160,0.089) (1.170,0.112) (1.170,0.087) (1.180,0.108) (1.190,0.100) (1.200,0.074)
 };
 \addlegendentry{Training}
-\addplot[red, thick, mark=square*, mark size=0.8pt] coordinates {
-(0.04,0.6758)(0.08,0.4661)(0.12,0.4376)(0.16,0.3979)(0.20,0.3868)(0.24,0.3742)(0.28,0.3744)(0.32,0.3662)(0.36,0.3437)(0.40,0.3297)(0.44,0.3265)(0.49,0.3273)(0.53,0.3317)(0.57,0.3764)(0.61,0.3157)(0.65,0.3046)(0.69,0.3051)(0.73,0.3100)(0.77,0.3030)(0.81,0.2935)(0.85,0.2914)(0.89,0.2903)(0.93,0.2872)(0.97,0.2766)(1.01,0.2759)(1.05,0.2798)(1.09,0.2823)(1.13,0.2817)(1.17,0.2816)
+\addplot[red, thick, mark=square*, mark size=0.9pt] coordinates {
+(0.04,0.5961) (0.08,0.4217) (0.12,0.4011) (0.16,0.3969) (0.20,0.3762) (0.24,0.3583) (0.28,0.3460) (0.32,0.3496) (0.36,0.3452) (0.40,0.3280) (0.44,0.3391) (0.49,0.3250) (0.53,0.3248) (0.57,0.3185) (0.61,0.3194) (0.65,0.3209) (0.69,0.3079) (0.73,0.3051) (0.77,0.3013) (0.81,0.2870) (0.85,0.2785) (0.89,0.2823) (0.93,0.2793) (0.97,0.2756) (1.01,0.2763) (1.05,0.2836) (1.09,0.2848) (1.13,0.2845) (1.17,0.2845)
 };
 \addlegendentry{Validation}
-\addplot[only marks, mark=o, mark size=3pt, red, thick] coordinates {(1.01,0.2759)};
+\addplot[only marks, mark=o, mark size=3pt, red, thick] coordinates {(0.97,0.2756)};
 \end{axis}
 \end{tikzpicture}
 \caption{CodeT5+-770M (full FT)}
 \end{subfigure}
-\caption[Learning and validation curves for the two runs.]{Training loss (grey) and validation loss (coloured) over training, per model; the circled point marks the checkpoint retained by minimum validation loss. Qwen2.5's validation loss bottoms early (epoch~\num{0.68}) and drifts up while its training loss keeps falling---a widening gap that is mild overfitting---whereas CodeT5+'s validation loss bottoms late (epoch~\num{1.0}) and stays essentially flat. Validation is measured every 10 optimiser steps for Qwen2.5 and every 25 for CodeT5+; training loss is logged every step and every fifth step respectively.}
+\caption[Learning and validation curves for the two runs.]{Training loss (grey) and validation loss (coloured) over training, per model; the circled point marks the checkpoint retained by minimum validation loss. Qwen2.5's validation loss bottoms early (epoch~\num{0.44}) and drifts up while its training loss keeps falling---a widening gap that is mild overfitting---whereas CodeT5+'s bottoms late (epoch~\num{0.97}) and stays essentially flat. Validation is measured every 10 optimiser steps for Qwen2.5 and every 25 for CodeT5+.}
 \label{fig:llm-loss-curves}
 \end{figure}
 
@@ -324,19 +340,42 @@ Table~\ref{tab:llm-architecture} summarises the outcome.
 \toprule
 \textbf{Model} & \textbf{Compatible} & \textbf{Exact match} & \textbf{Null} \\
 \midrule
-Qwen2.5-Coder-7B (QLoRA, constrained) & \num{36.6}\% & \num{6.6}\% & \num{0.5}\% \\
-CodeT5+-770M (full FT, unconstrained) & \textbf{\num{54.3}\%} & \textbf{\num{30.2}\%} & \num{4.4}\% \\
+Qwen2.5-Coder-7B (QLoRA, constrained) & \num{35.9}\% & \num{7.7}\% & \num{2.0}\% \\
+CodeT5+-770M (full FT, unconstrained) & \textbf{\num{56.3}\%} & \textbf{\num{29.5}\%} & \num{4.4}\% \\
 \bottomrule
 \end{tabular}
-\caption{Architecture comparison on the common \num{2127}-entry test set; both models trained on the canonical both-pass dataset with the same prompt.}
+\caption{Architecture comparison on the common \num{2127}-entry test set; both models trained on the canonical both-pass dataset with the same prompt (verified identical: both runs record the same prompt-module hash, Section~\ref{sec:llm-repro}).}
 \label{tab:llm-architecture}
 \end{table}
 
 The smaller encoder--decoder is the stronger model on both axes.
-It is more compatible (\num{54.3}\% versus \num{36.6}\%, \num{1155} entries against \num{778}, a \num{17.7}-point margin) and far more precise, matching the reference exactly on \num{30.2}\% of entries against \num{6.6}\% for Qwen2.5 (\num{642} against \num{141}, more than four times as many), while decoding without the grammar constraint and at roughly a tenth of the parameters.
-The one cost of the missing constraint is CodeT5+'s higher null rate (\num{4.4}\% against \num{0.5}\%): these malformed outputs are counted against it as incompatible.
-That handicap---\num{3.9} points more null than Qwen2.5, all charged against CodeT5+---is far smaller than its \num{17.7}-point compatibility margin, so the unconstrained decoding does not account for the gap.
+It is more compatible (\num{56.3}\% versus \num{35.9}\%, \num{1198} entries against \num{763}, a \num{20.5}-point margin) and far more precise, matching the reference exactly on \num{29.5}\% of entries against \num{7.7}\% for Qwen2.5 (\num{627} against \num{164}, nearly four times as many), while decoding without the grammar constraint and at roughly a tenth of the parameters.
+The one cost of the missing constraint is CodeT5+'s higher null rate (\num{4.4}\% against \num{2.0}\%): these malformed outputs are counted against it as incompatible.
+That handicap---\num{2.4} points more null than Qwen2.5, all charged against CodeT5+---is far smaller than its \num{20.5}-point compatibility margin, so the unconstrained decoding does not account for the gap.
 Full fine-tuning of a task-matched encoder--decoder thus outperforms parameter-efficient adaptation of a much larger decoder-only model on this task.
+
+\paragraph{How the compatibility is earned.}
+Because the evaluator records both directions of \texttt{subtype?/2}, each prediction falls into one of four cases against its reference, and the two models earn their compatibility differently (Table~\ref{tab:llm-distance}).
+Predictions that are equal to the reference or narrower than it are compatible by construction, and every one of them is: \num{164} and \num{172} for Qwen2.5, \num{627} and \num{197} for CodeT5+.
+The remaining compatible predictions are ones the reference neither contains nor is contained by, admitted because the reference is gradual and a \texttt{dynamic()} position accepts anything.
+For Qwen2.5 those account for \num{390} of its \num{763} compatible predictions (\num{51}\%); for CodeT5+, \num{324} of \num{1198} (\num{27}\%).
+Qwen2.5's compatibility therefore rests about twice as heavily on references too weak to contradict it, so the \num{20.5}-point margin understates the distance between the two models on the entries where the reference has something to say.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lrrrrr}
+\toprule
+ & \multicolumn{2}{c}{\textbf{compatible by construction}} & \multicolumn{2}{c}{\textbf{not contained}} & \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+\textbf{Model} & \textbf{equal} & \textbf{narrower} & \textbf{broader} & \textbf{apart} & \textbf{null} \\
+\midrule
+Qwen2.5-Coder-7B & \num{164} & \num{172} & \num{154} & \num{1594} & \num{43} \\
+CodeT5+-770M     & \textbf{\num{627}} & \num{197} & \num{205} & \num{1005} & \num{93} \\
+\bottomrule
+\end{tabular}
+\caption[Predictions by set-theoretic relation to the reference.]{Each prediction by its relation to the reference, from the two directions of \texttt{subtype?/2}: \emph{equal} (mutual subtyping, the exact matches), \emph{narrower} (prediction a strict subtype), \emph{broader} (reference a strict subtype), \emph{apart} (neither contains the other), \emph{null} (unparseable). The first two are always compatible; of the last two, only those whose reference is gradual are.}
+\label{tab:llm-distance}
+\end{table}
 
 \section{Qualitative Analysis}
 \label{sec:llm-qualitative}
@@ -350,11 +389,13 @@ Some predictions differ textually from the reference yet denote the identical ty
 Each type is a subtype of the other, so the prediction counts as exact for both models.
 
 \paragraph{Where the larger model fails and the smaller succeeds.}
-The architecture comparison of Section~\ref{sec:llm-results} shows up in individual predictions.
-\texttt{Postgrex.ReplicationConnection.encode\_lsn/1} has reference \texttt{(integer() -> \{:ok, binary()\} or :error)}.
-Qwen2.5 predicts \texttt{(integer() -> \{:ok or :error, dynamic()\} or empty\_list())}, merging the two result arms into a single tuple and adding an \texttt{empty\_list()} alternative the reference does not contain; the prediction is incompatible with the reference, whereas CodeT5+ reproduces the reference exactly.
-\texttt{Integer.extended\_gcd/2} has reference \texttt{(integer(), integer() -> \{integer(), integer(), integer()\})}; Qwen2.5 predicts \texttt{(integer(), integer() -> \{:ok or :error, tuple()\} or none())}, a two-element result the reference excludes, and is again incompatible, whereas CodeT5+ reproduces the three-integer tuple exactly.
-In both cases Qwen2.5 predicts a tuple tagged \texttt{:ok or :error}, a pattern neither reference has.
+The architecture comparison of Section~\ref{sec:llm-results} shows up in individual predictions, and one failure shape recurs: Qwen2.5 answers with a \emph{struct} where the reference is a plain primitive.
+\texttt{CSSHelpers.string\_to\_class/1} has reference \texttt{(binary() -> binary())}; Qwen2.5 predicts \texttt{(binary() -> dynamic(\%\{atom() => if\_set(term()), :\_\_struct\_\_ => :"Elixir.String"\}))}, an open struct named \texttt{String}, whereas CodeT5+ reproduces the reference exactly.
+\texttt{CMS.Helpers.rewrite\_url/1} has the same reference and draws the same shape from Qwen2.5, this time named \texttt{URI}.
+\texttt{Membrane.Matroska.Schema.element\_id\_to\_name/1} has reference \texttt{(integer() -> atom())}, where Qwen2.5 predicts \texttt{(integer() -> binary())}---the right arity and argument, the wrong leaf type---and CodeT5+ is again exact.
+The pattern is measurable rather than anecdotal: among Qwen2.5's \num{1364} non-compatible predictions, \num{253} name a struct the reference does not contain, against \num{33} of CodeT5+'s \num{929}.
+In \num{21} of Qwen2.5's cases the invented struct is \texttt{String}, which is not a struct in Elixir at all---a shape no reference in the corpus could have taught it.
+
 We are deliberately cautious about the cause: CodeT5+ and Qwen2.5 differ in more than their encoder --- also in fine-tuning regime (full versus low-rank adaptation), pretraining corpus and objective, and parameter count --- so this single comparison cannot attribute the gap to any one factor.
 One plausible contributor is architectural: an encoder--decoder reads the whole function definition bidirectionally before the decoder fixes any output position, a fuller view of the code's evidence than a strictly left-to-right, decoder-only pass affords.
 
@@ -373,11 +414,11 @@ Isolating the encoder's contribution --- for instance by fully fine-tuning a dec
 \begin{itemize}
     \item \textbf{Corpus and split}: the \num{18688} annotations accepted by both checkers (Chapter~\ref{ch:implementation}) are length-filtered and partitioned by hashing the name of each subproject, so that no subproject can appear in more than one split, yielding \num{9888} training, \num{3484} validation, and \num{2127} test entries over 279/60/64 subprojects (Subsection~\ref{sec:llm-data-prep}).
     \item \textbf{Task}: prediction is framed as conditional generation---given a function definition and the types in scope, write the annotation as text---under one prompt template shared verbatim by both models, which diverge only in how they consume it: a single concatenated stream for the decoder-only model, separate encoder and decoder streams for the encoder--decoder (Subsection~\ref{sec:llm-task}).
-    \item \textbf{Training}: \texttt{Qwen2.5-Coder-7B} was adapted with QLoRA and \texttt{CodeT5+-770M} fully fine-tuned, both for 1.2 epochs on identical data. Both runs converged without instability, and each model carried forward is the checkpoint of lowest validation loss: \num{0.885} at epoch~\num{0.68} for Qwen2.5, whose curve drifts upward thereafter, and \num{0.276} at epoch~\num{1.0} for CodeT5+, whose curve stays flat to the end (Section~\ref{sec:llm-repro}).
+    \item \textbf{Training}: \texttt{Qwen2.5-Coder-7B} was adapted with QLoRA and \texttt{CodeT5+-770M} fully fine-tuned, both for 1.2 epochs on identical data. Both runs converged without instability, and each model carried forward is the checkpoint of lowest validation loss: \num{0.694} at epoch~\num{0.44} for Qwen2.5, whose curve drifts upward thereafter, and \num{0.276} at epoch~\num{0.97} for CodeT5+, whose curve stays flat to the end. Both runs record the same prompt-module hash, so the two models read prompts built by one and the same code (Section~\ref{sec:llm-repro}).
     \item \textbf{Metric}: predictions are judged by Elixir's own \texttt{compatible?/2} in \texttt{Module.Types.Descr}, which accepts a prediction exactly when the reference does not contradict it, with exact match---decided by the same module's \texttt{subtype?/2} in both directions---reported alongside as an indicator of precision and unparseable output counted as incompatible (Section~\ref{sec:compatibility-eval}).
-    \item \textbf{Results}: on the common \num{2127}-entry test set CodeT5+ is compatible on \num{54.3}\% of entries against \num{36.6}\% for Qwen2.5, a \num{17.7}-point margin, and exact on \num{30.2}\% against \num{6.6}\%---the smaller model ahead on both axes at roughly a tenth of the parameters and without the grammar constraint Qwen2.5 decodes under. The cost of that unconstrained decoding, a null rate \num{3.9} points higher and charged against CodeT5+ as incompatible, is far smaller than its margin (Section~\ref{sec:llm-results}).
-    \item \textbf{Qualitative behaviour}: deciding equality by mutual subtyping credits predictions that differ textually from the reference yet denote the same type, which a string comparison would miss; in the failures examined, Qwen2.5 tags the result tuple \texttt{:ok or :error}, a shape neither reference has (Section~\ref{sec:llm-qualitative}).
+    \item \textbf{Results}: on the common \num{2127}-entry test set CodeT5+ is compatible on \num{56.3}\% of entries against \num{35.9}\% for Qwen2.5, a \num{20.5}-point margin, and exact on \num{29.5}\% against \num{7.7}\%---the smaller model ahead on both axes at roughly a tenth of the parameters and without the grammar constraint Qwen2.5 decodes under. The cost of that unconstrained decoding, a null rate \num{2.4} points higher and charged against CodeT5+ as incompatible, is far smaller than its margin. Of the compatible predictions, \num{51}\% of Qwen2.5's are admitted only because the reference is gradual, against \num{27}\% of CodeT5+'s, so the margin understates the gap where the reference constrains the answer (Section~\ref{sec:llm-results}).
+    \item \textbf{Qualitative behaviour}: deciding equality by mutual subtyping credits predictions that differ textually from the reference yet denote the same type, which a string comparison would miss; in the failures examined, Qwen2.5 answers with a struct where the reference is a plain primitive---\num{253} of its \num{1364} failures name a struct the reference does not contain, against \num{33} of CodeT5+'s \num{929} (Section~\ref{sec:llm-qualitative}).
     \item \textbf{Attribution}: the two models differ in architecture, scale, and fine-tuning regime at once, so the gap is not attributed to any single factor. The encoder's bidirectional read of the definition is a plausible contributor, and controlled architecture comparisons outside this setting point the same way~\cite{t5,wang2022architecture}, but isolating it would require a further experiment.
 \end{itemize}
-Within the envelope the length filter keeps, a fine-tuned model can therefore propose an annotation the reference accepts for slightly more than half of the held-out functions, and reproduce the reference exactly for close to a third.
+Within the envelope the length filter keeps, a fine-tuned model can therefore propose an annotation the reference accepts for slightly more than half of the held-out functions, and reproduce the reference exactly for close to three in ten.
 These figures measure agreement with a reference annotation; what they do not measure is whether such a prediction carries its function through migration in its own project, which would require compiling it back into the source.
