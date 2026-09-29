@@ -3,7 +3,7 @@
 \sloppy
 
 Of the \num{3636} entries the typechecker rejects but Dialyzer accepts, 691 are return-type findings; the larger unreachable-clause, argument-mismatch, and map-key groups are treated in Subsection~\ref{sec:typecheck-only}.
-The return-type findings split into 390 whose annotation carries a \texttt{dynamic()} (no static verdict after root-hoisting), 125 \emph{cannot-verify} cases (the body's return flows from an intra-project or un-spec'd call that module-local inference assumes is \texttt{dynamic()}), and 176 purely-static disagreements.
+The return-type findings split into 405 whose annotation carries a \texttt{dynamic()} (no static verdict after root-hoisting), 127 \emph{cannot-verify} cases (the declared type is concrete but inference types the body's return, wholly or at some position, as \texttt{term()} or \texttt{dynamic()}), and 159 purely-static disagreements.
 The purely-static group is where a true static verdict is possible: a genuine leak is a body that provably returns a value outside its declared type, which Dialyzer's optimism accepts.
 This appendix gives representative genuine leaks and one worked example of each recurring artefact category; it is illustrative rather than exhaustive.
 
@@ -14,7 +14,7 @@ Each returns a value the declared type excludes---typically a clause that leaks 
 \setlength{\tabcolsep}{4pt}
 \begin{tabular}{@{}p{0.40\textwidth} >{\raggedright\arraybackslash}p{0.28\textwidth} >{\raggedright\arraybackslash}p{0.24\textwidth}@{}}
 \toprule \textbf{Function} & \textbf{Body returns} & \textbf{Declared} \\ \midrule
-\texttt{Scenic.PubSub.publish/2} & \texttt{:ok or \{:error, :not\_registered\}} & \texttt{:ok} \\
+\texttt{Mobilizon.Posts.Post.generate\_url/1} & \texttt{nil} & \texttt{binary()} \\
 \texttt{Ash.UUIDv7.generate/0} & \texttt{:error or binary()} & \texttt{binary()} \\
 \texttt{Timex.day\_name/1} & \texttt{nil or binary()} & \texttt{binary() or \{:error, :invalid\_weekday\_number\}} \\
 \texttt{Cldr.Calendar.Coptic.quarter\_of\_year/3} & \texttt{\{:error, :not\_defined\}} & \texttt{integer()} \\

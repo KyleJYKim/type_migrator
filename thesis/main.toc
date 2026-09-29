@@ -74,7 +74,7 @@
 \contentsline {paragraph}{Argument mismatches (914).}{45}{section*.70}%
 \contentsline {paragraph}{Return-type findings (691).}{45}{section*.71}%
 \contentsline {paragraph}{Interpretation.}{46}{section*.72}%
-\contentsline {subsection}{\numberline {2.3.6}Entries Flagged by Both Tools}{46}{subsection.2.3.6}%
+\contentsline {subsection}{\numberline {2.3.6}Entries Flagged by Both Tools}{47}{subsection.2.3.6}%
 \contentsline {subsection}{\numberline {2.3.7}Implications for Downstream Use}{47}{subsection.2.3.7}%
 \contentsline {paragraph}{Keeping only typechecker-verified labels.}{47}{section*.73}%
 \contentsline {paragraph}{Gradual types in the labels.}{47}{section*.74}%

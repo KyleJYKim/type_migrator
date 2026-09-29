@@ -174,9 +174,8 @@ Elixir Types is a gradual type system based on the semantic subtyping~\cite{fris
 It is designed to be sound, meaning that if a program type checks successfully, it is guaranteed to be free of type errors at runtime, that is, no false negative opposed to Dialyzer.
 
 The type system requires two main features to type check the code: explicit type annotations and local type inference.
-The latter is achieved through a phic type system with a more sophisticated local type inference mechanism.
-Which means that while the type system looks for explicit type annotations on functions, it can also deduce the types of function bodies and their interactions based on the code structure and the operations performed on the data.
-This can capture complex type relationships and constraints that Dialyzer may miss.
+Explicit annotations declare the types a function is meant to accept and return, while local type inference deduces the types of the variables and expressions within a function body from its patterns, guards, and the operations performed on the data.
+Together, they let the typechecker relate a function's declared types to what its body actually does, capturing type relationships and constraints that Dialyzer may miss.
 
 \subsubsection{Gradual type system}
 \label{sec:gradual-type-system}
