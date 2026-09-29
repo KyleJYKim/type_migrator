@@ -50,7 +50,7 @@ The optimiser is paged AdamW with 8-bit state, and both train for 1.2 epochs, ea
 \label{sec:llm-compute}
 All training runs were carried out on the LIP6 Convergence cluster, where each job was allocated through Slurm a single NVIDIA~A100 GPU, 8 CPU cores, and host RAM.
 Runs used a full A100 (the \texttt{a100\_7g.80gb} profile, 80~GB); because the 4-bit QLoRA configuration keeps the 7~B base model, its LoRA adapters, and optimiser state comfortably within 40~GB, a half-GPU MIG slice (the \texttt{a100\_3g.40gb} profile, 40~GB) was equally effective where it was used, and no run approached its time or memory limit.
-The compatibility evaluation, which requires the compiler with the typechecker, was run separately on a local workstation.
+The compatibility evaluation was run separately on a local workstation: it needs no GPU, only an Elixir providing \texttt{Module.Types.Descr}.
 
 With the models and their training regime fixed, we now turn to the pipeline that turns the checker-verified corpus into predictions: how the training dataset is prepared, and the code that fine-tunes the models and generates their annotations.
 
