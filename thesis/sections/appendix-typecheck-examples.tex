@@ -1,13 +1,13 @@
-\section*{Appendix. Typechecker-Only Warning Examples}
+\chapter{Typechecker-Only Warning Examples}
 \label{app:typecheck-examples}
 \sloppy
 
 Of the \num{3636} entries the typechecker rejects but Dialyzer accepts, 691 are return-type findings; the larger unreachable-clause, argument-mismatch, and map-key groups are treated in Subsection~\ref{sec:typecheck-only}.
 The return-type findings split into 405 whose annotation carries a \texttt{dynamic()} (no static verdict after root-hoisting), 127 \emph{cannot-verify} cases (the declared type is concrete but inference types the body's return, wholly or at some position, as \texttt{term()} or \texttt{dynamic()}), and 159 purely-static disagreements.
 The purely-static group is where a true static verdict is possible: a genuine leak is a body that provably returns a value outside its declared type, which Dialyzer's optimism accepts.
-This appendix gives representative genuine leaks and one worked example of each recurring artefact category; it is illustrative rather than exhaustive.
+This appendix gives representative genuine leaks and one worked example of each recurring artefact category; the selection is illustrative.
 
-\subsection*{Representative genuine return-type leaks}
+\section*{Representative genuine return-type leaks}
 Each returns a value the declared type excludes---typically a clause that leaks \texttt{nil} or an error tuple, or a spec that under-declares the returned atoms.
 
 \footnotesize
@@ -23,7 +23,7 @@ Each returns a value the declared type excludes---typically a clause that leaks 
 \end{tabular}
 \normalsize
 
-\subsection*{Artefact categories}
+\section*{Artefact categories}
 Not every return disagreement is a genuine leak; the two recurring non-genuine kinds are the conservatism of module-local inference and its over-broadening.
 
 \paragraph{Cannot verify.} \texttt{Ash.\allowbreak{}DataLayer.\allowbreak{}rollback/\allowbreak{}3}.

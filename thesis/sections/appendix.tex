@@ -1,4 +1,5 @@
-\section*{Appendix. Semantics of Field Types in TypeSpecs}
+\chapter{Semantics of Field Types in TypeSpecs}
+\label{app:field-type-semantics}
 
 To understand the field type translation, the comprehension of field type notation has to precede.
 Field types are divided into mandatory types and non-mandatory types that could be denoted by \texttt{required} and \texttt{optional} in their key-types as the field type translation in Figure~\ref{app:translation-in-field-types} suggests.
@@ -6,7 +7,7 @@ Although it is natural to discern whether a pair is required or optional by the 
 By default when type-checked with Dialyzer, literal types are mandatory even with \texttt{optional} denotation.
 On the other hand, non-literal types are always optional whether they are denoted by \texttt{required} or not.
 
-\subsection*{Semantics in Translation of Field Types}
+\section*{Semantics in Translation of Field Types}
 
 The only case when denotation has practical effect on field types is when used with literal types such as singleton atoms, digits, interval, and tuples.
 More specifically, \texttt{optional} denotation changes them to be optional:
@@ -28,7 +29,7 @@ Even though denoted by \texttt{required} in line~\ref{ln:map-req-atom-to-bin}, i
 
 Essentially, these are the key semantics for translating TypeSpecs to Elixir Types in field types, that is, only the key types as singleton atom types are taken as the mandatory field, hence translated without \texttt{if\_set} on value types.
 
-\subsection*{Semantics in Merge of Field Types}
+\section*{Semantics in Merge of Field Types}
 % L_1 \oplus \texttt{[}\,\ETK^{\orgtype}\fto\tau,\,\,L_2\texttt{]} &=& L_1 \oplus L_2 & \textsl{if }\ \ETK^{\prm{\orgtype}} \in L_1 \textsl{ and } \ETK \cap {\orgtype} \leq \ETK \cap \prm{\orgtype} \\
 % L_1 \oplus \texttt{[}\,\ETK^{\orgtype}\fto\tau,\,\,L_2\texttt{]} &=& \texttt{[}\,\ETK^{\orgtype\,\vee\,\prm{\orgtype}}\fto\tau \texttt{ or }\prm{\tau},\,\,L_1 \setminus \ETK^{\prm{\orgtype}}\texttt{]} \oplus L_2  & \textsl{if }\ \ETK^{\prm{\orgtype}}\fto\prm{\tau} \in L_1 \textsl{ and } \ETK \cap \orgtype \nleq \ETK \cap \prm{\orgtype} \\
 % L_1 \oplus \texttt{[}\,\SAtom^{\orgtype}\fto\ETT,\,\,L_2\texttt{]} &=& \texttt{[}\,\SAtom^{\prm{\orgtype}}\fto\prm{\ETT},\,\,L_1 \setminus \SAtom^{\prm{\orgtype}}\,\texttt{]} \oplus L_2 & \textsl{if }\ \SAtom^{\prm{\orgtype}}\fto\texttt{if\_set}(\prm{\ETT}) \in L_1 \\

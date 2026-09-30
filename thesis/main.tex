@@ -115,22 +115,28 @@ We pursue two model families in parallel on this both-pass pool---a large decode
 
 \input{sections/conclusion}
 
+% Bibliography (before the appendices), with its own TOC entry
 \clearpage
-\input{sections/appendix}
-\newpage
-\input{sections/appendix-dialyzer-examples}
-\newpage
-\input{sections/appendix-both-examples}
-\newpage
-\input{sections/appendix-typecheck-examples}
-\newpage
-\input{sections/appendix-source-projects}
-
-
-% Bibliography
-\newpage
+\phantomsection
+\addcontentsline{toc}{part}{Bibliography}
 \nocite{*}
 \bibliographystyle{apalike}  % Author-year citation style with alphabetical order
 \bibliography{bibliography}  % References will be pulled from references.bib
+
+% Appendices: \appendix switches chapter numbering to letters (Appendix A, B, ...).
+% Each appendix is a chapter, so each starts on its own page and gets a TOC entry.
+\clearpage
+\appendix
+\phantomsection
+\addcontentsline{toc}{part}{Appendices}
+\part*{Appendices}
+
+\input{sections/appendix}
+\input{sections/appendix-dialyzer-examples}
+\input{sections/appendix-both-examples}
+\input{sections/appendix-typecheck-examples}
+\input{sections/appendix-source-projects}
+
+
 
 \end{document}

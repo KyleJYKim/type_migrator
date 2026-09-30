@@ -2,7 +2,7 @@
 \label{ch:llm-settings}
 
 We fine-tune two models of deliberately contrasting design on the corpus of typechecker-accepted annotations: a large decoder-only model adapted parameter-efficiently, and a much smaller encoder--decoder fine-tuned in full.
-The aim is not to crown one architecture but to find an effective way to infer the new types.
+The aim is to find an effective way to infer the new types.
 Both see the same data, the same prompt, and the same split, so that what differs is the modelling approach and not the material it learns from.
 
 \section{Models}
@@ -63,7 +63,7 @@ This section turns the corpus of typechecker-accepted annotations into a supervi
 \label{sec:llm-data-prep}
 
 We train on the \emph{both-pass} pool: every entry on which both Dialyzer and the set-theoretic typechecker accept the translated annotation, that is passed.
-This is the largest checker-accepted pool, and it admits annotations whose translation contains \texttt{dynamic()}---overwhelmingly an artefact of unresolved remote types rather than a deliberate gradual-typing choice (Subsection~\ref{sec:approximation-via-dynamic}), but a type the checker nonetheless accepts as safe.
+This is the largest checker-accepted pool, and it admits annotations whose translation contains \texttt{dynamic()}. That \texttt{dynamic()} is overwhelmingly an artefact of unresolved remote types (Subsection~\ref{sec:approximation-via-dynamic}), but the checker nonetheless accepts it as safe.
 A length filter is applied before the split: entries whose function definition exceeds 2{,}000 characters or whose target annotation exceeds 1{,}000 characters are removed, as these pathological cases (e.g.\ \texttt{Regex.replace/4}, whose translation expands to over 250~KiB\footnote{Its third argument is typed \texttt{(... -> String.t())}, a variable-arity function whose non-\texttt{term()} return type the translation expands into a union over every fixed arity the BEAM permits, from 0 to 255 (Chapter~\ref{ch:formalisation}); a 616-character definition thereby yields an annotation of over 250~KiB.}) would dominate batch composition without proportionate learning signal.
 
 \paragraph{Subproject-stratified split.}
@@ -76,7 +76,7 @@ Hashing the \emph{name}, rather than shuffling the subproject universe, is what 
 
 The resulting proportions are approximate, and deliberately so.
 The ratio is exactly 70/15/15 over the hash range, but a finite set of subprojects cannot realise it exactly: by \emph{count} the split lands at 279/60/64 (69/15/16\%), the ordinary sampling spread of dropping 403 independent items into fixed buckets.
-By \emph{entries} it drifts further, to 63.8/22.5/13.7\% (Table~\ref{tab:llm-splits})---validation above and training below the nominal share---because the split unit is the whole subproject while entries are counted per function, and subprojects vary widely in size, so a few large ones landing in validation tilt the totals; this imbalance is one no choice of hash can remove, since it stems from the coarse split unit rather than from the hash.
+By \emph{entries} it drifts further, to 63.8/22.5/13.7\% (Table~\ref{tab:llm-splits}), with validation above and training below the nominal share. The split unit is the whole subproject while entries are counted per function, and subprojects vary widely in size, so a few large ones landing in validation tilt the totals. No choice of hash can remove this imbalance, since it stems from the coarse split unit.
 We treat precise proportions as subordinate to a test set that is leak-free and stable across rounds, and the two changes that would tighten the ratio each forfeit exactly one of those guarantees: splitting by \emph{entry} would balance the counts but leak sibling functions of one subproject across splits, while counting up to an exact 70\% would nail the ratio but tie every assignment to the whole corpus, so that adding or dropping a single repository would reshuffle the test set.
 A split that never leaks and never shifts between rounds is worth more here than an exact one that does either.
 
@@ -136,10 +136,10 @@ The target annotation is what follows that marker:
 The \texttt{\#\#\# Output:} marker is the seam at which the two architectures diverge---the one point where they treat the same text differently.
 For the decoder-only model (Qwen2.5), prompt and target form a single continuous token stream: the prompt up to \texttt{\#\#\# Output:} is fed in and the model \emph{continues} it, emitting the annotation, and a terminating end-of-text token, as the completion of that same sequence.
 For the encoder--decoder (CodeT5+), the two are separate streams: the identical prompt is the \emph{encoder} input, read in full and bidirectionally, while the annotation is generated on the \emph{decoder} side as its own target sequence.
-The supervised objective is the same either way---given the definition, produce, token by token, the annotation the typechecker accepts---but the decoder-only model is trained over the whole concatenated sequence, whereas the encoder--decoder places its loss on the target tokens alone (Section~\ref{sec:llm-training}).
+Both architectures learn the same supervised objective: given the definition, produce, token by token, the annotation the typechecker accepts. They differ in where the loss falls: the decoder-only model is trained over the whole concatenated sequence, whereas the encoder--decoder places its loss on the target tokens alone (Section~\ref{sec:llm-training}).
 
 The template uses the familiar Alpaca-style \texttt{\#\#\# Instruction}/\texttt{\#\#\# Input}/\texttt{\#\#\# Output} headers, yet both models are base, pre-trained checkpoints, not instruction-tuned variants (Section~\ref{sec:llm-models}).
-The headers are therefore not there to trigger instruction-following---a base model has learned none---but act as fixed structural delimiters imposed identically during fine-tuning and at inference (the same template is the single source of truth for both).
+A base model has learned no instruction-following, so the headers cannot trigger it; they act as fixed structural delimiters imposed identically during fine-tuning and at inference (the same template is the single source of truth for both).
 The model thus learns the format from the supervised data: the annotation is what follows the \texttt{\#\#\# Output:} marker.
 The natural-language instruction line is itself a constant prefix, identical across every example, so a base model need not interpret it as a command for the mapping to be learned.
 An instruction-tuned model, by contrast, would read such a header through its own learned instruction-following and would normally be driven through its dedicated chat template and special role tokens; we instead supply a plain, fixed scaffold and teach its role through fine-tuning.
@@ -171,7 +171,7 @@ One observation from these runs bears directly on that selection rule.
 Both models were also trained in an earlier round whose prompt supplied the types in scope in their original TypeSpec form rather than translated (Subsection~\ref{sec:llm-task}); everything else was held fixed.
 Between the two rounds Qwen2.5's best validation loss fell from \num{0.885} to \num{0.694}, a \num{22}\% improvement, while its compatibility on the test set fell slightly, from \num{36.6}\% to \num{35.9}\%.
 CodeT5+ moved the other way: its best validation loss was unchanged at \num{0.276}, while its compatibility rose from \num{54.3}\% to \num{56.3}\%.
-Cross-entropy on held-out targets and compatibility with a reference are therefore not merely different scales but can move in opposite directions, which is the concrete form of the caveat attached to selecting checkpoints by validation loss (Section~\ref{sec:future-work}).
+Cross-entropy on held-out targets and compatibility with a reference can therefore move in opposite directions, which is the concrete form of the caveat attached to selecting checkpoints by validation loss (Section~\ref{sec:future-work}).
 
 \paragraph{Provenance of the two runs.}
 Each run records the prompt format it used---the instruction text, which fields the blocks were built from, the character budget, and a hash of the prompt module's source---alongside a sample of the exact training texts and every generation prompt with its raw output.
@@ -240,7 +240,7 @@ All training artefacts (configuration, prompt template, every dataset split, and
 A trained model is run over the held-out test split by \texttt{generate.py} (Qwen2.5) or \texttt{generate\_seq2seq.py} (CodeT5+): each entry's prompt is fed to the model, which decodes greedily to produce one annotation.
 
 Qwen2.5's decoding is \emph{grammar-constrained}.
-A GBNF grammar encodes the entire set-theoretic type syntax---unions, intersections, negation, the base types, \texttt{dynamic()}, function types, lists, tuples, and maps with \texttt{if\_set} fields---and a grammar-constrained logits processor masks, at every decoding step, every token that would break the grammar.
+A GBNF grammar encodes the entire set-theoretic type syntax: unions, intersections, negation, the base types, \texttt{dynamic()}, function types, lists, tuples, and maps with \texttt{if\_set} fields. At every decoding step, a grammar-constrained logits processor masks every token that would break the grammar.
 The model can therefore emit only well-formed Descr types: balanced delimiters, terminated atoms, and no drift into TypeSpec forms such as \texttt{String.t()} or \texttt{any()}.
 A light repetition penalty and a per-entry time budget additionally break the degenerate enumeration loops into which a constrained greedy decoder can otherwise fall.
 CodeT5+ is decoded \emph{unconstrained}: the same grammar cannot be applied because the constrained-decoding library does not support its tokenizer, which is the source of its higher null rate (Section~\ref{sec:llm-results}).
@@ -392,7 +392,7 @@ Membrane.Matroska.Schema.element_id_to_name/1
 
 \noindent
 The first two answer with an open struct where the type is a plain \texttt{binary()}; the third keeps the arity and the argument type but returns the wrong leaf type.
-The pattern is measurable rather than anecdotal: among Qwen2.5's \num{1364} non-compatible predictions, \num{253} name a struct the reference does not contain, against \num{33} of CodeT5+'s \num{929}.
+The pattern is measurable: among Qwen2.5's \num{1364} non-compatible predictions, \num{253} name a struct the reference does not contain, against \num{33} of CodeT5+'s \num{929}.
 In \num{21} of Qwen2.5's cases the invented struct is \texttt{String}, which is not a struct in Elixir at all---a shape no reference in the corpus could have taught it.
 
 We are deliberately cautious about the cause: CodeT5+ and Qwen2.5 differ in more than their encoder --- also in fine-tuning regime (full versus low-rank adaptation), pretraining corpus and objective, and parameter count --- so this single comparison cannot attribute the gap to any one factor.
