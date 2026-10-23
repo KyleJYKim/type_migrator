@@ -1,12 +1,14 @@
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
+% PDF/A-2b output (Ca' Foscari requires PDF/A). pdfx loads hyperref itself, so
+% hyperref must not be loaded separately; document metadata lives in main.xmpdata.
+\usepackage[a-2b]{pdfx}
 \usepackage{amsmath, amssymb, amsfonts}
 \usepackage{graphicx}
 \usepackage{caption}
 \usepackage{subcaption}
 \usepackage{booktabs}
 \usepackage{siunitx}
-\usepackage{hyperref}
 \usepackage{float}
 \usepackage{textgreek}
 \usepackage{fancyhdr}
